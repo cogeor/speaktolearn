@@ -31,6 +31,7 @@ dependencies:
 
   # Utilities
   characters: ^1.4.0
+  crypto: ^3.0.7
   permission_handler: ^11.3.1
   path_provider: ^2.1.5
   dio: ^5.7.0
