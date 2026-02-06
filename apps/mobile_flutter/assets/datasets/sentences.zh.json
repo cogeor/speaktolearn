@@ -1,0 +1,194 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "mandarin_sample_v1",
+  "language": "zh-CN",
+  "generated_at": "2026-02-06T12:00:00Z",
+  "items": [
+    {
+      "id": "ts_000001",
+      "text": "你好！",
+      "romanization": "ni hao",
+      "gloss": {
+        "en": "Hello!"
+      },
+      "tokens": ["你", "好"],
+      "tags": ["hsk1", "greeting"],
+      "difficulty": 1,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female", "zh": "女声"},
+            "uri": "assets://examples/female/ts_000001.opus",
+            "duration_ms": 850
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000002",
+      "text": "早上好！",
+      "romanization": "zao shang hao",
+      "gloss": {
+        "en": "Good morning!"
+      },
+      "tokens": ["早上", "好"],
+      "tags": ["hsk1", "greeting", "time"],
+      "difficulty": 1,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000002.opus",
+            "duration_ms": 920
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000003",
+      "text": "我想喝水。",
+      "romanization": "wo xiang he shui",
+      "gloss": {
+        "en": "I want to drink water."
+      },
+      "tokens": ["我", "想", "喝", "水"],
+      "tags": ["hsk1", "daily", "wants"],
+      "difficulty": 1,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000003.opus",
+            "duration_ms": 1200
+          },
+          {
+            "id": "m1",
+            "label": {"en": "Male"},
+            "uri": "assets://examples/male/ts_000003.opus",
+            "duration_ms": 1150
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000004",
+      "text": "我需要一杯咖啡。",
+      "romanization": "wo xu yao yi bei ka fei",
+      "gloss": {
+        "en": "I need a cup of coffee."
+      },
+      "tokens": ["我", "需要", "一", "杯", "咖啡"],
+      "tags": ["hsk1", "daily", "needs", "food"],
+      "difficulty": 1,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000004.opus",
+            "duration_ms": 1400
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000005",
+      "text": "请问，去火车站怎么走？",
+      "romanization": "qing wen, qu huo che zhan zen me zou",
+      "gloss": {
+        "en": "Excuse me, how do I get to the train station?"
+      },
+      "tokens": ["请问", "去", "火车站", "怎么", "走"],
+      "tags": ["hsk2", "travel", "directions"],
+      "difficulty": 2,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000005.opus",
+            "duration_ms": 2100
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000006",
+      "text": "今天几月几号？",
+      "romanization": "jin tian ji yue ji hao",
+      "gloss": {
+        "en": "What is today's date?"
+      },
+      "tokens": ["今天", "几", "月", "几", "号"],
+      "tags": ["hsk2", "time", "dates"],
+      "difficulty": 2,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000006.opus",
+            "duration_ms": 1300
+          },
+          {
+            "id": "m1",
+            "label": {"en": "Male"},
+            "uri": "assets://examples/male/ts_000006.opus",
+            "duration_ms": 1250
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000007",
+      "text": "现在几点了？",
+      "romanization": "xian zai ji dian le",
+      "gloss": {
+        "en": "What time is it now?"
+      },
+      "tokens": ["现在", "几点", "了"],
+      "tags": ["hsk2", "time"],
+      "difficulty": 2,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000007.opus",
+            "duration_ms": 1100
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000008",
+      "text": "这个多少钱？",
+      "romanization": "zhe ge duo shao qian",
+      "gloss": {
+        "en": "How much is this?"
+      },
+      "tokens": ["这个", "多少", "钱"],
+      "tags": ["hsk2", "shopping", "money"],
+      "difficulty": 2,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000008.opus",
+            "duration_ms": 1050
+          },
+          {
+            "id": "m1",
+            "label": {"en": "Male"},
+            "uri": "assets://examples/male/ts_000008.opus",
+            "duration_ms": 1000
+          }
+        ]
+      }
+    }
+  ]
+}
