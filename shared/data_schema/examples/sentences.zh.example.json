@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "mandarin_core_v1",
+  "language": "zh-CN",
+  "generated_at": "2026-02-06T10:00:00Z",
+  "items": [
+    {
+      "id": "ts_000001",
+      "text": "你好！",
+      "romanization": "ni hao",
+      "gloss": {
+        "en": "Hello!",
+        "de": "Hallo!"
+      },
+      "tokens": ["你", "好"],
+      "tags": ["hsk1", "greeting"],
+      "difficulty": 1,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female", "zh": "女声"},
+            "uri": "assets://examples/female/ts_000001.opus",
+            "duration_ms": 850
+          },
+          {
+            "id": "m1",
+            "label": {"en": "Male", "zh": "男声"},
+            "uri": "assets://examples/male/ts_000001.opus",
+            "duration_ms": 920
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000002",
+      "text": "我想喝水。",
+      "romanization": "wo xiang he shui",
+      "gloss": {
+        "en": "I want to drink water."
+      },
+      "tokens": ["我", "想", "喝", "水"],
+      "tags": ["hsk1", "daily", "wants"],
+      "difficulty": 1,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000002.opus",
+            "duration_ms": 1200
+          },
+          {
+            "id": "m1",
+            "label": {"en": "Male"},
+            "uri": "assets://examples/male/ts_000002.opus",
+            "duration_ms": 1150
+          }
+        ]
+      }
+    },
+    {
+      "id": "ts_000003",
+      "text": "请问，去火车站怎么走？",
+      "romanization": "qing wen, qu huo che zhan zen me zou",
+      "gloss": {
+        "en": "Excuse me, how do I get to the train station?"
+      },
+      "tokens": ["请问", "去", "火车站", "怎么", "走"],
+      "tags": ["hsk2", "travel", "directions"],
+      "difficulty": 2,
+      "example_audio": {
+        "voices": [
+          {
+            "id": "f1",
+            "label": {"en": "Female"},
+            "uri": "assets://examples/female/ts_000003.opus",
+            "duration_ms": 2100
+          }
+        ]
+      }
+    }
+  ]
+}
