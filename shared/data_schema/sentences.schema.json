@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://speaktolearn.app/schemas/sentences.schema.json",
+  "title": "SpeakToLearn Dataset",
+  "description": "Language learning text sequence dataset",
+  "type": "object",
+  "required": ["schema_version", "dataset_id", "language", "generated_at", "items"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility checking",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": ["1.0.0"]
+    },
+    "dataset_id": {
+      "type": "string",
+      "description": "Unique identifier for this dataset",
+      "pattern": "^[a-z0-9_]+$",
+      "examples": ["mandarin_core_v1", "japanese_basic_v1"]
+    },
+    "language": {
+      "type": "string",
+      "description": "BCP-47 language code",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "examples": ["zh-CN", "ja-JP", "ko-KR"]
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when dataset was generated"
+    },
+    "items": {
+      "type": "array",
+      "description": "List of text sequences",
+      "items": { "$ref": "#/$defs/TextSequence" },
+      "minItems": 1
+    }
+  },
+  "$defs": {
+    "TextSequence": {
+      "type": "object",
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier",
+          "pattern": "^ts_\\d{6}$",
+          "examples": ["ts_000001"]
+        },
+        "text": {
+          "type": "string",
+          "description": "Primary text in target language",
+          "minLength": 1
+        },
+        "romanization": {
+          "type": "string",
+          "description": "Pronunciation guide (pinyin, romaji, etc.)",
+          "examples": ["ni hao", "konnichiwa"]
+        },
+        "gloss": {
+          "type": "object",
+          "description": "Translations keyed by language code",
+          "additionalProperties": { "type": "string" },
+          "examples": [{"en": "Hello", "de": "Hallo"}]
+        },
+        "tokens": {
+          "type": "array",
+          "description": "Individual words/characters for highlighting",
+          "items": { "type": "string" },
+          "examples": [["ni", "hao"]]
+        },
+        "tags": {
+          "type": "array",
+          "description": "Categorization tags",
+          "items": { "type": "string" },
+          "examples": [["hsk1", "greeting"]]
+        },
+        "difficulty": {
+          "type": "integer",
+          "description": "Difficulty level (1=easiest)",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "example_audio": {
+          "$ref": "#/$defs/ExampleAudio"
+        }
+      }
+    },
+    "ExampleAudio": {
+      "type": "object",
+      "required": ["voices"],
+      "properties": {
+        "voices": {
+          "type": "array",
+          "description": "Available voice examples",
+          "items": { "$ref": "#/$defs/Voice" }
+        }
+      }
+    },
+    "Voice": {
+      "type": "object",
+      "required": ["id", "uri"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Voice identifier",
+          "examples": ["f1", "m1"]
+        },
+        "label": {
+          "type": "object",
+          "description": "Human-readable label by language",
+          "additionalProperties": { "type": "string" },
+          "examples": [{"en": "Female", "zh": "nu sheng"}]
+        },
+        "uri": {
+          "type": "string",
+          "description": "Audio file URI",
+          "pattern": "^(assets|file|https?)://",
+          "examples": ["assets://examples/female/ts_000001.opus"]
+        },
+        "duration_ms": {
+          "type": "integer",
+          "description": "Audio duration in milliseconds",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
