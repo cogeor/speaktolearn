@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:speak_to_learn/app/di.dart';
 import 'package:speak_to_learn/app/router.dart';
 import 'package:speak_to_learn/app/theme.dart';
+import 'package:speak_to_learn/features/practice/presentation/practice_sheet.dart';
 import 'package:speak_to_learn/features/text_sequences/domain/text_sequence.dart';
 
 import 'mocks/mock_integration_repositories.dart';
@@ -75,6 +76,16 @@ class IntegrationFinders {
   static Finder get micIcon => find.byIcon(Icons.mic);
   static Finder get stopIcon => find.byIcon(Icons.stop);
   static Finder get progressIndicator => find.byType(CircularProgressIndicator);
+
+  // Practice sheet elements
+  static Finder get practiceSheet => find.byType(PracticeSheet);
+  static Finder get recordFab => find.byType(FloatingActionButton);
+  static Finder get replayButton => find.byIcon(Icons.replay);
+
+  // Score elements
+  static Finder get latestScoreLabel => find.text('Latest');
+  static Finder get bestScoreLabel => find.text('Best');
+  static Finder scoreValue(int score) => find.text(score.toString());
 
   // Helper to find sequence text
   static Finder sequenceText(String text) => find.text(text);
@@ -260,5 +271,68 @@ extension IntegrationTestHelpers on WidgetTester {
   void verifySequenceDisplayed(String text) {
     expect(IntegrationFinders.sequenceText(text), findsOneWidget);
     expect(IntegrationFinders.emptyStateText, findsNothing);
+  }
+
+  /// Opens the practice sheet by tapping on the main sequence text.
+  Future<void> openPracticeSheet() async {
+    // Find the GestureDetector wrapping the sequence text
+    final sequenceGesture = find.byWidgetPredicate(
+      (widget) =>
+          widget is GestureDetector &&
+          widget.child is Text &&
+          (widget.child as Text).style?.fontSize != null,
+    );
+    if (sequenceGesture.evaluate().isNotEmpty) {
+      await tap(sequenceGesture.first);
+    } else {
+      // Fallback: tap any GestureDetector containing large text
+      final gestures = find.byType(GestureDetector);
+      for (final element in gestures.evaluate()) {
+        final widget = element.widget as GestureDetector;
+        if (widget.child is Text) {
+          await tap(find.byWidget(widget));
+          break;
+        }
+      }
+    }
+    await pumpAndSettle();
+  }
+
+  /// Taps the recording FAB to start recording.
+  Future<void> tapRecordButton() async {
+    await tap(IntegrationFinders.recordFab);
+    await pump();
+  }
+
+  /// Taps the FAB to stop recording and score.
+  Future<void> tapStopAndScore() async {
+    await tap(IntegrationFinders.recordFab);
+    await pumpAndSettle();
+  }
+
+  /// Waits for scoring to complete.
+  Future<void> waitForScoring({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    final endTime = DateTime.now().add(timeout);
+    while (DateTime.now().isBefore(endTime)) {
+      await pump(const Duration(milliseconds: 100));
+      // Check if scoring indicator is gone
+      if (IntegrationFinders.progressIndicator.evaluate().isEmpty) {
+        break;
+      }
+    }
+    await pumpAndSettle();
+  }
+
+  /// Verifies the recording state indicator.
+  Future<void> verifyRecordingState({required bool isRecording}) async {
+    if (isRecording) {
+      expect(IntegrationFinders.stopIcon, findsOneWidget);
+      expect(IntegrationFinders.micIcon, findsNothing);
+    } else {
+      expect(IntegrationFinders.micIcon, findsOneWidget);
+      expect(IntegrationFinders.stopIcon, findsNothing);
+    }
   }
 }
