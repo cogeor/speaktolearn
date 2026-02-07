@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -165,6 +166,35 @@ class MockSpeechToText implements SpeechToText {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Mock permission_handler platform channel
+  setUpAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('flutter.baseflow.com/permissions/methods'),
+      (MethodCall methodCall) async {
+        // Return granted (1) for all permission requests
+        if (methodCall.method == 'requestPermissions') {
+          final List<int> permissions = methodCall.arguments.cast<int>();
+          return {for (final p in permissions) p: 1}; // 1 = granted
+        }
+        if (methodCall.method == 'checkPermissionStatus') {
+          return 1; // granted
+        }
+        return null;
+      },
+    );
+  });
+
+  tearDownAll(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+      const MethodChannel('flutter.baseflow.com/permissions/methods'),
+      null,
+    );
+  });
+
   group('SpeechToTextRecognizer', () {
     late MockSpeechToText mockSpeech;
     late SpeechToTextRecognizer recognizer;
