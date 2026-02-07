@@ -1,32 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../practice/presentation/home_controller.dart';
-import '../../practice/presentation/home_state.dart';
-import '../../progress/domain/progress_repository.dart';
-import '../domain/text_sequence_repository.dart';
+import '../../../app/di.dart';
+import '../../practice/presentation/home_screen.dart';
 import 'sequence_list_item.dart';
-
-/// Provider for text sequence repository.
-///
-/// Placeholder that throws until wired in di.dart.
-final textSequenceRepositoryProvider = Provider<TextSequenceRepository>((ref) {
-  throw UnimplementedError('textSequenceRepositoryProvider must be overridden');
-});
-
-/// Provider for progress repository.
-///
-/// Placeholder that throws until wired in di.dart.
-final progressRepositoryProvider = Provider<ProgressRepository>((ref) {
-  throw UnimplementedError('progressRepositoryProvider must be overridden');
-});
-
-/// Provider for home controller.
-///
-/// Placeholder that throws until wired in home_screen.dart.
-final homeControllerProvider =
-    StateNotifierProvider<HomeController, HomeState>((ref) {
-  throw UnimplementedError('homeControllerProvider must be overridden');
-});
 
 /// Provider for the sequence list controller.
 final sequenceListControllerProvider = AutoDisposeAsyncNotifierProvider<

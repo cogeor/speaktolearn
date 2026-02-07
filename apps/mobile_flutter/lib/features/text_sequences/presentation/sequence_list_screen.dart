@@ -20,7 +20,7 @@ class SequenceListScreen extends ConsumerWidget {
         title: const Text('Sequences'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/'),
         ),
       ),
       body: state.when(
@@ -35,7 +35,7 @@ class SequenceListScreen extends ConsumerWidget {
               item: item,
               onTap: () {
                 controller.select(item.id);
-                context.pop();
+                context.go('/');
               },
               onToggleTrack: () => controller.toggleTracked(item.id),
             );

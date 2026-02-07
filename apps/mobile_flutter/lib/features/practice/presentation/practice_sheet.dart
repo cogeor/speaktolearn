@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../app/di.dart';
 import '../../../app/theme.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
@@ -8,21 +9,24 @@ import '../../example_audio/presentation/example_audio_controller.dart';
 import '../../recording/presentation/recording_controller.dart';
 import '../../recording/presentation/recording_state.dart';
 
-/// Placeholder provider for example audio controller.
-/// Will be properly implemented when DI is set up.
+/// Provider for example audio controller.
 final exampleAudioControllerProvider =
     StateNotifierProvider<ExampleAudioController, ExampleAudioState>((ref) {
-  throw UnimplementedError(
-    'exampleAudioControllerProvider must be overridden in ProviderScope',
+  return ExampleAudioController(
+    player: ref.watch(audioPlayerProvider),
+    repository: ref.watch(exampleAudioRepositoryProvider),
   );
 });
 
-/// Placeholder provider for recording controller.
-/// Will be properly implemented when DI is set up.
+/// Provider for recording controller.
 final recordingControllerProvider =
     StateNotifierProvider<RecordingController, RecordingState>((ref) {
-  throw UnimplementedError(
-    'recordingControllerProvider must be overridden in ProviderScope',
+  return RecordingController(
+    recorder: ref.watch(audioRecorderProvider),
+    repository: ref.watch(recordingRepositoryProvider),
+    scorer: ref.watch(pronunciationScorerProvider),
+    progressRepository: ref.watch(progressRepositoryProvider),
+    audioPlayer: ref.watch(audioPlayerProvider),
   );
 });
 

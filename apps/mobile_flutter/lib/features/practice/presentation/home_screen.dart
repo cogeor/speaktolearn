@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/di.dart';
 import '../../../app/theme.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
@@ -10,11 +11,13 @@ import 'home_state.dart';
 import 'practice_sheet.dart';
 
 /// Provider for the home screen controller.
-///
-/// TODO: Wire up with actual dependencies.
 final homeControllerProvider =
     StateNotifierProvider<HomeController, HomeState>((ref) {
-  throw UnimplementedError('homeControllerProvider is not yet wired');
+  return HomeController(
+    textSequenceRepository: ref.watch(textSequenceRepositoryProvider),
+    progressRepository: ref.watch(progressRepositoryProvider),
+    getNextTrackedSequence: ref.watch(getNextTrackedSequenceProvider),
+  );
 });
 
 /// Home screen that displays the current practice sequence.
