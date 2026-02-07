@@ -26,6 +26,7 @@ mixin _$TextSequenceProgress {
   String? get bestAttemptId => throw _privateConstructorUsedError;
   DateTime? get lastAttemptAt => throw _privateConstructorUsedError;
   int get attemptCount => throw _privateConstructorUsedError;
+  int? get lastScore => throw _privateConstructorUsedError;
 
   /// Serializes this TextSequenceProgress to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,6 +51,7 @@ abstract class $TextSequenceProgressCopyWith<$Res> {
     String? bestAttemptId,
     DateTime? lastAttemptAt,
     int attemptCount,
+    int? lastScore,
   });
 }
 
@@ -76,6 +78,7 @@ class _$TextSequenceProgressCopyWithImpl<
     Object? bestAttemptId = freezed,
     Object? lastAttemptAt = freezed,
     Object? attemptCount = null,
+    Object? lastScore = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -99,6 +102,10 @@ class _$TextSequenceProgressCopyWithImpl<
                 ? _value.attemptCount
                 : attemptCount // ignore: cast_nullable_to_non_nullable
                       as int,
+            lastScore: freezed == lastScore
+                ? _value.lastScore
+                : lastScore // ignore: cast_nullable_to_non_nullable
+                      as int?,
           )
           as $Val,
     );
@@ -120,6 +127,7 @@ abstract class _$$TextSequenceProgressImplCopyWith<$Res>
     String? bestAttemptId,
     DateTime? lastAttemptAt,
     int attemptCount,
+    int? lastScore,
   });
 }
 
@@ -142,6 +150,7 @@ class __$$TextSequenceProgressImplCopyWithImpl<$Res>
     Object? bestAttemptId = freezed,
     Object? lastAttemptAt = freezed,
     Object? attemptCount = null,
+    Object? lastScore = freezed,
   }) {
     return _then(
       _$TextSequenceProgressImpl(
@@ -165,6 +174,10 @@ class __$$TextSequenceProgressImplCopyWithImpl<$Res>
             ? _value.attemptCount
             : attemptCount // ignore: cast_nullable_to_non_nullable
                   as int,
+        lastScore: freezed == lastScore
+            ? _value.lastScore
+            : lastScore // ignore: cast_nullable_to_non_nullable
+                  as int?,
       ),
     );
   }
@@ -179,6 +192,7 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
     this.bestAttemptId,
     this.lastAttemptAt,
     this.attemptCount = 0,
+    this.lastScore,
   }) : super._();
 
   factory _$TextSequenceProgressImpl.fromJson(Map<String, dynamic> json) =>
@@ -195,10 +209,12 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
   @override
   @JsonKey()
   final int attemptCount;
+  @override
+  final int? lastScore;
 
   @override
   String toString() {
-    return 'TextSequenceProgress(tracked: $tracked, bestScore: $bestScore, bestAttemptId: $bestAttemptId, lastAttemptAt: $lastAttemptAt, attemptCount: $attemptCount)';
+    return 'TextSequenceProgress(tracked: $tracked, bestScore: $bestScore, bestAttemptId: $bestAttemptId, lastAttemptAt: $lastAttemptAt, attemptCount: $attemptCount, lastScore: $lastScore)';
   }
 
   @override
@@ -214,7 +230,9 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
             (identical(other.lastAttemptAt, lastAttemptAt) ||
                 other.lastAttemptAt == lastAttemptAt) &&
             (identical(other.attemptCount, attemptCount) ||
-                other.attemptCount == attemptCount));
+                other.attemptCount == attemptCount) &&
+            (identical(other.lastScore, lastScore) ||
+                other.lastScore == lastScore));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -226,6 +244,7 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
     bestAttemptId,
     lastAttemptAt,
     attemptCount,
+    lastScore,
   );
 
   /// Create a copy of TextSequenceProgress
@@ -253,6 +272,7 @@ abstract class _TextSequenceProgress extends TextSequenceProgress {
     final String? bestAttemptId,
     final DateTime? lastAttemptAt,
     final int attemptCount,
+    final int? lastScore,
   }) = _$TextSequenceProgressImpl;
   const _TextSequenceProgress._() : super._();
 
@@ -269,6 +289,8 @@ abstract class _TextSequenceProgress extends TextSequenceProgress {
   DateTime? get lastAttemptAt;
   @override
   int get attemptCount;
+  @override
+  int? get lastScore;
 
   /// Create a copy of TextSequenceProgress
   /// with the given fields replaced by the non-null parameter values.

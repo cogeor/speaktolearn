@@ -114,6 +114,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
       attemptCount: currentProgress.attemptCount + 1,
       bestScore: newBest ? attempt.score : currentProgress.bestScore,
       bestAttemptId: newBest ? attempt.id : currentProgress.bestAttemptId,
+      lastScore: attempt.score,
     );
 
     await _progressBox.put(key, updatedProgress.toJson());

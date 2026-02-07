@@ -13,6 +13,7 @@ class TextSequenceProgress with _$TextSequenceProgress {
     String? bestAttemptId,
     DateTime? lastAttemptAt,
     @Default(0) int attemptCount,
+    int? lastScore,
   }) = _TextSequenceProgress;
 
   factory TextSequenceProgress.fromJson(Map<String, dynamic> json) =>

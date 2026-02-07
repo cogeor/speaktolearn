@@ -104,6 +104,7 @@ class MockProgressRepository implements ProgressRepository {
       lastAttemptAt: attempt.gradedAt,
       bestScore: isBest ? attempt.score : current.bestScore,
       bestAttemptId: isBest ? attempt.id : current.bestAttemptId,
+      lastScore: attempt.score,
     );
   }
 

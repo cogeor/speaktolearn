@@ -16,6 +16,7 @@ _$TextSequenceProgressImpl _$$TextSequenceProgressImplFromJson(
       ? null
       : DateTime.parse(json['lastAttemptAt'] as String),
   attemptCount: (json['attemptCount'] as num?)?.toInt() ?? 0,
+  lastScore: (json['lastScore'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$$TextSequenceProgressImplToJson(
@@ -26,4 +27,5 @@ Map<String, dynamic> _$$TextSequenceProgressImplToJson(
   'bestAttemptId': instance.bestAttemptId,
   'lastAttemptAt': instance.lastAttemptAt?.toIso8601String(),
   'attemptCount': instance.attemptCount,
+  'lastScore': instance.lastScore,
 };
