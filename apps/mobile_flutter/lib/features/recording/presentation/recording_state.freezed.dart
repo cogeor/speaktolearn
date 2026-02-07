@@ -23,6 +23,9 @@ mixin _$RecordingState {
   bool get hasLatestRecording => throw _privateConstructorUsedError;
   String? get error => throw _privateConstructorUsedError;
 
+  /// The latest grade from the most recent scoring attempt.
+  Grade? get latestGrade => throw _privateConstructorUsedError;
+
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -43,7 +46,10 @@ abstract class $RecordingStateCopyWith<$Res> {
     bool isPlaying,
     bool hasLatestRecording,
     String? error,
+    Grade? latestGrade,
   });
+
+  $GradeCopyWith<$Res>? get latestGrade;
 }
 
 /// @nodoc
@@ -66,6 +72,7 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
     Object? isPlaying = null,
     Object? hasLatestRecording = null,
     Object? error = freezed,
+    Object? latestGrade = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -89,9 +96,27 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
                 ? _value.error
                 : error // ignore: cast_nullable_to_non_nullable
                       as String?,
+            latestGrade: freezed == latestGrade
+                ? _value.latestGrade
+                : latestGrade // ignore: cast_nullable_to_non_nullable
+                      as Grade?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of RecordingState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $GradeCopyWith<$Res>? get latestGrade {
+    if (_value.latestGrade == null) {
+      return null;
+    }
+
+    return $GradeCopyWith<$Res>(_value.latestGrade!, (value) {
+      return _then(_value.copyWith(latestGrade: value) as $Val);
+    });
   }
 }
 
@@ -110,7 +135,11 @@ abstract class _$$RecordingStateImplCopyWith<$Res>
     bool isPlaying,
     bool hasLatestRecording,
     String? error,
+    Grade? latestGrade,
   });
+
+  @override
+  $GradeCopyWith<$Res>? get latestGrade;
 }
 
 /// @nodoc
@@ -132,6 +161,7 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
     Object? isPlaying = null,
     Object? hasLatestRecording = null,
     Object? error = freezed,
+    Object? latestGrade = freezed,
   }) {
     return _then(
       _$RecordingStateImpl(
@@ -155,6 +185,10 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
             ? _value.error
             : error // ignore: cast_nullable_to_non_nullable
                   as String?,
+        latestGrade: freezed == latestGrade
+            ? _value.latestGrade
+            : latestGrade // ignore: cast_nullable_to_non_nullable
+                  as Grade?,
       ),
     );
   }
@@ -169,6 +203,7 @@ class _$RecordingStateImpl implements _RecordingState {
     this.isPlaying = false,
     this.hasLatestRecording = false,
     this.error,
+    this.latestGrade,
   });
 
   @override
@@ -186,9 +221,13 @@ class _$RecordingStateImpl implements _RecordingState {
   @override
   final String? error;
 
+  /// The latest grade from the most recent scoring attempt.
+  @override
+  final Grade? latestGrade;
+
   @override
   String toString() {
-    return 'RecordingState(isRecording: $isRecording, isScoring: $isScoring, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, error: $error)';
+    return 'RecordingState(isRecording: $isRecording, isScoring: $isScoring, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, error: $error, latestGrade: $latestGrade)';
   }
 
   @override
@@ -204,7 +243,9 @@ class _$RecordingStateImpl implements _RecordingState {
                 other.isPlaying == isPlaying) &&
             (identical(other.hasLatestRecording, hasLatestRecording) ||
                 other.hasLatestRecording == hasLatestRecording) &&
-            (identical(other.error, error) || other.error == error));
+            (identical(other.error, error) || other.error == error) &&
+            (identical(other.latestGrade, latestGrade) ||
+                other.latestGrade == latestGrade));
   }
 
   @override
@@ -215,6 +256,7 @@ class _$RecordingStateImpl implements _RecordingState {
     isPlaying,
     hasLatestRecording,
     error,
+    latestGrade,
   );
 
   /// Create a copy of RecordingState
@@ -236,6 +278,7 @@ abstract class _RecordingState implements RecordingState {
     final bool isPlaying,
     final bool hasLatestRecording,
     final String? error,
+    final Grade? latestGrade,
   }) = _$RecordingStateImpl;
 
   @override
@@ -248,6 +291,10 @@ abstract class _RecordingState implements RecordingState {
   bool get hasLatestRecording;
   @override
   String? get error;
+
+  /// The latest grade from the most recent scoring attempt.
+  @override
+  Grade? get latestGrade;
 
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.

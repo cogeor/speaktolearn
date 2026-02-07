@@ -15,6 +15,7 @@ import '../features/recording/domain/recording_repository.dart';
 import '../features/scoring/data/asr_similarity_scorer.dart';
 import '../features/scoring/data/cer_calculator.dart';
 import '../features/scoring/data/speech_recognizer.dart';
+import '../features/scoring/data/speech_to_text_recognizer.dart';
 import '../features/scoring/domain/pronunciation_scorer.dart';
 import '../features/selection/domain/get_next_tracked.dart';
 import '../features/selection/domain/sequence_ranker.dart';
@@ -78,8 +79,7 @@ final audioRecorderProvider = Provider<AudioRecorder>((ref) {
 
 /// Provider for speech recognizer.
 final speechRecognizerProvider = Provider<SpeechRecognizer>((ref) {
-  // Using mock for now until real implementation is added
-  return MockSpeechRecognizer(defaultResponse: '');
+  return SpeechToTextRecognizer();
 });
 
 /// Provider for pronunciation scorer.

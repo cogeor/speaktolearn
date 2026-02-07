@@ -38,6 +38,14 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.bar_chart),
+            onPressed: () => context.go('/stats'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.go('/settings'),
+          ),
+          IconButton(
             icon: Icon(
               state.currentProgress?.tracked == true
                   ? Icons.bookmark

@@ -185,7 +185,7 @@ class _ReplayButton extends ConsumerWidget {
   }
 }
 
-/// Displays latest and best scores.
+/// Displays latest and best scores with detailed breakdown.
 class _ScoreDisplay extends ConsumerWidget {
   const _ScoreDisplay({
     required this.progress,
@@ -197,19 +197,145 @@ class _ScoreDisplay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final recordingState = ref.watch(recordingControllerProvider);
+    final latestGrade = recordingState.latestGrade;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Main score row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _ScoreLabel(
+              label: 'Latest',
+              score: progress?.lastScore,
+            ),
+            const SizedBox(width: 24),
+            _ScoreLabel(
+              label: 'Best',
+              score: progress?.bestScore,
+            ),
+          ],
+        ),
+        // Detailed breakdown (if available from latest grade)
+        if (latestGrade != null &&
+            (latestGrade.accuracy != null || latestGrade.completeness != null)) ...[
+          const SizedBox(height: 16),
+          _DetailedScoreRow(
+            accuracy: latestGrade.accuracy,
+            completeness: latestGrade.completeness,
+          ),
+        ],
+        // Recognized text comparison
+        if (latestGrade?.recognizedText != null) ...[
+          const SizedBox(height: 16),
+          _RecognizedTextComparison(
+            expected: sequence.text,
+            recognized: latestGrade!.recognizedText!,
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Row showing accuracy and completeness scores.
+class _DetailedScoreRow extends StatelessWidget {
+  const _DetailedScoreRow({
+    this.accuracy,
+    this.completeness,
+  });
+
+  final int? accuracy;
+  final int? completeness;
+
+  @override
+  Widget build(BuildContext context) {
+    if (accuracy == null && completeness == null) {
+      return const SizedBox.shrink();
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _ScoreLabel(
-          label: 'Latest',
-          score: progress?.bestScore,
+        if (accuracy != null) ...[
+          _MiniScoreLabel(label: 'Accuracy', score: accuracy!),
+          const SizedBox(width: 16),
+        ],
+        if (completeness != null)
+          _MiniScoreLabel(label: 'Completeness', score: completeness!),
+      ],
+    );
+  }
+}
+
+/// Small score label for secondary metrics.
+class _MiniScoreLabel extends StatelessWidget {
+  const _MiniScoreLabel({
+    required this.label,
+    required this.score,
+  });
+
+  final String label;
+  final int score;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall,
         ),
-        const SizedBox(width: 24),
-        _ScoreLabel(
-          label: 'Best',
-          score: progress?.bestScore,
+        Text(
+          '$score%',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: score.scoreColor,
+          ),
         ),
       ],
+    );
+  }
+}
+
+/// Displays expected vs recognized text for comparison.
+class _RecognizedTextComparison extends StatelessWidget {
+  const _RecognizedTextComparison({
+    required this.expected,
+    required this.recognized,
+  });
+
+  final String expected;
+  final String recognized;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'You said:',
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            recognized.isNotEmpty ? recognized : '(nothing detected)',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              fontStyle: recognized.isEmpty ? FontStyle.italic : FontStyle.normal,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

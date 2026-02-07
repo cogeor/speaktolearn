@@ -105,15 +105,23 @@ class RecordingController extends StateNotifier<RecordingState> {
             score: grade.overall,
             method: grade.method,
             recognizedText: grade.recognizedText,
-            details: grade.details,
+            details: {
+              ...?grade.details,
+              'accuracy': grade.accuracy,
+              'completeness': grade.completeness,
+            },
           );
 
           await _progressRepository.saveAttempt(attempt);
+
+          // Save recording to enable replay functionality
+          await _repository.saveLatest(recording);
 
           state = state.copyWith(
             isRecording: false,
             isScoring: false,
             hasLatestRecording: true,
+            latestGrade: grade,
           );
 
           return grade;

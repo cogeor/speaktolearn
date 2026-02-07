@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../scoring/domain/grade.dart';
+
 part 'recording_state.freezed.dart';
 
 @freezed
@@ -10,5 +12,7 @@ class RecordingState with _$RecordingState {
     @Default(false) bool isPlaying,
     @Default(false) bool hasLatestRecording,
     String? error,
+    /// The latest grade from the most recent scoring attempt.
+    Grade? latestGrade,
   }) = _RecordingState;
 }

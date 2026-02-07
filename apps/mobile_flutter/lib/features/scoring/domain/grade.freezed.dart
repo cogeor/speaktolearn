@@ -21,9 +21,26 @@ Grade _$GradeFromJson(Map<String, dynamic> json) {
 
 /// @nodoc
 mixin _$Grade {
+  /// Overall pronunciation score (0-100).
   int get overall => throw _privateConstructorUsedError;
+
+  /// Scoring method identifier (e.g., 'asr_cer_v1').
   String get method => throw _privateConstructorUsedError;
+
+  /// Accuracy score derived from CER (0-100).
+  /// Represents how precisely the pronunciation matched expected phonemes.
+  /// Higher is better. Null if not calculated.
+  int? get accuracy => throw _privateConstructorUsedError;
+
+  /// Completeness score (0-100).
+  /// Represents what percentage of the reference text was spoken.
+  /// Higher is better. Null if not calculated.
+  int? get completeness => throw _privateConstructorUsedError;
+
+  /// The text recognized by the speech recognizer.
   String? get recognizedText => throw _privateConstructorUsedError;
+
+  /// Additional details about the scoring (CER, edit distance, etc.).
   Map<String, dynamic>? get details => throw _privateConstructorUsedError;
 
   /// Serializes this Grade to a JSON map.
@@ -43,6 +60,8 @@ abstract class $GradeCopyWith<$Res> {
   $Res call({
     int overall,
     String method,
+    int? accuracy,
+    int? completeness,
     String? recognizedText,
     Map<String, dynamic>? details,
   });
@@ -65,6 +84,8 @@ class _$GradeCopyWithImpl<$Res, $Val extends Grade>
   $Res call({
     Object? overall = null,
     Object? method = null,
+    Object? accuracy = freezed,
+    Object? completeness = freezed,
     Object? recognizedText = freezed,
     Object? details = freezed,
   }) {
@@ -78,6 +99,14 @@ class _$GradeCopyWithImpl<$Res, $Val extends Grade>
                 ? _value.method
                 : method // ignore: cast_nullable_to_non_nullable
                       as String,
+            accuracy: freezed == accuracy
+                ? _value.accuracy
+                : accuracy // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            completeness: freezed == completeness
+                ? _value.completeness
+                : completeness // ignore: cast_nullable_to_non_nullable
+                      as int?,
             recognizedText: freezed == recognizedText
                 ? _value.recognizedText
                 : recognizedText // ignore: cast_nullable_to_non_nullable
@@ -103,6 +132,8 @@ abstract class _$$GradeImplCopyWith<$Res> implements $GradeCopyWith<$Res> {
   $Res call({
     int overall,
     String method,
+    int? accuracy,
+    int? completeness,
     String? recognizedText,
     Map<String, dynamic>? details,
   });
@@ -124,6 +155,8 @@ class __$$GradeImplCopyWithImpl<$Res>
   $Res call({
     Object? overall = null,
     Object? method = null,
+    Object? accuracy = freezed,
+    Object? completeness = freezed,
     Object? recognizedText = freezed,
     Object? details = freezed,
   }) {
@@ -137,6 +170,14 @@ class __$$GradeImplCopyWithImpl<$Res>
             ? _value.method
             : method // ignore: cast_nullable_to_non_nullable
                   as String,
+        accuracy: freezed == accuracy
+            ? _value.accuracy
+            : accuracy // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        completeness: freezed == completeness
+            ? _value.completeness
+            : completeness // ignore: cast_nullable_to_non_nullable
+                  as int?,
         recognizedText: freezed == recognizedText
             ? _value.recognizedText
             : recognizedText // ignore: cast_nullable_to_non_nullable
@@ -156,6 +197,8 @@ class _$GradeImpl implements _Grade {
   const _$GradeImpl({
     required this.overall,
     required this.method,
+    this.accuracy,
+    this.completeness,
     this.recognizedText,
     final Map<String, dynamic>? details,
   }) : _details = details;
@@ -163,13 +206,34 @@ class _$GradeImpl implements _Grade {
   factory _$GradeImpl.fromJson(Map<String, dynamic> json) =>
       _$$GradeImplFromJson(json);
 
+  /// Overall pronunciation score (0-100).
   @override
   final int overall;
+
+  /// Scoring method identifier (e.g., 'asr_cer_v1').
   @override
   final String method;
+
+  /// Accuracy score derived from CER (0-100).
+  /// Represents how precisely the pronunciation matched expected phonemes.
+  /// Higher is better. Null if not calculated.
+  @override
+  final int? accuracy;
+
+  /// Completeness score (0-100).
+  /// Represents what percentage of the reference text was spoken.
+  /// Higher is better. Null if not calculated.
+  @override
+  final int? completeness;
+
+  /// The text recognized by the speech recognizer.
   @override
   final String? recognizedText;
+
+  /// Additional details about the scoring (CER, edit distance, etc.).
   final Map<String, dynamic>? _details;
+
+  /// Additional details about the scoring (CER, edit distance, etc.).
   @override
   Map<String, dynamic>? get details {
     final value = _details;
@@ -181,7 +245,7 @@ class _$GradeImpl implements _Grade {
 
   @override
   String toString() {
-    return 'Grade(overall: $overall, method: $method, recognizedText: $recognizedText, details: $details)';
+    return 'Grade(overall: $overall, method: $method, accuracy: $accuracy, completeness: $completeness, recognizedText: $recognizedText, details: $details)';
   }
 
   @override
@@ -191,6 +255,10 @@ class _$GradeImpl implements _Grade {
             other is _$GradeImpl &&
             (identical(other.overall, overall) || other.overall == overall) &&
             (identical(other.method, method) || other.method == method) &&
+            (identical(other.accuracy, accuracy) ||
+                other.accuracy == accuracy) &&
+            (identical(other.completeness, completeness) ||
+                other.completeness == completeness) &&
             (identical(other.recognizedText, recognizedText) ||
                 other.recognizedText == recognizedText) &&
             const DeepCollectionEquality().equals(other._details, _details));
@@ -202,6 +270,8 @@ class _$GradeImpl implements _Grade {
     runtimeType,
     overall,
     method,
+    accuracy,
+    completeness,
     recognizedText,
     const DeepCollectionEquality().hash(_details),
   );
@@ -224,18 +294,39 @@ abstract class _Grade implements Grade {
   const factory _Grade({
     required final int overall,
     required final String method,
+    final int? accuracy,
+    final int? completeness,
     final String? recognizedText,
     final Map<String, dynamic>? details,
   }) = _$GradeImpl;
 
   factory _Grade.fromJson(Map<String, dynamic> json) = _$GradeImpl.fromJson;
 
+  /// Overall pronunciation score (0-100).
   @override
   int get overall;
+
+  /// Scoring method identifier (e.g., 'asr_cer_v1').
   @override
   String get method;
+
+  /// Accuracy score derived from CER (0-100).
+  /// Represents how precisely the pronunciation matched expected phonemes.
+  /// Higher is better. Null if not calculated.
+  @override
+  int? get accuracy;
+
+  /// Completeness score (0-100).
+  /// Represents what percentage of the reference text was spoken.
+  /// Higher is better. Null if not calculated.
+  @override
+  int? get completeness;
+
+  /// The text recognized by the speech recognizer.
   @override
   String? get recognizedText;
+
+  /// Additional details about the scoring (CER, edit distance, etc.).
   @override
   Map<String, dynamic>? get details;
 

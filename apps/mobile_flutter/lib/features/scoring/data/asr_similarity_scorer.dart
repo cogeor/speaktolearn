@@ -37,6 +37,8 @@ class AsrSimilarityScorer implements PronunciationScorer {
         return Grade(
           overall: cerResult.score,
           method: _method,
+          accuracy: cerResult.accuracy,
+          completeness: cerResult.completeness,
           recognizedText: recognizedText,
           details: {
             'cer': cerResult.cer,
@@ -51,6 +53,8 @@ class AsrSimilarityScorer implements PronunciationScorer {
         return Grade(
           overall: 0,
           method: _method,
+          accuracy: 0,
+          completeness: 0,
           details: {
             'error': error.name,
           },
