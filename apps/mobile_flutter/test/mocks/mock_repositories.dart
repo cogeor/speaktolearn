@@ -117,6 +117,15 @@ class MockProgressRepository implements ProgressRepository {
     }
     return attempts;
   }
+
+  @override
+  Future<List<ScoreAttempt>> getAllAttempts() async {
+    final result = <ScoreAttempt>[];
+    for (final attempts in _attempts.values) {
+      result.addAll(attempts);
+    }
+    return result;
+  }
 }
 
 /// Mock implementation of [RecordingRepository] for testing.

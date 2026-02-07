@@ -18,18 +18,15 @@ class StatsController extends AsyncNotifier<PracticeStats> {
     // Get all tracked sequences
     final trackedProgress = await progressRepo.getTrackedProgress();
 
+    // Get all attempts for accurate average calculation
+    final allAttempts = await progressRepo.getAllAttempts();
+
     // Compute totals
     int totalAttempts = 0;
-    int totalScore = 0;
-    int scoredAttempts = 0;
     final dailyAttempts = <DateTime, int>{};
 
     for (final progress in trackedProgress) {
       totalAttempts += progress.attemptCount;
-      if (progress.bestScore != null) {
-        totalScore += progress.bestScore!;
-        scoredAttempts++;
-      }
 
       // Track daily attempts for heatmap
       if (progress.lastAttemptAt != null) {
@@ -42,9 +39,14 @@ class StatsController extends AsyncNotifier<PracticeStats> {
       }
     }
 
-    final averageScore = scoredAttempts > 0
-        ? totalScore / scoredAttempts
-        : null;
+    // Calculate average from all actual attempts (not just best scores)
+    final double? averageScore;
+    if (allAttempts.isNotEmpty) {
+      final totalScore = allAttempts.fold<int>(0, (sum, a) => sum + a.score);
+      averageScore = totalScore / allAttempts.length;
+    } else {
+      averageScore = null;
+    }
 
     // Calculate streak (simplified - counts consecutive days with attempts)
     final streak = _calculateStreak(dailyAttempts.keys.toList());

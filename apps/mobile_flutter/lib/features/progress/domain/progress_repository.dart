@@ -32,4 +32,7 @@ abstract class ProgressRepository {
 
   /// Returns attempts for a text sequence, optionally limited.
   Future<List<ScoreAttempt>> getAttempts(String textSequenceId, {int? limit});
+
+  /// Returns all attempts across all sequences.
+  Future<List<ScoreAttempt>> getAllAttempts();
 }

@@ -139,4 +139,21 @@ class ProgressRepositoryImpl implements ProgressRepository {
     }
     return list;
   }
+
+  @override
+  Future<List<ScoreAttempt>> getAllAttempts() async {
+    final result = <ScoreAttempt>[];
+    for (final key in _attemptsBox.keys) {
+      final data = _attemptsBox.get(key);
+      if (data != null) {
+        final attempts = (data as List)
+            .map((item) => ScoreAttempt.fromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ))
+            .toList();
+        result.addAll(attempts);
+      }
+    }
+    return result;
+  }
 }
