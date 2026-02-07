@@ -86,6 +86,8 @@ class SequenceListController
   }
 
   /// Toggles an HSK level in the filter.
+  ///
+  /// The list auto-rebuilds because build() watches hskFilterProvider.
   void toggleHskFilter(int level) {
     final current = ref.read(hskFilterProvider);
     if (current.contains(level)) {
@@ -93,12 +95,12 @@ class SequenceListController
     } else {
       ref.read(hskFilterProvider.notifier).state = current.union({level});
     }
-    ref.invalidateSelf();
   }
 
   /// Clears all HSK filters (show all).
+  ///
+  /// The list auto-rebuilds because build() watches hskFilterProvider.
   void clearHskFilter() {
     ref.read(hskFilterProvider.notifier).state = {};
-    ref.invalidateSelf();
   }
 }
