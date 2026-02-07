@@ -80,7 +80,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   const _HomeContent({
     required this.state,
     required this.controller,
@@ -88,6 +88,13 @@ class _HomeContent extends StatelessWidget {
 
   final HomeState state;
   final HomeController controller;
+
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  bool _showPinyin = true;
 
   void _showPracticeSheet(
     BuildContext context,
@@ -107,22 +114,50 @@ class _HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final sequence = widget.state.current!;
+    final hasPinyin = sequence.romanization != null &&
+                      sequence.romanization!.isNotEmpty;
+
     return Column(
       children: [
         Expanded(
           child: Center(
-            child: GestureDetector(
-              onTap: () {
-                _showPracticeSheet(
-                  context,
-                  state.current!,
-                  state.currentProgress,
-                );
-              },
-              child: Text(
-                state.current!.text,
-                style: Theme.of(context).textTheme.displayLarge,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    _showPracticeSheet(
+                      context,
+                      sequence,
+                      widget.state.currentProgress,
+                    );
+                  },
+                  child: Text(
+                    sequence.text,
+                    style: Theme.of(context).textTheme.displayLarge,
+                  ),
+                ),
+                if (hasPinyin) ...[
+                  const SizedBox(height: 12),
+                  GestureDetector(
+                    onTap: () => setState(() => _showPinyin = !_showPinyin),
+                    child: Text(
+                      _showPinyin
+                          ? sequence.romanization!
+                          : '(tap to show pinyin)',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _showPinyin
+                            ? Theme.of(context).colorScheme.secondary
+                            : AppTheme.subtle,
+                        fontStyle: _showPinyin
+                            ? FontStyle.normal
+                            : FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),
@@ -130,16 +165,16 @@ class _HomeContent extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              if (state.currentProgress?.bestScore != null)
+              if (widget.state.currentProgress?.bestScore != null)
                 Text(
-                  'Best: ${state.currentProgress!.bestScore}',
+                  'Best: ${widget.state.currentProgress!.bestScore}',
                   style: TextStyle(
-                    color: state.currentProgress!.bestScore!.scoreColor,
+                    color: widget.state.currentProgress!.bestScore!.scoreColor,
                   ),
                 ),
               const Spacer(),
               ElevatedButton(
-                onPressed: controller.next,
+                onPressed: widget.controller.next,
                 child: const Text('Next'),
               ),
             ],
