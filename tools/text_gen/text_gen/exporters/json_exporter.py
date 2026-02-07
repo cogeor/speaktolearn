@@ -21,10 +21,14 @@ class JsonExporter:
         # Ensure directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Custom serializer for datetime (ISO 8601 with Z suffix)
+        # Custom serializer for datetime (ISO 8601 format)
         def default_serializer(obj):
             if isinstance(obj, datetime):
-                return obj.isoformat() + "Z"
+                # Use Z suffix for UTC, otherwise use offset
+                iso = obj.isoformat()
+                if iso.endswith('+00:00'):
+                    return iso.replace('+00:00', 'Z')
+                return iso
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
         # Write JSON

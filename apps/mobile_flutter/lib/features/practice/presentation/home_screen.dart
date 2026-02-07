@@ -118,7 +118,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     if (voices == null || voices.isEmpty) return;
 
     final controller = ref.read(exampleAudioControllerProvider.notifier);
-    controller.play(sequence.id, voices.first.id);
+    controller.play(sequence, voices.first.id);
   }
 
   @override

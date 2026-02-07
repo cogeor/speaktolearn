@@ -67,7 +67,12 @@ def audio(
     with console.status("Generating audio..."):
         generator.generate_all(dataset, output, voices=voice_list)
 
+    # Save updated dataset with audio references
+    exporter = JsonExporter()
+    exporter.export(dataset, input_file)
+
     console.print(f"[green]Generated audio to {output}[/green]")
+    console.print(f"[green]Updated {input_file} with audio references[/green]")
 
 
 @app.command()

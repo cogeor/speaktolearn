@@ -113,7 +113,7 @@ class _ExampleAudioButtons extends ConsumerWidget {
           child: OutlinedButton(
             onPressed: state.isPlaying
                 ? null
-                : () => controller.play(sequence.id, voice.id),
+                : () => controller.play(sequence, voice.id),
             child: Text(voice.id),
           ),
         );

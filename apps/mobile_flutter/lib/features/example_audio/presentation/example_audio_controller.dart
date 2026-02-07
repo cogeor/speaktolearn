@@ -55,22 +55,14 @@ class ExampleAudioController extends StateNotifier<ExampleAudioState> {
   ///
   /// Resolves the audio source from the repository and starts playback.
   /// Updates state with the current sequence and voice IDs.
-  Future<void> play(String sequenceId, String voiceId) async {
-    // Create a temporary TextSequence to resolve the voice
-    // In practice, the sequence should be passed or looked up
-    final sequence = TextSequence(
-      id: sequenceId,
-      text: '',
-      language: '',
-    );
-
+  Future<void> play(TextSequence sequence, String voiceId) async {
     final audioSource = await _repository.resolveVoice(sequence, voiceId);
     if (audioSource == null) {
       return;
     }
 
     state = state.copyWith(
-      currentSequenceId: sequenceId,
+      currentSequenceId: sequence.id,
       currentVoiceId: voiceId,
     );
 
