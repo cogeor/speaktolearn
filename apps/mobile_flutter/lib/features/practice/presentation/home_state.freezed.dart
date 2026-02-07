@@ -22,8 +22,6 @@ mixin _$HomeState {
       throw _privateConstructorUsedError;
   bool get isLoading => throw _privateConstructorUsedError;
   bool get isEmptyTracked => throw _privateConstructorUsedError;
-  RecordingStatus get recordingStatus => throw _privateConstructorUsedError;
-  int? get latestScore => throw _privateConstructorUsedError;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
@@ -42,8 +40,6 @@ abstract class $HomeStateCopyWith<$Res> {
     TextSequenceProgress? currentProgress,
     bool isLoading,
     bool isEmptyTracked,
-    RecordingStatus recordingStatus,
-    int? latestScore,
   });
 
   $TextSequenceCopyWith<$Res>? get current;
@@ -69,8 +65,6 @@ class _$HomeStateCopyWithImpl<$Res, $Val extends HomeState>
     Object? currentProgress = freezed,
     Object? isLoading = null,
     Object? isEmptyTracked = null,
-    Object? recordingStatus = null,
-    Object? latestScore = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -90,14 +84,6 @@ class _$HomeStateCopyWithImpl<$Res, $Val extends HomeState>
                 ? _value.isEmptyTracked
                 : isEmptyTracked // ignore: cast_nullable_to_non_nullable
                       as bool,
-            recordingStatus: null == recordingStatus
-                ? _value.recordingStatus
-                : recordingStatus // ignore: cast_nullable_to_non_nullable
-                      as RecordingStatus,
-            latestScore: freezed == latestScore
-                ? _value.latestScore
-                : latestScore // ignore: cast_nullable_to_non_nullable
-                      as int?,
           )
           as $Val,
     );
@@ -148,8 +134,6 @@ abstract class _$$HomeStateImplCopyWith<$Res>
     TextSequenceProgress? currentProgress,
     bool isLoading,
     bool isEmptyTracked,
-    RecordingStatus recordingStatus,
-    int? latestScore,
   });
 
   @override
@@ -176,8 +160,6 @@ class __$$HomeStateImplCopyWithImpl<$Res>
     Object? currentProgress = freezed,
     Object? isLoading = null,
     Object? isEmptyTracked = null,
-    Object? recordingStatus = null,
-    Object? latestScore = freezed,
   }) {
     return _then(
       _$HomeStateImpl(
@@ -197,14 +179,6 @@ class __$$HomeStateImplCopyWithImpl<$Res>
             ? _value.isEmptyTracked
             : isEmptyTracked // ignore: cast_nullable_to_non_nullable
                   as bool,
-        recordingStatus: null == recordingStatus
-            ? _value.recordingStatus
-            : recordingStatus // ignore: cast_nullable_to_non_nullable
-                  as RecordingStatus,
-        latestScore: freezed == latestScore
-            ? _value.latestScore
-            : latestScore // ignore: cast_nullable_to_non_nullable
-                  as int?,
       ),
     );
   }
@@ -218,8 +192,6 @@ class _$HomeStateImpl implements _HomeState {
     this.currentProgress,
     this.isLoading = true,
     this.isEmptyTracked = false,
-    this.recordingStatus = RecordingStatus.idle,
-    this.latestScore,
   });
 
   @override
@@ -232,15 +204,10 @@ class _$HomeStateImpl implements _HomeState {
   @override
   @JsonKey()
   final bool isEmptyTracked;
-  @override
-  @JsonKey()
-  final RecordingStatus recordingStatus;
-  @override
-  final int? latestScore;
 
   @override
   String toString() {
-    return 'HomeState(current: $current, currentProgress: $currentProgress, isLoading: $isLoading, isEmptyTracked: $isEmptyTracked, recordingStatus: $recordingStatus, latestScore: $latestScore)';
+    return 'HomeState(current: $current, currentProgress: $currentProgress, isLoading: $isLoading, isEmptyTracked: $isEmptyTracked)';
   }
 
   @override
@@ -254,11 +221,7 @@ class _$HomeStateImpl implements _HomeState {
             (identical(other.isLoading, isLoading) ||
                 other.isLoading == isLoading) &&
             (identical(other.isEmptyTracked, isEmptyTracked) ||
-                other.isEmptyTracked == isEmptyTracked) &&
-            (identical(other.recordingStatus, recordingStatus) ||
-                other.recordingStatus == recordingStatus) &&
-            (identical(other.latestScore, latestScore) ||
-                other.latestScore == latestScore));
+                other.isEmptyTracked == isEmptyTracked));
   }
 
   @override
@@ -268,8 +231,6 @@ class _$HomeStateImpl implements _HomeState {
     currentProgress,
     isLoading,
     isEmptyTracked,
-    recordingStatus,
-    latestScore,
   );
 
   /// Create a copy of HomeState
@@ -287,8 +248,6 @@ abstract class _HomeState implements HomeState {
     final TextSequenceProgress? currentProgress,
     final bool isLoading,
     final bool isEmptyTracked,
-    final RecordingStatus recordingStatus,
-    final int? latestScore,
   }) = _$HomeStateImpl;
 
   @override
@@ -299,10 +258,6 @@ abstract class _HomeState implements HomeState {
   bool get isLoading;
   @override
   bool get isEmptyTracked;
-  @override
-  RecordingStatus get recordingStatus;
-  @override
-  int? get latestScore;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
-import '../../recording/presentation/recording_state.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
@@ -32,51 +31,34 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeControllerProvider);
     final controller = ref.read(homeControllerProvider.notifier);
-    // Watch recording state to trigger rebuilds when it changes
-    ref.watch(recordingControllerProvider);
+    // Watch recording state - single source of truth for recording status
+    final recordingState = ref.watch(recordingControllerProvider);
     final recordingController = ref.read(recordingControllerProvider.notifier);
 
-    // Sync recording controller state to home state
-    ref.listen<RecordingState>(recordingControllerProvider, (previous, next) {
-      if (next.isRecording && state.recordingStatus != RecordingStatus.recording) {
-        controller.setRecordingStatus(RecordingStatus.recording);
-      } else if (next.isScoring && state.recordingStatus != RecordingStatus.processing) {
-        controller.setRecordingStatus(RecordingStatus.processing);
-      } else if (!next.isRecording && !next.isScoring && state.recordingStatus != RecordingStatus.idle) {
-        controller.setRecordingStatus(RecordingStatus.idle);
-      }
-    });
+    // Derive recording status from RecordingState
+    final recordingStatus = recordingState.recordingStatus;
 
     // Handle FAB press based on current recording status
     void handleFabPress() async {
       if (state.current == null) return;
 
-      switch (state.recordingStatus) {
+      switch (recordingStatus) {
         case RecordingStatus.idle:
           // Start recording
-          controller.setRecordingStatus(RecordingStatus.recording);
           await recordingController.startRecording(state.current!);
           // Check if recording actually started (no error)
           final newRecordingState = ref.read(recordingControllerProvider);
-          if (newRecordingState.error != null) {
-            controller.setRecordingStatus(RecordingStatus.idle);
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(newRecordingState.error!)),
-              );
-            }
+          if (newRecordingState.error != null && context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(newRecordingState.error!)),
+            );
           }
           break;
 
         case RecordingStatus.recording:
           // Stop and score
-          controller.setRecordingStatus(RecordingStatus.processing);
-          final grade = await recordingController.stopAndScore(state.current!);
-          if (grade != null) {
-            controller.setLatestScore(grade.overall);
-          }
+          await recordingController.stopAndScore(state.current!);
           await controller.refreshProgress();
-          // refreshProgress resets status to idle
           break;
 
         case RecordingStatus.processing:
@@ -118,7 +100,7 @@ class HomeScreen extends ConsumerWidget {
               : _HomeContent(state: state, controller: controller),
       floatingActionButton: state.current != null && !state.isLoading && !state.isEmptyTracked
           ? RecordFAB(
-              status: state.recordingStatus,
+              status: recordingStatus,
               onPressed: handleFabPress,
             )
           : null,

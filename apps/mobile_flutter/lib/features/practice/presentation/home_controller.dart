@@ -60,8 +60,6 @@ class HomeController extends StateNotifier<HomeState> {
       current: sequence,
       currentProgress: progress,
       isEmptyTracked: false,
-      recordingStatus: RecordingStatus.idle,
-      latestScore: null,
     );
   }
 
@@ -81,8 +79,6 @@ class HomeController extends StateNotifier<HomeState> {
       current: sequence,
       currentProgress: progress,
       isEmptyTracked: false,
-      recordingStatus: RecordingStatus.idle,
-      latestScore: null,
     );
   }
 
@@ -106,19 +102,6 @@ class HomeController extends StateNotifier<HomeState> {
 
     final progress = await _progressRepository.getProgress(state.current!.id);
 
-    state = state.copyWith(
-      currentProgress: progress,
-      recordingStatus: RecordingStatus.idle,
-    );
-  }
-
-  /// Updates the recording status for FAB display.
-  void setRecordingStatus(RecordingStatus status) {
-    state = state.copyWith(recordingStatus: status);
-  }
-
-  /// Sets the latest score after a recording attempt.
-  void setLatestScore(int? score) {
-    state = state.copyWith(latestScore: score);
+    state = state.copyWith(currentProgress: progress);
   }
 }
