@@ -28,6 +28,7 @@ dependencies:
   just_audio: ^0.9.42
   record: ^6.0.0
   speech_to_text: ^7.0.0
+  audio_waveforms: ^1.2.0
 
   # Utilities
   characters: ^1.4.0

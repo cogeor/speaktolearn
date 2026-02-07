@@ -1,3 +1,4 @@
+import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -37,12 +38,22 @@ class RecordingController extends StateNotifier<RecordingState> {
   final ProgressRepository _progressRepository;
   final AudioPlayer _audioPlayer;
 
+  /// Controller for waveform visualization during recording.
+  late final RecorderController waveformController = RecorderController()
+    ..androidEncoder = AndroidEncoder.aac
+    ..androidOutputFormat = AndroidOutputFormat.mpeg4
+    ..iosEncoder = IosEncoder.kAudioFormatMPEG4AAC
+    ..sampleRate = 44100;
+
   /// Starts recording audio for the given text sequence.
   ///
   /// Sets [RecordingState.isRecording] to true on success.
   /// On failure, sets [RecordingState.error] with the error message.
   Future<void> startRecording(String textSequenceId) async {
     state = state.copyWith(isRecording: true, error: null);
+
+    // Start waveform visualization
+    await waveformController.record();
 
     final result = await _recorder.start();
 
@@ -61,6 +72,9 @@ class RecordingController extends StateNotifier<RecordingState> {
 
   /// Stops the current recording.
   Future<void> stopRecording() async {
+    // Stop waveform visualization
+    await waveformController.stop();
+
     final result = await _recorder.stop();
 
     result.when(
@@ -83,6 +97,9 @@ class RecordingController extends StateNotifier<RecordingState> {
   /// On failure, sets [RecordingState.error] and returns null.
   Future<Grade?> stopAndScore(TextSequence textSequence) async {
     state = state.copyWith(isScoring: true, error: null);
+
+    // Stop waveform visualization
+    await waveformController.stop();
 
     final stopResult = await _recorder.stop();
 
@@ -182,13 +199,21 @@ class RecordingController extends StateNotifier<RecordingState> {
   /// Stops the audio player if playback is in progress.
   /// Resets state to initial values.
   Future<void> cancel() async {
+    // Stop waveform if recording
     if (state.isRecording) {
+      await waveformController.stop();
       await _recorder.stop();
     }
     if (state.isPlaying) {
       await _audioPlayer.stop();
     }
     state = const RecordingState();
+  }
+
+  @override
+  void dispose() {
+    waveformController.dispose();
+    super.dispose();
   }
 
   String _errorToMessage(RecordingError error) {
