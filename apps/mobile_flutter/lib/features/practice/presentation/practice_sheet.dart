@@ -8,6 +8,7 @@ import '../../progress/domain/text_sequence_progress.dart';
 import '../../example_audio/presentation/example_audio_controller.dart';
 import '../../recording/presentation/recording_controller.dart';
 import '../../recording/presentation/recording_state.dart';
+import 'widgets/score_bar.dart';
 
 /// Provider for example audio controller.
 final exampleAudioControllerProvider =
@@ -340,7 +341,7 @@ class _RecognizedTextComparison extends StatelessWidget {
   }
 }
 
-/// Helper widget to display a score label.
+/// Helper widget to display a score label with visual bar.
 class _ScoreLabel extends StatelessWidget {
   const _ScoreLabel({
     required this.label,
@@ -352,22 +353,31 @@ class _ScoreLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        Text(
-          score?.toString() ?? '-',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: score?.scoreColor ?? AppTheme.subtle,
+    return SizedBox(
+      width: 80,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            score?.toString() ?? '-',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: score?.scoreColor ?? AppTheme.subtle,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ScoreBar(
+            score: score,
+            height: 6,
+          ),
+        ],
+      ),
     );
   }
 }
