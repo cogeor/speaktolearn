@@ -18,6 +18,8 @@ import '../features/scoring/data/speech_recognizer.dart';
 import '../features/scoring/data/speech_to_text_recognizer.dart';
 import '../features/scoring/domain/pronunciation_scorer.dart';
 import '../features/selection/domain/get_next_tracked.dart';
+import '../features/recording/presentation/recording_controller.dart';
+import '../features/recording/presentation/recording_state.dart';
 import '../features/selection/domain/sequence_ranker.dart';
 import '../features/settings/data/settings_repository_impl.dart';
 import '../features/settings/domain/settings_repository.dart';
@@ -103,6 +105,18 @@ final getNextTrackedSequenceProvider = Provider<GetNextTrackedSequence>((ref) {
     textSequenceRepository: ref.watch(textSequenceRepositoryProvider),
     progressRepository: ref.watch(progressRepositoryProvider),
     ranker: ref.watch(sequenceRankerProvider),
+  );
+});
+
+/// Provider for recording controller.
+final recordingControllerProvider =
+    StateNotifierProvider<RecordingController, RecordingState>((ref) {
+  return RecordingController(
+    recorder: ref.watch(audioRecorderProvider),
+    repository: ref.watch(recordingRepositoryProvider),
+    scorer: ref.watch(pronunciationScorerProvider),
+    progressRepository: ref.watch(progressRepositoryProvider),
+    audioPlayer: ref.watch(audioPlayerProvider),
   );
 });
 

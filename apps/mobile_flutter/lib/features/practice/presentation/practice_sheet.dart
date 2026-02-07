@@ -6,8 +6,7 @@ import '../../../app/theme.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
 import '../../example_audio/presentation/example_audio_controller.dart';
-import '../../recording/presentation/recording_controller.dart';
-import '../../recording/presentation/recording_state.dart';
+import '../../recording/presentation/widgets/recording_waveform.dart';
 import 'widgets/score_bar.dart';
 
 /// Provider for example audio controller.
@@ -16,18 +15,6 @@ final exampleAudioControllerProvider =
   return ExampleAudioController(
     player: ref.watch(audioPlayerProvider),
     repository: ref.watch(exampleAudioRepositoryProvider),
-  );
-});
-
-/// Provider for recording controller.
-final recordingControllerProvider =
-    StateNotifierProvider<RecordingController, RecordingState>((ref) {
-  return RecordingController(
-    recorder: ref.watch(audioRecorderProvider),
-    repository: ref.watch(recordingRepositoryProvider),
-    scorer: ref.watch(pronunciationScorerProvider),
-    progressRepository: ref.watch(progressRepositoryProvider),
-    audioPlayer: ref.watch(audioPlayerProvider),
   );
 });
 
@@ -75,6 +62,8 @@ class _PracticeSheetState extends ConsumerState<PracticeSheet> {
             _ExampleAudioButtons(sequence: widget.sequence),
             const SizedBox(height: 16),
             _RecordButton(sequence: widget.sequence),
+            const SizedBox(height: 16),
+            const _RecordingWaveformDisplay(),
             const SizedBox(height: 16),
             _ReplayButton(sequence: widget.sequence),
             const SizedBox(height: 16),
@@ -377,6 +366,28 @@ class _ScoreLabel extends StatelessWidget {
             height: 6,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Displays waveform visualization during recording.
+class _RecordingWaveformDisplay extends ConsumerWidget {
+  const _RecordingWaveformDisplay();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(recordingControllerProvider);
+    final controller = ref.read(recordingControllerProvider.notifier);
+
+    if (!state.isRecording) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: RecordingWaveform(
+        controller: controller.waveformController,
       ),
     );
   }

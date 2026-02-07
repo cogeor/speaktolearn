@@ -60,6 +60,8 @@ class HomeController extends StateNotifier<HomeState> {
       current: sequence,
       currentProgress: progress,
       isEmptyTracked: false,
+      recordingStatus: RecordingStatus.idle,
+      latestScore: null,
     );
   }
 
@@ -79,6 +81,8 @@ class HomeController extends StateNotifier<HomeState> {
       current: sequence,
       currentProgress: progress,
       isEmptyTracked: false,
+      recordingStatus: RecordingStatus.idle,
+      latestScore: null,
     );
   }
 

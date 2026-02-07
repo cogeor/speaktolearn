@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
+import '../../recording/presentation/recording_state.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
@@ -31,6 +32,58 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeControllerProvider);
     final controller = ref.read(homeControllerProvider.notifier);
+    // Watch recording state to trigger rebuilds when it changes
+    ref.watch(recordingControllerProvider);
+    final recordingController = ref.read(recordingControllerProvider.notifier);
+
+    // Sync recording controller state to home state
+    ref.listen<RecordingState>(recordingControllerProvider, (previous, next) {
+      if (next.isRecording && state.recordingStatus != RecordingStatus.recording) {
+        controller.setRecordingStatus(RecordingStatus.recording);
+      } else if (next.isScoring && state.recordingStatus != RecordingStatus.processing) {
+        controller.setRecordingStatus(RecordingStatus.processing);
+      } else if (!next.isRecording && !next.isScoring && state.recordingStatus != RecordingStatus.idle) {
+        controller.setRecordingStatus(RecordingStatus.idle);
+      }
+    });
+
+    // Handle FAB press based on current recording status
+    void handleFabPress() async {
+      if (state.current == null) return;
+
+      switch (state.recordingStatus) {
+        case RecordingStatus.idle:
+          // Start recording
+          controller.setRecordingStatus(RecordingStatus.recording);
+          await recordingController.startRecording(state.current!.id);
+          // Check if recording actually started (no error)
+          final newRecordingState = ref.read(recordingControllerProvider);
+          if (newRecordingState.error != null) {
+            controller.setRecordingStatus(RecordingStatus.idle);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(newRecordingState.error!)),
+              );
+            }
+          }
+          break;
+
+        case RecordingStatus.recording:
+          // Stop and score
+          controller.setRecordingStatus(RecordingStatus.processing);
+          final grade = await recordingController.stopAndScore(state.current!);
+          if (grade != null) {
+            controller.setLatestScore(grade.overall);
+          }
+          await controller.refreshProgress();
+          // refreshProgress resets status to idle
+          break;
+
+        case RecordingStatus.processing:
+          // Do nothing - button is disabled during processing
+          break;
+      }
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -66,9 +119,7 @@ class HomeScreen extends ConsumerWidget {
       floatingActionButton: state.current != null && !state.isLoading && !state.isEmptyTracked
           ? RecordFAB(
               status: state.recordingStatus,
-              onPressed: () {
-                // Will be wired in loop 02c
-              },
+              onPressed: handleFabPress,
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
@@ -256,11 +307,26 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                 ),
                 const SizedBox(height: 12),
               ],
-              Align(
-                alignment: Alignment.centerRight,
-                child: ElevatedButton(
-                  onPressed: widget.controller.next,
-                  child: const Text('Next'),
+              Center(
+                child: SizedBox(
+                  width: 180,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: widget.controller.next,
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(26),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text('Next', style: TextStyle(fontSize: 18)),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward, size: 22),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ],
