@@ -28,6 +28,7 @@ mixin _$AppSettings {
   double get playbackSpeed => throw _privateConstructorUsedError;
   bool get autoPlayExample => throw _privateConstructorUsedError;
   String? get preferredVoiceId => throw _privateConstructorUsedError;
+  VoicePreference get voicePreference => throw _privateConstructorUsedError;
 
   /// Serializes this AppSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -54,6 +55,7 @@ abstract class $AppSettingsCopyWith<$Res> {
     double playbackSpeed,
     bool autoPlayExample,
     String? preferredVoiceId,
+    VoicePreference voicePreference,
   });
 }
 
@@ -79,6 +81,7 @@ class _$AppSettingsCopyWithImpl<$Res, $Val extends AppSettings>
     Object? playbackSpeed = null,
     Object? autoPlayExample = null,
     Object? preferredVoiceId = freezed,
+    Object? voicePreference = null,
   }) {
     return _then(
       _value.copyWith(
@@ -110,6 +113,10 @@ class _$AppSettingsCopyWithImpl<$Res, $Val extends AppSettings>
                 ? _value.preferredVoiceId
                 : preferredVoiceId // ignore: cast_nullable_to_non_nullable
                       as String?,
+            voicePreference: null == voicePreference
+                ? _value.voicePreference
+                : voicePreference // ignore: cast_nullable_to_non_nullable
+                      as VoicePreference,
           )
           as $Val,
     );
@@ -133,6 +140,7 @@ abstract class _$$AppSettingsImplCopyWith<$Res>
     double playbackSpeed,
     bool autoPlayExample,
     String? preferredVoiceId,
+    VoicePreference voicePreference,
   });
 }
 
@@ -157,6 +165,7 @@ class __$$AppSettingsImplCopyWithImpl<$Res>
     Object? playbackSpeed = null,
     Object? autoPlayExample = null,
     Object? preferredVoiceId = freezed,
+    Object? voicePreference = null,
   }) {
     return _then(
       _$AppSettingsImpl(
@@ -188,6 +197,10 @@ class __$$AppSettingsImplCopyWithImpl<$Res>
             ? _value.preferredVoiceId
             : preferredVoiceId // ignore: cast_nullable_to_non_nullable
                   as String?,
+        voicePreference: null == voicePreference
+            ? _value.voicePreference
+            : voicePreference // ignore: cast_nullable_to_non_nullable
+                  as VoicePreference,
       ),
     );
   }
@@ -204,6 +217,7 @@ class _$AppSettingsImpl implements _AppSettings {
     this.playbackSpeed = 1.0,
     this.autoPlayExample = false,
     this.preferredVoiceId,
+    this.voicePreference = VoicePreference.systemDefault,
   });
 
   factory _$AppSettingsImpl.fromJson(Map<String, dynamic> json) =>
@@ -229,10 +243,13 @@ class _$AppSettingsImpl implements _AppSettings {
   final bool autoPlayExample;
   @override
   final String? preferredVoiceId;
+  @override
+  @JsonKey()
+  final VoicePreference voicePreference;
 
   @override
   String toString() {
-    return 'AppSettings(uiLanguageCode: $uiLanguageCode, targetLanguageCode: $targetLanguageCode, showRomanization: $showRomanization, showGloss: $showGloss, playbackSpeed: $playbackSpeed, autoPlayExample: $autoPlayExample, preferredVoiceId: $preferredVoiceId)';
+    return 'AppSettings(uiLanguageCode: $uiLanguageCode, targetLanguageCode: $targetLanguageCode, showRomanization: $showRomanization, showGloss: $showGloss, playbackSpeed: $playbackSpeed, autoPlayExample: $autoPlayExample, preferredVoiceId: $preferredVoiceId, voicePreference: $voicePreference)';
   }
 
   @override
@@ -253,7 +270,9 @@ class _$AppSettingsImpl implements _AppSettings {
             (identical(other.autoPlayExample, autoPlayExample) ||
                 other.autoPlayExample == autoPlayExample) &&
             (identical(other.preferredVoiceId, preferredVoiceId) ||
-                other.preferredVoiceId == preferredVoiceId));
+                other.preferredVoiceId == preferredVoiceId) &&
+            (identical(other.voicePreference, voicePreference) ||
+                other.voicePreference == voicePreference));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -267,6 +286,7 @@ class _$AppSettingsImpl implements _AppSettings {
     playbackSpeed,
     autoPlayExample,
     preferredVoiceId,
+    voicePreference,
   );
 
   /// Create a copy of AppSettings
@@ -292,6 +312,7 @@ abstract class _AppSettings implements AppSettings {
     final double playbackSpeed,
     final bool autoPlayExample,
     final String? preferredVoiceId,
+    final VoicePreference voicePreference,
   }) = _$AppSettingsImpl;
 
   factory _AppSettings.fromJson(Map<String, dynamic> json) =
@@ -311,6 +332,8 @@ abstract class _AppSettings implements AppSettings {
   bool get autoPlayExample;
   @override
   String? get preferredVoiceId;
+  @override
+  VoicePreference get voicePreference;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.

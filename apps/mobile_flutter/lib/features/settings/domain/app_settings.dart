@@ -3,6 +3,13 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'app_settings.freezed.dart';
 part 'app_settings.g.dart';
 
+/// Voice preference for TTS playback.
+enum VoicePreference {
+  systemDefault,
+  male,
+  female,
+}
+
 @freezed
 class AppSettings with _$AppSettings {
   const factory AppSettings({
@@ -13,6 +20,7 @@ class AppSettings with _$AppSettings {
     @Default(1.0) double playbackSpeed,
     @Default(false) bool autoPlayExample,
     String? preferredVoiceId,
+    @Default(VoicePreference.systemDefault) VoicePreference voicePreference,
   }) = _AppSettings;
 
   factory AppSettings.fromJson(Map<String, dynamic> json) =>
