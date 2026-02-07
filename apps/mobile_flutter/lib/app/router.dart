@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../features/practice/presentation/home_screen.dart';
+import '../features/text_sequences/presentation/sequence_list_screen.dart';
 
 /// Router provider for the application.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -10,28 +12,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/',
         name: 'home',
-        builder: (context, state) => const _PlaceholderScreen(title: 'Home'),
+        builder: (context, state) => const HomeScreen(),
       ),
       GoRoute(
         path: '/list',
         name: 'list',
-        builder: (context, state) => const _PlaceholderScreen(title: 'Sequence List'),
+        builder: (context, state) => const SequenceListScreen(),
       ),
     ],
   );
 });
-
-/// Temporary placeholder screen until real screens are implemented.
-class _PlaceholderScreen extends StatelessWidget {
-  const _PlaceholderScreen({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text(title)),
-    );
-  }
-}
