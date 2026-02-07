@@ -20,14 +20,6 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     return _repository.getSettings();
   }
 
-  /// Updates the preferred voice ID for audio playback.
-  Future<void> updatePreferredVoiceId(String? voiceId) async {
-    final current = state.value ?? const AppSettings();
-    final updated = current.copyWith(preferredVoiceId: voiceId);
-    await _repository.updateSettings(updated);
-    state = AsyncValue.data(updated);
-  }
-
   /// Updates the voice preference setting.
   Future<void> updateVoicePreference(VoicePreference preference) async {
     final current = state.value ?? const AppSettings();
