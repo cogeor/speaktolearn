@@ -35,6 +35,17 @@ class PracticeSheet extends ConsumerStatefulWidget {
 
 class _PracticeSheetState extends ConsumerState<PracticeSheet> {
   @override
+  void initState() {
+    super.initState();
+    // Check if a recording exists for this sequence on sheet open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(recordingControllerProvider.notifier)
+          .checkLatestRecording(widget.sequence.id);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
