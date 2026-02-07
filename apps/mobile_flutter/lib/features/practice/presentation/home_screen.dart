@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../text_sequences/domain/text_sequence.dart';
+import '../../progress/domain/text_sequence_progress.dart';
 import 'home_controller.dart';
 import 'home_state.dart';
+import 'practice_sheet.dart';
 
 /// Provider for the home screen controller.
 ///
@@ -83,6 +86,22 @@ class _HomeContent extends StatelessWidget {
   final HomeState state;
   final HomeController controller;
 
+  void _showPracticeSheet(
+    BuildContext context,
+    TextSequence sequence,
+    TextSequenceProgress? progress,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => PracticeSheet(
+        sequence: sequence,
+        progress: progress,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -91,8 +110,11 @@ class _HomeContent extends StatelessWidget {
           child: Center(
             child: GestureDetector(
               onTap: () {
-                // TODO: Open practice sheet
-                debugPrint('Opening practice sheet');
+                _showPracticeSheet(
+                  context,
+                  state.current!,
+                  state.currentProgress,
+                );
               },
               child: Text(
                 state.current!.text,
