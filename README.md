@@ -2,6 +2,22 @@
 
 A language learning app focused on pronunciation practice. Users listen to native speaker audio, record their own pronunciation, and receive feedback based on speech recognition accuracy.
 
+## Quick Start
+
+```bash
+# 1. Set up Python tool
+make setup
+
+# 2. Add your OpenAI API key
+echo "OPENAI__API_KEY=sk-your-key" > tools/text_gen/.env
+
+# 3. Generate content (text + audio) and export to Flutter
+make generate
+
+# 4. Run the app
+make run
+```
+
 ## Project Structure
 
 ```

@@ -1,0 +1,52 @@
+.PHONY: setup generate clean run test help
+
+# Default target
+help:
+	@echo "SpeakToLearn - Development Commands"
+	@echo ""
+	@echo "  make setup      - Set up Python virtual environment"
+	@echo "  make generate   - Generate text + audio and export to Flutter"
+	@echo "  make clean      - Remove generated files"
+	@echo "  make run        - Run Flutter app"
+	@echo "  make test       - Run all tests"
+	@echo ""
+
+# Configuration
+PYTHON := tools/text_gen/.venv/Scripts/python
+TEXT_GEN := $(PYTHON) -m text_gen.cli
+FLUTTER_ASSETS := apps/mobile_flutter/assets
+
+# Set up Python environment
+setup:
+	cd tools/text_gen && uv venv .venv && uv pip install -e ".[dev]"
+	@echo ""
+	@echo "Setup complete. Add your OpenAI API key to tools/text_gen/.env"
+
+# Generate content and export to Flutter
+generate:
+	@echo "==> Generating text sequences..."
+	cd tools/text_gen && $(TEXT_GEN) generate --language zh-CN --count 50 --tags hsk1,daily --difficulty 1
+	@echo ""
+	@echo "==> Generating TTS audio..."
+	cd tools/text_gen && $(TEXT_GEN) audio output/sentences.zh.json --voices female,male
+	@echo ""
+	@echo "==> Exporting to Flutter assets..."
+	cd tools/text_gen && $(TEXT_GEN) export --input output/ --flutter-assets ../../$(FLUTTER_ASSETS)/
+	@echo ""
+	@echo "Done! Assets exported to $(FLUTTER_ASSETS)/"
+
+# Clean generated files
+clean:
+	rm -rf tools/text_gen/output/sentences.*.json
+	rm -rf tools/text_gen/output/examples/
+	rm -rf $(FLUTTER_ASSETS)/datasets/
+	rm -rf $(FLUTTER_ASSETS)/examples/
+
+# Run Flutter app
+run:
+	cd apps/mobile_flutter && flutter run
+
+# Run tests
+test:
+	cd tools/text_gen && $(PYTHON) -m pytest -v
+	cd apps/mobile_flutter && flutter test
