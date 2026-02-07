@@ -55,7 +55,7 @@ class HomeScreen extends ConsumerWidget {
         case RecordingStatus.idle:
           // Start recording
           controller.setRecordingStatus(RecordingStatus.recording);
-          await recordingController.startRecording(state.current!.id);
+          await recordingController.startRecording(state.current!);
           // Check if recording actually started (no error)
           final newRecordingState = ref.read(recordingControllerProvider);
           if (newRecordingState.error != null) {

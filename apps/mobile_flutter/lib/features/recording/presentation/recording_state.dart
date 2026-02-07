@@ -14,5 +14,9 @@ class RecordingState with _$RecordingState {
     String? error,
     /// The latest grade from the most recent scoring attempt.
     Grade? latestGrade,
+    /// Remaining seconds in the auto-stop countdown. Null when not recording.
+    int? remainingSeconds,
+    /// Total duration in seconds for progress calculation. Null when not recording.
+    int? totalDurationSeconds,
   }) = _RecordingState;
 }

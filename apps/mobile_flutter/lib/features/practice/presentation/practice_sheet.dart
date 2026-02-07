@@ -143,7 +143,7 @@ class _RecordButton extends ConsumerWidget {
               if (state.isRecording) {
                 controller.stopAndScore(sequence);
               } else {
-                controller.startRecording(sequence.id);
+                controller.startRecording(sequence);
               }
             },
       child: child,

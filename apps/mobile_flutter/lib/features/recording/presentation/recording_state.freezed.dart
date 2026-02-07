@@ -26,6 +26,12 @@ mixin _$RecordingState {
   /// The latest grade from the most recent scoring attempt.
   Grade? get latestGrade => throw _privateConstructorUsedError;
 
+  /// Remaining seconds in the auto-stop countdown. Null when not recording.
+  int? get remainingSeconds => throw _privateConstructorUsedError;
+
+  /// Total duration in seconds for progress calculation. Null when not recording.
+  int? get totalDurationSeconds => throw _privateConstructorUsedError;
+
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -47,6 +53,8 @@ abstract class $RecordingStateCopyWith<$Res> {
     bool hasLatestRecording,
     String? error,
     Grade? latestGrade,
+    int? remainingSeconds,
+    int? totalDurationSeconds,
   });
 
   $GradeCopyWith<$Res>? get latestGrade;
@@ -73,6 +81,8 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
     Object? hasLatestRecording = null,
     Object? error = freezed,
     Object? latestGrade = freezed,
+    Object? remainingSeconds = freezed,
+    Object? totalDurationSeconds = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -100,6 +110,14 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
                 ? _value.latestGrade
                 : latestGrade // ignore: cast_nullable_to_non_nullable
                       as Grade?,
+            remainingSeconds: freezed == remainingSeconds
+                ? _value.remainingSeconds
+                : remainingSeconds // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            totalDurationSeconds: freezed == totalDurationSeconds
+                ? _value.totalDurationSeconds
+                : totalDurationSeconds // ignore: cast_nullable_to_non_nullable
+                      as int?,
           )
           as $Val,
     );
@@ -136,6 +154,8 @@ abstract class _$$RecordingStateImplCopyWith<$Res>
     bool hasLatestRecording,
     String? error,
     Grade? latestGrade,
+    int? remainingSeconds,
+    int? totalDurationSeconds,
   });
 
   @override
@@ -162,6 +182,8 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
     Object? hasLatestRecording = null,
     Object? error = freezed,
     Object? latestGrade = freezed,
+    Object? remainingSeconds = freezed,
+    Object? totalDurationSeconds = freezed,
   }) {
     return _then(
       _$RecordingStateImpl(
@@ -189,6 +211,14 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
             ? _value.latestGrade
             : latestGrade // ignore: cast_nullable_to_non_nullable
                   as Grade?,
+        remainingSeconds: freezed == remainingSeconds
+            ? _value.remainingSeconds
+            : remainingSeconds // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        totalDurationSeconds: freezed == totalDurationSeconds
+            ? _value.totalDurationSeconds
+            : totalDurationSeconds // ignore: cast_nullable_to_non_nullable
+                  as int?,
       ),
     );
   }
@@ -204,6 +234,8 @@ class _$RecordingStateImpl implements _RecordingState {
     this.hasLatestRecording = false,
     this.error,
     this.latestGrade,
+    this.remainingSeconds,
+    this.totalDurationSeconds,
   });
 
   @override
@@ -225,9 +257,17 @@ class _$RecordingStateImpl implements _RecordingState {
   @override
   final Grade? latestGrade;
 
+  /// Remaining seconds in the auto-stop countdown. Null when not recording.
+  @override
+  final int? remainingSeconds;
+
+  /// Total duration in seconds for progress calculation. Null when not recording.
+  @override
+  final int? totalDurationSeconds;
+
   @override
   String toString() {
-    return 'RecordingState(isRecording: $isRecording, isScoring: $isScoring, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, error: $error, latestGrade: $latestGrade)';
+    return 'RecordingState(isRecording: $isRecording, isScoring: $isScoring, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, error: $error, latestGrade: $latestGrade, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds)';
   }
 
   @override
@@ -245,7 +285,11 @@ class _$RecordingStateImpl implements _RecordingState {
                 other.hasLatestRecording == hasLatestRecording) &&
             (identical(other.error, error) || other.error == error) &&
             (identical(other.latestGrade, latestGrade) ||
-                other.latestGrade == latestGrade));
+                other.latestGrade == latestGrade) &&
+            (identical(other.remainingSeconds, remainingSeconds) ||
+                other.remainingSeconds == remainingSeconds) &&
+            (identical(other.totalDurationSeconds, totalDurationSeconds) ||
+                other.totalDurationSeconds == totalDurationSeconds));
   }
 
   @override
@@ -257,6 +301,8 @@ class _$RecordingStateImpl implements _RecordingState {
     hasLatestRecording,
     error,
     latestGrade,
+    remainingSeconds,
+    totalDurationSeconds,
   );
 
   /// Create a copy of RecordingState
@@ -279,6 +325,8 @@ abstract class _RecordingState implements RecordingState {
     final bool hasLatestRecording,
     final String? error,
     final Grade? latestGrade,
+    final int? remainingSeconds,
+    final int? totalDurationSeconds,
   }) = _$RecordingStateImpl;
 
   @override
@@ -295,6 +343,14 @@ abstract class _RecordingState implements RecordingState {
   /// The latest grade from the most recent scoring attempt.
   @override
   Grade? get latestGrade;
+
+  /// Remaining seconds in the auto-stop countdown. Null when not recording.
+  @override
+  int? get remainingSeconds;
+
+  /// Total duration in seconds for progress calculation. Null when not recording.
+  @override
+  int? get totalDurationSeconds;
 
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.
