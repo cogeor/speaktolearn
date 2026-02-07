@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
+import '../../settings/presentation/settings_controller.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
 import 'home_controller.dart';
 import 'home_state.dart';
 import 'practice_sheet.dart';
+import 'widgets/record_fab.dart';
+import 'widgets/score_bar.dart';
 
 /// Provider for the home screen controller.
 final homeControllerProvider =
@@ -60,6 +63,15 @@ class HomeScreen extends ConsumerWidget {
           : state.isEmptyTracked
               ? const _EmptyState()
               : _HomeContent(state: state, controller: controller),
+      floatingActionButton: state.current != null && !state.isLoading && !state.isEmptyTracked
+          ? RecordFAB(
+              status: state.recordingStatus,
+              onPressed: () {
+                // Will be wired in loop 02c
+              },
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
@@ -103,6 +115,21 @@ class _HomeContent extends ConsumerStatefulWidget {
 
 class _HomeContentState extends ConsumerState<_HomeContent> {
   bool _showPinyin = true;
+  bool _initializedFromSettings = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initializedFromSettings) {
+      final settingsAsync = ref.read(settingsControllerProvider);
+      if (settingsAsync case AsyncData(value: final settings)) {
+        setState(() {
+          _showPinyin = settings.showRomanization;
+          _initializedFromSettings = true;
+        });
+      }
+    }
+  }
 
   void _showPracticeSheet(
     BuildContext context,
@@ -205,20 +232,36 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80), // Extra bottom padding for FAB
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.state.currentProgress?.bestScore != null)
-                Text(
-                  'Best: ${widget.state.currentProgress!.bestScore}',
-                  style: TextStyle(
-                    color: widget.state.currentProgress!.bestScore!.scoreColor,
-                  ),
+              if (widget.state.currentProgress?.bestScore != null) ...[
+                Row(
+                  children: [
+                    Text(
+                      'Best: ${widget.state.currentProgress!.bestScore}',
+                      style: TextStyle(
+                        color: widget.state.currentProgress!.bestScore!.scoreColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ScoreBar(
+                        score: widget.state.currentProgress!.bestScore,
+                        height: 8,
+                      ),
+                    ),
+                  ],
                 ),
-              const Spacer(),
-              ElevatedButton(
-                onPressed: widget.controller.next,
-                child: const Text('Next'),
+                const SizedBox(height: 12),
+              ],
+              Align(
+                alignment: Alignment.centerRight,
+                child: ElevatedButton(
+                  onPressed: widget.controller.next,
+                  child: const Text('Next'),
+                ),
               ),
             ],
           ),
