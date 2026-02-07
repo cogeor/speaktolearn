@@ -82,7 +82,7 @@ class TextGenerator:
         if not prompt_path.exists():
             raise ValueError(f"No prompt template for language: {language}")
 
-        return prompt_path.read_text()
+        return prompt_path.read_text(encoding="utf-8")
 
     def _build_system_prompt(
         self,
