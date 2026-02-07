@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
+import '../../settings/domain/app_settings.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
@@ -185,7 +186,27 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     if (voices == null || voices.isEmpty) return;
 
     final controller = ref.read(exampleAudioControllerProvider.notifier);
-    controller.play(sequence, voices.first.id);
+    final voiceId = _selectVoice(voices);
+    controller.play(sequence, voiceId);
+  }
+
+  /// Selects voice based on user's VoicePreference setting.
+  String _selectVoice(List<ExampleVoice> voices) {
+    final settingsAsync = ref.read(settingsControllerProvider);
+    final preference = settingsAsync.valueOrNull?.voicePreference ??
+        VoicePreference.systemDefault;
+
+    if (preference == VoicePreference.systemDefault) {
+      return voices.first.id;
+    }
+
+    // Try to find a voice matching the preference
+    final targetGender = preference == VoicePreference.male ? 'male' : 'female';
+    final match = voices.firstWhere(
+      (v) => v.id.toLowerCase().contains(targetGender),
+      orElse: () => voices.first,
+    );
+    return match.id;
   }
 
   @override
