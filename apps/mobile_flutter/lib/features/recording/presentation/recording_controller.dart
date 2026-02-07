@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:audio_waveforms/audio_waveforms.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -11,6 +14,7 @@ import '../../scoring/domain/pronunciation_scorer.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../domain/audio_recorder.dart';
 import '../domain/recording.dart';
+import '../domain/recording_duration_calculator.dart';
 import '../domain/recording_repository.dart';
 import 'recording_state.dart';
 
@@ -18,6 +22,16 @@ import 'recording_state.dart';
 ///
 /// Handles starting and stopping recordings, managing state,
 /// and coordinating with the repository for persistence.
+///
+/// ## Haptic Feedback
+///
+/// This controller provides tactile feedback for recording operations:
+/// - **Medium impact**: Recording started successfully - confirms action initiated
+/// - **Light impact**: Recording stopped successfully - subtle confirmation
+/// - **Heavy impact**: Error occurred - alerts user to problem
+/// - **Medium impact (on scoring)**: Good score (>=80) - positive reinforcement
+///
+/// Haptics respect device settings via Flutter's HapticFeedback class.
 class RecordingController extends StateNotifier<RecordingState> {
   RecordingController({
     required AudioRecorder recorder,
@@ -38,6 +52,11 @@ class RecordingController extends StateNotifier<RecordingState> {
   final ProgressRepository _progressRepository;
   final AudioPlayer _audioPlayer;
 
+  Timer? _autoStopTimer;
+  Timer? _countdownTimer;
+  int _remainingSeconds = 0;
+  TextSequence? _currentTextSequence;
+
   /// Controller for waveform visualization during recording.
   late final RecorderController waveformController = RecorderController()
     ..androidEncoder = AndroidEncoder.aac
@@ -48,9 +67,23 @@ class RecordingController extends StateNotifier<RecordingState> {
   /// Starts recording audio for the given text sequence.
   ///
   /// Sets [RecordingState.isRecording] to true on success.
+  /// Starts an auto-stop timer based on the expected duration.
   /// On failure, sets [RecordingState.error] with the error message.
-  Future<void> startRecording(String textSequenceId) async {
-    state = state.copyWith(isRecording: true, error: null);
+  Future<void> startRecording(TextSequence textSequence) async {
+    // Calculate expected duration from text
+    final duration = calculateRecordingDuration(
+      textSequence.text,
+      textSequence.language,
+    );
+    _remainingSeconds = duration.inSeconds;
+    _currentTextSequence = textSequence;
+
+    state = state.copyWith(
+      isRecording: true,
+      error: null,
+      remainingSeconds: _remainingSeconds,
+      totalDurationSeconds: _remainingSeconds,
+    );
 
     // Start waveform visualization
     await waveformController.record();
@@ -59,19 +92,42 @@ class RecordingController extends StateNotifier<RecordingState> {
 
     result.when(
       success: (_) {
-        // Recording started successfully, state already set
+        // Haptic feedback on successful start
+        HapticFeedback.mediumImpact();
+
+        // Start auto-stop timer
+        _autoStopTimer = Timer(duration, () {
+          if (state.isRecording && _currentTextSequence != null) {
+            stopAndScore(_currentTextSequence!);
+          }
+        });
+
+        // Start countdown timer for UI updates (every second)
+        _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (_remainingSeconds > 0) {
+            _remainingSeconds--;
+            state = state.copyWith(remainingSeconds: _remainingSeconds);
+          }
+        });
       },
       failure: (error) {
+        // Haptic feedback on failure
+        HapticFeedback.heavyImpact();
+        _cancelTimers();
         state = state.copyWith(
           isRecording: false,
           error: _errorToMessage(error),
+          remainingSeconds: null,
+          totalDurationSeconds: null,
         );
       },
     );
   }
 
-  /// Stops the current recording.
+  /// Stops the current recording without scoring.
   Future<void> stopRecording() async {
+    _cancelTimers();
+
     // Stop waveform visualization
     await waveformController.stop();
 
@@ -79,12 +135,22 @@ class RecordingController extends StateNotifier<RecordingState> {
 
     result.when(
       success: (_) {
-        state = state.copyWith(isRecording: false);
+        // Haptic feedback on successful stop
+        HapticFeedback.lightImpact();
+        state = state.copyWith(
+          isRecording: false,
+          remainingSeconds: null,
+          totalDurationSeconds: null,
+        );
       },
       failure: (error) {
+        // Haptic feedback on failure
+        HapticFeedback.heavyImpact();
         state = state.copyWith(
           isRecording: false,
           error: _errorToMessage(error),
+          remainingSeconds: null,
+          totalDurationSeconds: null,
         );
       },
     );
@@ -96,7 +162,14 @@ class RecordingController extends StateNotifier<RecordingState> {
   /// On success, saves the attempt and returns the [Grade].
   /// On failure, sets [RecordingState.error] and returns null.
   Future<Grade?> stopAndScore(TextSequence textSequence) async {
-    state = state.copyWith(isScoring: true, error: null);
+    _cancelTimers();
+
+    state = state.copyWith(
+      isScoring: true,
+      error: null,
+      remainingSeconds: null,
+      totalDurationSeconds: null,
+    );
 
     // Stop waveform visualization
     await waveformController.stop();
@@ -105,6 +178,9 @@ class RecordingController extends StateNotifier<RecordingState> {
 
     return stopResult.when(
       success: (filePath) async {
+        // Haptic feedback on successful stop
+        HapticFeedback.lightImpact();
+
         try {
           final recording = Recording(
             id: const Uuid().v4(),
@@ -134,6 +210,11 @@ class RecordingController extends StateNotifier<RecordingState> {
           // Save recording to enable replay functionality
           await _repository.saveLatest(recording);
 
+          // Haptic feedback based on score quality
+          if (grade.overall >= 80) {
+            HapticFeedback.mediumImpact(); // Good score celebration
+          }
+
           state = state.copyWith(
             isRecording: false,
             isScoring: false,
@@ -143,6 +224,8 @@ class RecordingController extends StateNotifier<RecordingState> {
 
           return grade;
         } catch (e) {
+          // Haptic feedback on scoring failure
+          HapticFeedback.heavyImpact();
           state = state.copyWith(
             isRecording: false,
             isScoring: false,
@@ -152,6 +235,8 @@ class RecordingController extends StateNotifier<RecordingState> {
         }
       },
       failure: (error) {
+        // Haptic feedback on recording failure
+        HapticFeedback.heavyImpact();
         state = state.copyWith(
           isRecording: false,
           isScoring: false,
@@ -197,8 +282,11 @@ class RecordingController extends StateNotifier<RecordingState> {
   ///
   /// Stops the recorder if recording is in progress.
   /// Stops the audio player if playback is in progress.
+  /// Cancels any active timers.
   /// Resets state to initial values.
   Future<void> cancel() async {
+    _cancelTimers();
+
     // Stop waveform if recording
     if (state.isRecording) {
       await waveformController.stop();
@@ -212,8 +300,18 @@ class RecordingController extends StateNotifier<RecordingState> {
 
   @override
   void dispose() {
+    _cancelTimers();
     waveformController.dispose();
     super.dispose();
+  }
+
+  /// Cancels all active timers.
+  void _cancelTimers() {
+    _autoStopTimer?.cancel();
+    _autoStopTimer = null;
+    _countdownTimer?.cancel();
+    _countdownTimer = null;
+    _currentTextSequence = null;
   }
 
   String _errorToMessage(RecordingError error) {
