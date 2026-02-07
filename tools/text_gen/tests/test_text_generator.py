@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from sentence_gen.generators.text_generator import TextGenerator
-from sentence_gen.config import Config, OpenAIConfig, TTSConfig
+from text_gen.generators.text_generator import TextGenerator
+from text_gen.config import Config, OpenAIConfig, TTSConfig
 
 
 @pytest.fixture
@@ -19,7 +19,7 @@ def mock_config():
 def test_generate_creates_dataset(mock_config):
     """Verify generate() creates a dataset with correct structure."""
     # Create generator with mocked OpenAI client
-    with patch("sentence_gen.generators.text_generator.OpenAI") as mock_openai_class:
+    with patch("text_gen.generators.text_generator.OpenAI") as mock_openai_class:
         # Set up mock client
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
@@ -61,7 +61,7 @@ def test_generate_creates_dataset(mock_config):
 
 def test_generate_batches_large_counts(mock_config):
     """Verify generate() batches requests for large counts."""
-    with patch("sentence_gen.generators.text_generator.OpenAI") as mock_openai_class:
+    with patch("text_gen.generators.text_generator.OpenAI") as mock_openai_class:
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
 
@@ -94,7 +94,7 @@ def test_generate_batches_large_counts(mock_config):
 
 def test_build_system_prompt(mock_config):
     """Verify system prompt is correctly built."""
-    with patch("sentence_gen.generators.text_generator.OpenAI"):
+    with patch("text_gen.generators.text_generator.OpenAI"):
         generator = TextGenerator(mock_config)
 
     prompt = generator._build_system_prompt(

@@ -1,8 +1,8 @@
 """Unit tests for Pydantic models."""
 
 import pytest
-from sentence_gen.models.text_sequence import TextSequence
-from sentence_gen.models.dataset import Dataset
+from text_gen.models.text_sequence import TextSequence
+from text_gen.models.dataset import Dataset
 
 
 def test_text_sequence_create():

@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator, validate, ValidationError
 
-from sentence_gen.models import Dataset, TextSequence, ExampleAudio, VoiceRef
+from text_gen.models import Dataset, TextSequence, ExampleAudio, VoiceRef
 
 
 # Paths to schema and example files

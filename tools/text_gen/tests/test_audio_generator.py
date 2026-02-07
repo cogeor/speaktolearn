@@ -4,11 +4,11 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
-from sentence_gen.generators.audio_generator import AudioGenerator
-from sentence_gen.config import Config, OpenAIConfig, TTSConfig
-from sentence_gen.models.dataset import Dataset
-from sentence_gen.models.text_sequence import TextSequence
-from sentence_gen.models.voice import VoiceRef
+from text_gen.generators.audio_generator import AudioGenerator
+from text_gen.config import Config, OpenAIConfig, TTSConfig
+from text_gen.models.dataset import Dataset
+from text_gen.models.text_sequence import TextSequence
+from text_gen.models.voice import VoiceRef
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def sample_dataset():
 
 def test_audio_generator_init(mock_config):
     """Verify AudioGenerator initializes with config."""
-    with patch("sentence_gen.generators.audio_generator.OpenAI") as mock_openai_class:
+    with patch("text_gen.generators.audio_generator.OpenAI") as mock_openai_class:
         generator = AudioGenerator(mock_config)
 
         mock_openai_class.assert_called_once_with(api_key="test-key")
@@ -43,7 +43,7 @@ def test_audio_generator_init(mock_config):
 
 def test_generate_audio_creates_file(mock_config, sample_dataset, tmp_path):
     """Verify audio generation creates file and returns path."""
-    with patch("sentence_gen.generators.audio_generator.OpenAI") as mock_openai_class:
+    with patch("text_gen.generators.audio_generator.OpenAI") as mock_openai_class:
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
 
@@ -82,7 +82,7 @@ def test_generate_audio_creates_file(mock_config, sample_dataset, tmp_path):
 
 def test_generate_audio_skips_existing(mock_config, sample_dataset, tmp_path):
     """Verify audio generation skips existing files."""
-    with patch("sentence_gen.generators.audio_generator.OpenAI") as mock_openai_class:
+    with patch("text_gen.generators.audio_generator.OpenAI") as mock_openai_class:
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
 
@@ -110,7 +110,7 @@ def test_generate_audio_skips_existing(mock_config, sample_dataset, tmp_path):
 
 def test_add_audio_ref_creates_voice_ref(mock_config, sample_dataset, tmp_path):
     """Verify VoiceRef is correctly created and added to item."""
-    with patch("sentence_gen.generators.audio_generator.OpenAI"):
+    with patch("text_gen.generators.audio_generator.OpenAI"):
         generator = AudioGenerator(mock_config)
 
     item = sample_dataset.items[0]
@@ -132,7 +132,7 @@ def test_add_audio_ref_creates_voice_ref(mock_config, sample_dataset, tmp_path):
 
 def test_add_audio_ref_replaces_existing_voice(mock_config, sample_dataset, tmp_path):
     """Verify adding same voice replaces existing reference."""
-    with patch("sentence_gen.generators.audio_generator.OpenAI"):
+    with patch("text_gen.generators.audio_generator.OpenAI"):
         generator = AudioGenerator(mock_config)
 
     item = sample_dataset.items[0]
@@ -149,7 +149,7 @@ def test_add_audio_ref_replaces_existing_voice(mock_config, sample_dataset, tmp_
 
 def test_add_audio_ref_multiple_voices(mock_config, sample_dataset, tmp_path):
     """Verify multiple voice references can be added."""
-    with patch("sentence_gen.generators.audio_generator.OpenAI"):
+    with patch("text_gen.generators.audio_generator.OpenAI"):
         generator = AudioGenerator(mock_config)
 
     item = sample_dataset.items[0]
@@ -171,7 +171,7 @@ def test_add_audio_ref_multiple_voices(mock_config, sample_dataset, tmp_path):
 
 def test_generate_all_creates_directories(mock_config, sample_dataset, tmp_path):
     """Verify generate_all creates output directories."""
-    with patch("sentence_gen.generators.audio_generator.OpenAI") as mock_openai_class:
+    with patch("text_gen.generators.audio_generator.OpenAI") as mock_openai_class:
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
 
