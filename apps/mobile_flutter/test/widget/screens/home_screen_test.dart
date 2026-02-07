@@ -36,6 +36,12 @@ class FakeHomeController extends StateNotifier<HomeState>
   @override
   Future<void> refreshProgress() async {}
 
+  @override
+  void setRecordingStatus(RecordingStatus status) {}
+
+  @override
+  void setLatestScore(int? score) {}
+
   void updateState(HomeState newState) {
     state = newState;
   }
