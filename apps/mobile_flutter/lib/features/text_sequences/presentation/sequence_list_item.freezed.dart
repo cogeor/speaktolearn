@@ -21,6 +21,7 @@ mixin _$SequenceListItem {
   String get text => throw _privateConstructorUsedError;
   bool get isTracked => throw _privateConstructorUsedError;
   int? get bestScore => throw _privateConstructorUsedError;
+  int? get hskLevel => throw _privateConstructorUsedError;
 
   /// Create a copy of SequenceListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -36,7 +37,13 @@ abstract class $SequenceListItemCopyWith<$Res> {
     $Res Function(SequenceListItem) then,
   ) = _$SequenceListItemCopyWithImpl<$Res, SequenceListItem>;
   @useResult
-  $Res call({String id, String text, bool isTracked, int? bestScore});
+  $Res call({
+    String id,
+    String text,
+    bool isTracked,
+    int? bestScore,
+    int? hskLevel,
+  });
 }
 
 /// @nodoc
@@ -58,6 +65,7 @@ class _$SequenceListItemCopyWithImpl<$Res, $Val extends SequenceListItem>
     Object? text = null,
     Object? isTracked = null,
     Object? bestScore = freezed,
+    Object? hskLevel = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -77,6 +85,10 @@ class _$SequenceListItemCopyWithImpl<$Res, $Val extends SequenceListItem>
                 ? _value.bestScore
                 : bestScore // ignore: cast_nullable_to_non_nullable
                       as int?,
+            hskLevel: freezed == hskLevel
+                ? _value.hskLevel
+                : hskLevel // ignore: cast_nullable_to_non_nullable
+                      as int?,
           )
           as $Val,
     );
@@ -92,7 +104,13 @@ abstract class _$$SequenceListItemImplCopyWith<$Res>
   ) = __$$SequenceListItemImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String id, String text, bool isTracked, int? bestScore});
+  $Res call({
+    String id,
+    String text,
+    bool isTracked,
+    int? bestScore,
+    int? hskLevel,
+  });
 }
 
 /// @nodoc
@@ -113,6 +131,7 @@ class __$$SequenceListItemImplCopyWithImpl<$Res>
     Object? text = null,
     Object? isTracked = null,
     Object? bestScore = freezed,
+    Object? hskLevel = freezed,
   }) {
     return _then(
       _$SequenceListItemImpl(
@@ -132,6 +151,10 @@ class __$$SequenceListItemImplCopyWithImpl<$Res>
             ? _value.bestScore
             : bestScore // ignore: cast_nullable_to_non_nullable
                   as int?,
+        hskLevel: freezed == hskLevel
+            ? _value.hskLevel
+            : hskLevel // ignore: cast_nullable_to_non_nullable
+                  as int?,
       ),
     );
   }
@@ -145,6 +168,7 @@ class _$SequenceListItemImpl implements _SequenceListItem {
     required this.text,
     required this.isTracked,
     this.bestScore,
+    this.hskLevel,
   });
 
   @override
@@ -155,10 +179,12 @@ class _$SequenceListItemImpl implements _SequenceListItem {
   final bool isTracked;
   @override
   final int? bestScore;
+  @override
+  final int? hskLevel;
 
   @override
   String toString() {
-    return 'SequenceListItem(id: $id, text: $text, isTracked: $isTracked, bestScore: $bestScore)';
+    return 'SequenceListItem(id: $id, text: $text, isTracked: $isTracked, bestScore: $bestScore, hskLevel: $hskLevel)';
   }
 
   @override
@@ -171,11 +197,14 @@ class _$SequenceListItemImpl implements _SequenceListItem {
             (identical(other.isTracked, isTracked) ||
                 other.isTracked == isTracked) &&
             (identical(other.bestScore, bestScore) ||
-                other.bestScore == bestScore));
+                other.bestScore == bestScore) &&
+            (identical(other.hskLevel, hskLevel) ||
+                other.hskLevel == hskLevel));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, text, isTracked, bestScore);
+  int get hashCode =>
+      Object.hash(runtimeType, id, text, isTracked, bestScore, hskLevel);
 
   /// Create a copy of SequenceListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -195,6 +224,7 @@ abstract class _SequenceListItem implements SequenceListItem {
     required final String text,
     required final bool isTracked,
     final int? bestScore,
+    final int? hskLevel,
   }) = _$SequenceListItemImpl;
 
   @override
@@ -205,6 +235,8 @@ abstract class _SequenceListItem implements SequenceListItem {
   bool get isTracked;
   @override
   int? get bestScore;
+  @override
+  int? get hskLevel;
 
   /// Create a copy of SequenceListItem
   /// with the given fields replaced by the non-null parameter values.

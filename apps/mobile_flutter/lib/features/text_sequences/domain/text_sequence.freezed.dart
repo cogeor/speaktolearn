@@ -29,6 +29,7 @@ mixin _$TextSequence {
   List<String>? get tokens => throw _privateConstructorUsedError;
   List<String>? get tags => throw _privateConstructorUsedError;
   int? get difficulty => throw _privateConstructorUsedError;
+  int? get hskLevel => throw _privateConstructorUsedError;
   List<ExampleVoice>? get voices => throw _privateConstructorUsedError;
 
   /// Serializes this TextSequence to a JSON map.
@@ -57,6 +58,7 @@ abstract class $TextSequenceCopyWith<$Res> {
     List<String>? tokens,
     List<String>? tags,
     int? difficulty,
+    int? hskLevel,
     List<ExampleVoice>? voices,
   });
 }
@@ -84,6 +86,7 @@ class _$TextSequenceCopyWithImpl<$Res, $Val extends TextSequence>
     Object? tokens = freezed,
     Object? tags = freezed,
     Object? difficulty = freezed,
+    Object? hskLevel = freezed,
     Object? voices = freezed,
   }) {
     return _then(
@@ -120,6 +123,10 @@ class _$TextSequenceCopyWithImpl<$Res, $Val extends TextSequence>
                 ? _value.difficulty
                 : difficulty // ignore: cast_nullable_to_non_nullable
                       as int?,
+            hskLevel: freezed == hskLevel
+                ? _value.hskLevel
+                : hskLevel // ignore: cast_nullable_to_non_nullable
+                      as int?,
             voices: freezed == voices
                 ? _value.voices
                 : voices // ignore: cast_nullable_to_non_nullable
@@ -148,6 +155,7 @@ abstract class _$$TextSequenceImplCopyWith<$Res>
     List<String>? tokens,
     List<String>? tags,
     int? difficulty,
+    int? hskLevel,
     List<ExampleVoice>? voices,
   });
 }
@@ -174,6 +182,7 @@ class __$$TextSequenceImplCopyWithImpl<$Res>
     Object? tokens = freezed,
     Object? tags = freezed,
     Object? difficulty = freezed,
+    Object? hskLevel = freezed,
     Object? voices = freezed,
   }) {
     return _then(
@@ -210,6 +219,10 @@ class __$$TextSequenceImplCopyWithImpl<$Res>
             ? _value.difficulty
             : difficulty // ignore: cast_nullable_to_non_nullable
                   as int?,
+        hskLevel: freezed == hskLevel
+            ? _value.hskLevel
+            : hskLevel // ignore: cast_nullable_to_non_nullable
+                  as int?,
         voices: freezed == voices
             ? _value._voices
             : voices // ignore: cast_nullable_to_non_nullable
@@ -231,6 +244,7 @@ class _$TextSequenceImpl implements _TextSequence {
     final List<String>? tokens,
     final List<String>? tags,
     this.difficulty,
+    this.hskLevel,
     final List<ExampleVoice>? voices,
   }) : _gloss = gloss,
        _tokens = tokens,
@@ -280,6 +294,8 @@ class _$TextSequenceImpl implements _TextSequence {
 
   @override
   final int? difficulty;
+  @override
+  final int? hskLevel;
   final List<ExampleVoice>? _voices;
   @override
   List<ExampleVoice>? get voices {
@@ -292,7 +308,7 @@ class _$TextSequenceImpl implements _TextSequence {
 
   @override
   String toString() {
-    return 'TextSequence(id: $id, text: $text, language: $language, romanization: $romanization, gloss: $gloss, tokens: $tokens, tags: $tags, difficulty: $difficulty, voices: $voices)';
+    return 'TextSequence(id: $id, text: $text, language: $language, romanization: $romanization, gloss: $gloss, tokens: $tokens, tags: $tags, difficulty: $difficulty, hskLevel: $hskLevel, voices: $voices)';
   }
 
   @override
@@ -311,6 +327,8 @@ class _$TextSequenceImpl implements _TextSequence {
             const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.difficulty, difficulty) ||
                 other.difficulty == difficulty) &&
+            (identical(other.hskLevel, hskLevel) ||
+                other.hskLevel == hskLevel) &&
             const DeepCollectionEquality().equals(other._voices, _voices));
   }
 
@@ -326,6 +344,7 @@ class _$TextSequenceImpl implements _TextSequence {
     const DeepCollectionEquality().hash(_tokens),
     const DeepCollectionEquality().hash(_tags),
     difficulty,
+    hskLevel,
     const DeepCollectionEquality().hash(_voices),
   );
 
@@ -353,6 +372,7 @@ abstract class _TextSequence implements TextSequence {
     final List<String>? tokens,
     final List<String>? tags,
     final int? difficulty,
+    final int? hskLevel,
     final List<ExampleVoice>? voices,
   }) = _$TextSequenceImpl;
 
@@ -375,6 +395,8 @@ abstract class _TextSequence implements TextSequence {
   List<String>? get tags;
   @override
   int? get difficulty;
+  @override
+  int? get hskLevel;
   @override
   List<ExampleVoice>? get voices;
 

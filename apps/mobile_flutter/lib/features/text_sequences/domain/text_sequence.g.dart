@@ -20,6 +20,7 @@ _$TextSequenceImpl _$$TextSequenceImplFromJson(Map<String, dynamic> json) =>
           .toList(),
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       difficulty: (json['difficulty'] as num?)?.toInt(),
+      hskLevel: (json['hskLevel'] as num?)?.toInt(),
       voices: (json['voices'] as List<dynamic>?)
           ?.map((e) => ExampleVoice.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -35,6 +36,7 @@ Map<String, dynamic> _$$TextSequenceImplToJson(_$TextSequenceImpl instance) =>
       'tokens': instance.tokens,
       'tags': instance.tags,
       'difficulty': instance.difficulty,
+      'hskLevel': instance.hskLevel,
       'voices': instance.voices,
     };
 

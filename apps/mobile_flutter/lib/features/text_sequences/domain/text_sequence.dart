@@ -14,6 +14,7 @@ class TextSequence with _$TextSequence {
     List<String>? tokens,
     List<String>? tags,
     int? difficulty,
+    int? hskLevel,
     List<ExampleVoice>? voices,
   }) = _TextSequence;
 

@@ -9,5 +9,6 @@ class SequenceListItem with _$SequenceListItem {
     required String text,
     required bool isTracked,
     int? bestScore,
+    int? hskLevel,
   }) = _SequenceListItem;
 }

@@ -33,6 +33,18 @@ class TextSequenceDto {
 
   Map<String, dynamic> toJson() => _$TextSequenceDtoToJson(this);
 
+  /// Parses HSK level from tags (e.g., "hsk1", "hsk2", etc.).
+  int? _parseHskFromTags() {
+    if (tags == null) return null;
+    for (final tag in tags!) {
+      final match = RegExp(r'^hsk(\d)$', caseSensitive: false).firstMatch(tag);
+      if (match != null) {
+        return int.parse(match.group(1)!);
+      }
+    }
+    return null;
+  }
+
   TextSequence toDomain(String language) => TextSequence(
         id: id,
         text: text,
@@ -42,6 +54,7 @@ class TextSequenceDto {
         tokens: tokens ?? [],
         tags: tags ?? [],
         difficulty: difficulty ?? 1,
+        hskLevel: _parseHskFromTags(),
         voices: exampleAudio?.voices
                 .map((v) => ExampleVoice(
                       id: v.id,

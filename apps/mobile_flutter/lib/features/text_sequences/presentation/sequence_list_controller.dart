@@ -36,6 +36,7 @@ class SequenceListController
         text: sequence.text,
         isTracked: progress?.tracked ?? false,
         bestScore: progress?.bestScore,
+        hskLevel: sequence.hskLevel,
       );
     }).toList();
 
