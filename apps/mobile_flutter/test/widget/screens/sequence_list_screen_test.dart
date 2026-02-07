@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speak_to_learn/app/theme.dart';
 import 'package:speak_to_learn/features/text_sequences/presentation/sequence_list_item.dart';
