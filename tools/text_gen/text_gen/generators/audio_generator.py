@@ -83,7 +83,7 @@ class AudioGenerator:
         Returns:
             Path to the generated audio file, or None if generation failed
         """
-        output_path = output_dir / voice_name / f"{item.id}.opus"
+        output_path = output_dir / voice_name / f"{item.id}.mp3"
 
         # Skip if audio file already exists
         if output_path.exists():
@@ -95,7 +95,7 @@ class AudioGenerator:
                 model="tts-1",
                 voice=voice_id,
                 input=item.text,
-                response_format="opus",
+                response_format="mp3",
             )
 
             # Save to file
@@ -123,7 +123,7 @@ class AudioGenerator:
             audio_path: Path to the audio file
             base_dir: Base directory for computing relative paths
         """
-        uri = f"assets://examples/{voice_name}/{item.id}.opus"
+        uri = f"assets://examples/{voice_name}/{item.id}.mp3"
 
         voice_ref = VoiceRef(
             id=voice_name[0] + "1",  # f1, m1

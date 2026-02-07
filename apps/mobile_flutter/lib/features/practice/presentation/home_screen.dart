@@ -170,14 +170,14 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                 ],
                 const SizedBox(height: 24),
                 if (hasAudio)
-                  IconButton.filled(
+                  OutlinedButton.icon(
                     onPressed: audioState.isPlaying
                         ? null
                         : () => _playAudio(sequence),
                     icon: Icon(
                       audioState.isPlaying ? Icons.volume_up : Icons.play_arrow,
                     ),
-                    iconSize: 32,
+                    label: Text(audioState.isPlaying ? 'Playing...' : 'Play'),
                   ),
               ],
             ),

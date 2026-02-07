@@ -28,7 +28,8 @@ class ExampleAudioRepositoryImpl implements ExampleAudioRepository {
   @override
   Future<AudioSource> resolve(String uri) async {
     if (uri.startsWith('assets://')) {
-      final path = uri.substring('assets://'.length);
+      // Strip 'assets://' and add 'assets/' prefix for Flutter asset loading
+      final path = 'assets/${uri.substring('assets://'.length)}';
       return AssetAudioSource(path);
     }
 
