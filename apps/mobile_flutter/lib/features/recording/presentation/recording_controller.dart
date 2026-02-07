@@ -267,13 +267,18 @@ class RecordingController extends StateNotifier<RecordingState> {
     await _audioPlayer.load(FileAudioSource(recording.filePath));
     await _audioPlayer.play();
 
-    // Wait for playback to complete
-    await _audioPlayer.stateStream.firstWhere(
-      (playbackState) =>
-          playbackState == PlaybackState.completed ||
-          playbackState == PlaybackState.idle ||
-          playbackState == PlaybackState.error,
-    );
+    // Wait for playback to complete with timeout
+    try {
+      await _audioPlayer.stateStream.firstWhere(
+        (playbackState) =>
+            playbackState == PlaybackState.completed ||
+            playbackState == PlaybackState.idle ||
+            playbackState == PlaybackState.error,
+      ).timeout(const Duration(seconds: 30));
+    } catch (_) {
+      // Timeout or error - ensure we clean up
+      await _audioPlayer.stop();
+    }
 
     state = state.copyWith(isPlaying: false);
   }
@@ -302,6 +307,7 @@ class RecordingController extends StateNotifier<RecordingState> {
   void dispose() {
     _cancelTimers();
     waveformController.dispose();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
