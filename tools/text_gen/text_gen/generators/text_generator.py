@@ -3,6 +3,7 @@
 from openai import OpenAI
 from pathlib import Path
 import json
+import re
 
 from ..config import Config
 from ..models.dataset import Dataset
@@ -11,6 +12,7 @@ from ..models.text_sequence import TextSequence
 
 class TextGenerator:
     """Generates text sequences using LLM."""
+    _trailing_punctuation = re.compile(r"[.?!,;:。！？、，；：…]+$")
 
     def __init__(self, config: Config) -> None:
         """Initialize the text generator.
@@ -49,6 +51,7 @@ class TextGenerator:
         for batch_start in range(0, count, batch_size):
             batch_count = min(batch_size, count - batch_start)
             batch_items = self._generate_batch(
+                language=language,
                 system_prompt=system_prompt,
                 user_prompt=prompt,
                 count=batch_count,
@@ -120,6 +123,7 @@ Output format: JSON array of objects with keys:
 
     def _generate_batch(
         self,
+        language: str,
         system_prompt: str,
         user_prompt: str,
         count: int,
@@ -128,6 +132,7 @@ Output format: JSON array of objects with keys:
         """Generate a batch of sequences.
 
         Args:
+            language: Target language code
             system_prompt: The system prompt for the LLM
             user_prompt: The user prompt (language-specific template)
             count: Number of sequences in this batch
@@ -158,9 +163,11 @@ Output format: JSON array of objects with keys:
 
         items = []
         for i, item in enumerate(items_data):
+            raw_text = item.get("text", "")
+            normalized_text = self._normalize_text(language, raw_text)
             sequence = TextSequence.create(
                 index=start_index + i,
-                text=item.get("text", ""),
+                text=normalized_text,
                 romanization=item.get("romanization"),
                 translations={"en": item.get("translation", "")},
                 tags=item.get("tags", []),
@@ -169,3 +176,10 @@ Output format: JSON array of objects with keys:
             items.append(sequence)
 
         return items
+
+    def _normalize_text(self, language: str, text: str) -> str:
+        """Normalize generated sentence text for display consistency."""
+        normalized = text.strip()
+        if language.lower().startswith("zh"):
+            normalized = self._trailing_punctuation.sub("", normalized)
+        return normalized

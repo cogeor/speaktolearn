@@ -107,3 +107,32 @@ def test_build_system_prompt(mock_config):
     assert "2/5" in prompt
     assert "hsk1" in prompt
     assert "daily" in prompt
+
+
+def test_generate_strips_trailing_punctuation_for_zh(mock_config):
+    """Verify generated zh text drops trailing punctuation."""
+    with patch("text_gen.generators.text_generator.OpenAI") as mock_openai_class:
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
+        generator = TextGenerator(mock_config)
+
+        mock_response = Mock()
+        mock_response.choices = [
+            Mock(
+                message=Mock(
+                    content='{"sentences": [{"text": "ni hao?", "romanization": "ni hao", "translation": "Hello"}]}'
+                )
+            )
+        ]
+        mock_client.chat.completions.create.return_value = mock_response
+
+        with patch.object(generator, "_load_prompt", return_value="Test prompt"):
+            dataset = generator.generate(
+                language="zh-CN",
+                count=1,
+                tags=[],
+                difficulty=1,
+            )
+
+    assert dataset.items[0].text == "ni hao"

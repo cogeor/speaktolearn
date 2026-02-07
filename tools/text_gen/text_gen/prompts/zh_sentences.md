@@ -8,6 +8,7 @@ Generate practical Mandarin Chinese sentences for language learners.
    - Use common grammatical patterns
    - Start with simpler structures for lower difficulty
    - Include a variety: statements, questions, commands
+   - Do not include ending punctuation in the `text` field
 
 2. **Vocabulary**
    - Use HSK-appropriate vocabulary for the difficulty level

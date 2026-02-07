@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
-import '../../example_audio/presentation/example_audio_controller.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
 import 'home_controller.dart';
@@ -132,54 +131,68 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     return Column(
       children: [
         Expanded(
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    _showPracticeSheet(
-                      context,
-                      sequence,
-                      widget.state.currentProgress,
-                    );
-                  },
-                  child: Text(
-                    sequence.text,
-                    style: Theme.of(context).textTheme.displayLarge,
-                  ),
-                ),
-                if (hasPinyin) ...[
-                  const SizedBox(height: 12),
-                  GestureDetector(
-                    onTap: () => setState(() => _showPinyin = !_showPinyin),
-                    child: Text(
-                      _showPinyin
-                          ? sequence.romanization!
-                          : '(tap to show pinyin)',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: _showPinyin
-                            ? Theme.of(context).colorScheme.secondary
-                            : AppTheme.subtle,
-                        fontStyle: _showPinyin
-                            ? FontStyle.normal
-                            : FontStyle.italic,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        _showPracticeSheet(
+                          context,
+                          sequence,
+                          widget.state.currentProgress,
+                        );
+                      },
+                      child: Text(
+                        sequence.text,
+                        style: Theme.of(context).textTheme.displayLarge,
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                if (hasAudio)
-                  OutlinedButton.icon(
-                    onPressed: audioState.isPlaying
-                        ? null
-                        : () => _playAudio(sequence),
-                    icon: Icon(
-                      audioState.isPlaying ? Icons.volume_up : Icons.play_arrow,
-                    ),
-                    label: Text(audioState.isPlaying ? 'Playing...' : 'Play'),
-                  ),
-              ],
+                    if (hasPinyin) ...[
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () => setState(() => _showPinyin = !_showPinyin),
+                        child: Text(
+                          _showPinyin
+                              ? sequence.romanization!
+                              : '(tap to show pinyin)',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: _showPinyin
+                                ? Theme.of(context).colorScheme.secondary
+                                : AppTheme.subtle,
+                            fontStyle: _showPinyin
+                                ? FontStyle.normal
+                                : FontStyle.italic,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    if (hasAudio)
+                      Align(
+                        alignment: Alignment.center,
+                        child: IconButton(
+                          onPressed: audioState.isPlaying
+                              ? null
+                              : () => _playAudio(sequence),
+                          icon: Icon(
+                            audioState.isPlaying
+                                ? Icons.volume_up
+                                : Icons.play_arrow,
+                          ),
+                          iconSize: 32,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

@@ -7,11 +7,30 @@ import '../../../core/audio/audio_source.dart';
 
 /// AudioPlayer implementation using just_audio package.
 class JustAudioPlayer implements AudioPlayer {
-  JustAudioPlayer() : _player = ja.AudioPlayer();
+  JustAudioPlayer() : _player = ja.AudioPlayer() {
+    _listenToPlayerState();
+  }
 
   final ja.AudioPlayer _player;
   final _stateController = StreamController<PlaybackState>.broadcast();
   PlaybackState _currentState = PlaybackState.idle;
+
+  void _listenToPlayerState() {
+    _player.playerStateStream.listen((playerState) {
+      final PlaybackState newState;
+      if (playerState.processingState == ja.ProcessingState.loading ||
+          playerState.processingState == ja.ProcessingState.buffering) {
+        newState = PlaybackState.loading;
+      } else if (playerState.processingState == ja.ProcessingState.completed) {
+        newState = PlaybackState.completed;
+      } else if (playerState.playing) {
+        newState = PlaybackState.playing;
+      } else {
+        newState = PlaybackState.paused;
+      }
+      _updateState(newState);
+    });
+  }
 
   @override
   Stream<PlaybackState> get stateStream => _stateController.stream;
@@ -26,13 +45,14 @@ class JustAudioPlayer implements AudioPlayer {
   Duration? get duration => _player.duration;
 
   void _updateState(PlaybackState state) {
-    _currentState = state;
-    _stateController.add(state);
+    if (_currentState != state) {
+      _currentState = state;
+      _stateController.add(state);
+    }
   }
 
   @override
   Future<void> load(AudioSource source) async {
-    _updateState(PlaybackState.loading);
     try {
       final jaSource = switch (source) {
         AssetAudioSource(:final assetPath) => ja.AudioSource.asset(assetPath),
@@ -40,7 +60,6 @@ class JustAudioPlayer implements AudioPlayer {
         UrlAudioSource(:final url) => ja.AudioSource.uri(Uri.parse(url)),
       };
       await _player.setAudioSource(jaSource);
-      _updateState(PlaybackState.paused);
     } catch (e) {
       _updateState(PlaybackState.error);
     }
@@ -48,9 +67,7 @@ class JustAudioPlayer implements AudioPlayer {
 
   @override
   Future<void> play() async {
-    _updateState(PlaybackState.playing);
     await _player.play();
-    _updateState(PlaybackState.completed);
   }
 
   @override
