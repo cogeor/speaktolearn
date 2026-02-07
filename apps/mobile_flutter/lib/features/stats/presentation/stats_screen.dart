@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme.dart';
 import '../domain/practice_stats.dart';
 import 'stats_controller.dart';
+import 'widgets/activity_heatmap.dart';
 
 /// Screen displaying aggregate practice statistics.
 class StatsScreen extends ConsumerWidget {
@@ -103,13 +104,19 @@ class _StatsContent extends StatelessWidget {
               ),
             ),
           ),
-        // Placeholder for heatmap (B2)
+        // Activity heatmap
         const SizedBox(height: 24),
-        const Center(
-          child: Text(
-            'Activity heatmap coming soon',
-            style: TextStyle(color: AppTheme.subtle),
+        const Text(
+          'Activity',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
           ),
+        ),
+        const SizedBox(height: 12),
+        ActivityHeatmap(
+          dailyAttempts: stats.dailyAttempts,
+          weeks: 13,
         ),
       ],
     );
