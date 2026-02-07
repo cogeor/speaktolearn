@@ -8,9 +8,11 @@ part of 'example_audio_dto.dart';
 
 VoiceDto _$VoiceDtoFromJson(Map<String, dynamic> json) => VoiceDto(
   id: json['id'] as String,
-  label: Map<String, String>.from(json['label'] as Map),
+  label: (json['label'] as Map<String, dynamic>?)?.map(
+    (k, e) => MapEntry(k, e as String),
+  ),
   uri: json['uri'] as String,
-  durationMs: (json['duration_ms'] as num).toInt(),
+  durationMs: (json['duration_ms'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$VoiceDtoToJson(VoiceDto instance) => <String, dynamic>{

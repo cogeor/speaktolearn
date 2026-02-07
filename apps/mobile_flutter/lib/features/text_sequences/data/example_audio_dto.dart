@@ -5,16 +5,16 @@ part 'example_audio_dto.g.dart';
 @JsonSerializable()
 class VoiceDto {
   final String id;
-  final Map<String, String> label;
+  final Map<String, String>? label;
   final String uri;
   @JsonKey(name: 'duration_ms')
-  final int durationMs;
+  final int? durationMs;
 
   VoiceDto({
     required this.id,
-    required this.label,
+    this.label,
     required this.uri,
-    required this.durationMs,
+    this.durationMs,
   });
 
   factory VoiceDto.fromJson(Map<String, dynamic> json) =>

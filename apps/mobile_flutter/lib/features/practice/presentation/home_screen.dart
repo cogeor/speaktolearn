@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
+import '../../example_audio/presentation/example_audio_controller.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../progress/domain/text_sequence_progress.dart';
 import 'home_controller.dart';
@@ -80,7 +81,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _HomeContent extends StatefulWidget {
+class _HomeContent extends ConsumerStatefulWidget {
   const _HomeContent({
     required this.state,
     required this.controller,
@@ -90,10 +91,10 @@ class _HomeContent extends StatefulWidget {
   final HomeController controller;
 
   @override
-  State<_HomeContent> createState() => _HomeContentState();
+  ConsumerState<_HomeContent> createState() => _HomeContentState();
 }
 
-class _HomeContentState extends State<_HomeContent> {
+class _HomeContentState extends ConsumerState<_HomeContent> {
   bool _showPinyin = true;
 
   void _showPracticeSheet(
@@ -112,11 +113,21 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
 
+  void _playAudio(TextSequence sequence) {
+    final voices = sequence.voices;
+    if (voices == null || voices.isEmpty) return;
+
+    final controller = ref.read(exampleAudioControllerProvider.notifier);
+    controller.play(sequence.id, voices.first.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final sequence = widget.state.current!;
     final hasPinyin = sequence.romanization != null &&
                       sequence.romanization!.isNotEmpty;
+    final hasAudio = sequence.voices != null && sequence.voices!.isNotEmpty;
+    final audioState = ref.watch(exampleAudioControllerProvider);
 
     return Column(
       children: [
@@ -157,6 +168,17 @@ class _HomeContentState extends State<_HomeContent> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 24),
+                if (hasAudio)
+                  IconButton.filled(
+                    onPressed: audioState.isPlaying
+                        ? null
+                        : () => _playAudio(sequence),
+                    icon: Icon(
+                      audioState.isPlaying ? Icons.volume_up : Icons.play_arrow,
+                    ),
+                    iconSize: 32,
+                  ),
               ],
             ),
           ),
