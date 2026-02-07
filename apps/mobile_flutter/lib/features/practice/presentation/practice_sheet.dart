@@ -46,6 +46,13 @@ class _PracticeSheetState extends ConsumerState<PracticeSheet> {
   }
 
   @override
+  void dispose() {
+    // Cancel any active recording or playback when sheet is dismissed
+    ref.read(recordingControllerProvider.notifier).cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Padding(
