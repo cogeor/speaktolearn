@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:speak_to_learn/app/di.dart';
+import 'package:speak_to_learn/app/theme.dart';
 import 'package:speak_to_learn/features/practice/presentation/home_controller.dart';
 import 'package:speak_to_learn/features/practice/presentation/home_screen.dart';
 import 'package:speak_to_learn/features/practice/presentation/home_state.dart';
 import 'package:speak_to_learn/features/progress/domain/text_sequence_progress.dart';
 import 'package:speak_to_learn/features/text_sequences/domain/text_sequence.dart';
-import 'package:speak_to_learn/app/theme.dart';
+
+import '../../mocks/mock_audio.dart';
+import '../../mocks/mock_repositories.dart';
 
 /// Fake HomeController for testing.
 class FakeHomeController extends StateNotifier<HomeState>
@@ -36,16 +40,11 @@ class FakeHomeController extends StateNotifier<HomeState>
   @override
   Future<void> refreshProgress() async {}
 
-  @override
-  void setRecordingStatus(RecordingStatus status) {}
-
-  @override
-  void setLatestScore(int? score) {}
-
   void updateState(HomeState newState) {
     state = newState;
   }
 }
+
 
 void main() {
   const testSequence = TextSequence(
@@ -68,6 +67,14 @@ void main() {
     return ProviderScope(
       overrides: [
         homeControllerProvider.overrideWith((_) => fakeController),
+        // Override all base dependencies to avoid Hive
+        textSequenceRepositoryProvider.overrideWithValue(MockTextSequenceRepository()),
+        progressRepositoryProvider.overrideWithValue(MockProgressRepository()),
+        recordingRepositoryProvider.overrideWithValue(MockRecordingRepository()),
+        settingsRepositoryProvider.overrideWithValue(MockSettingsRepository()),
+        exampleAudioRepositoryProvider.overrideWithValue(MockExampleAudioRepository()),
+        audioRecorderProvider.overrideWithValue(FakeAudioRecorder()),
+        audioPlayerProvider.overrideWithValue(FakeAudioPlayer()),
       ],
       child: MaterialApp(
         theme: AppTheme.darkTheme,
