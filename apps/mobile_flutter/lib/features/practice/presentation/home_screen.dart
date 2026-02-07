@@ -148,20 +148,17 @@ class _HomeContent extends ConsumerStatefulWidget {
 }
 
 class _HomeContentState extends ConsumerState<_HomeContent> {
-  bool _showPinyin = true;
-  bool _initializedFromSettings = false;
+  // Local override for pinyin visibility (null = use settings, true/false = user override)
+  bool? _pinyinOverride;
+  String? _lastSequenceId;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_initializedFromSettings) {
-      final settingsAsync = ref.read(settingsControllerProvider);
-      if (settingsAsync case AsyncData(value: final settings)) {
-        setState(() {
-          _showPinyin = settings.showRomanization;
-          _initializedFromSettings = true;
-        });
-      }
+  void didUpdateWidget(covariant _HomeContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset local override when sequence changes
+    if (widget.state.current?.id != _lastSequenceId) {
+      _pinyinOverride = null;
+      _lastSequenceId = widget.state.current?.id;
     }
   }
 
@@ -217,6 +214,11 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     final hasAudio = sequence.voices != null && sequence.voices!.isNotEmpty;
     final audioState = ref.watch(exampleAudioControllerProvider);
 
+    // Watch settings for reactive pinyin visibility
+    final settingsAsync = ref.watch(settingsControllerProvider);
+    final showRomanizationSetting = settingsAsync.valueOrNull?.showRomanization ?? true;
+    final showPinyin = _pinyinOverride ?? showRomanizationSetting;
+
     return Column(
       children: [
         Expanded(
@@ -246,16 +248,16 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                     if (hasPinyin) ...[
                       const SizedBox(height: 12),
                       GestureDetector(
-                        onTap: () => setState(() => _showPinyin = !_showPinyin),
+                        onTap: () => setState(() => _pinyinOverride = !showPinyin),
                         child: Text(
-                          _showPinyin
+                          showPinyin
                               ? sequence.romanization!
                               : '(tap to show pinyin)',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: _showPinyin
+                            color: showPinyin
                                 ? Theme.of(context).colorScheme.secondary
                                 : AppTheme.subtle,
-                            fontStyle: _showPinyin
+                            fontStyle: showPinyin
                                 ? FontStyle.normal
                                 : FontStyle.italic,
                           ),
