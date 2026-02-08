@@ -23,7 +23,7 @@ from .data import (
 )
 from .pitch import extract_f0_pyin, hz_to_semitones, normalize_f0, robust_stats
 from .sandhi import apply_tone_sandhi
-from .scorer import MinimalScorer, ScorerConfig
+from .scorer import DeterministicScorer, MinimalScorer, ScorerConfig
 from .types import (
     Contour,
     FrameTrack,
@@ -71,6 +71,7 @@ __all__ = [
     "extract_contour",
     "resample_contour",
     # Scorer
+    "DeterministicScorer",
     "MinimalScorer",
     "ScorerConfig",
 ]
