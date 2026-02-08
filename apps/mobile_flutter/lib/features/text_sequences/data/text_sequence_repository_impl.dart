@@ -41,6 +41,12 @@ class TextSequenceRepositoryImpl implements TextSequenceRepository {
   }
 
   @override
+  Future<List<TextSequence>> getByLevel(int level) async {
+    final sequences = await _loadSequences();
+    return sequences.where((s) => s.hskLevel == level).toList();
+  }
+
+  @override
   Future<int> count() async {
     final sequences = await _loadSequences();
     return sequences.length;

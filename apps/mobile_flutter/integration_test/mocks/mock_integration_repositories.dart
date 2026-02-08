@@ -45,6 +45,11 @@ class MockIntegrationTextSequenceRepository implements TextSequenceRepository {
   }
 
   @override
+  Future<List<TextSequence>> getByLevel(int level) async {
+    return _sequences.where((s) => s.hskLevel == level).toList();
+  }
+
+  @override
   Future<int> count() async => _sequences.length;
 }
 
@@ -138,6 +143,21 @@ class MockIntegrationProgressRepository implements ProgressRepository {
       result.addAll(attempts);
     }
     return result;
+  }
+
+  @override
+  Future<void> generateFakeStats({
+    required List<String> sequenceIds,
+    int days = 60,
+    int attemptsPerDay = 10,
+  }) async {
+    // No-op for testing
+  }
+
+  @override
+  Future<void> clearAllStats() async {
+    _progress.clear();
+    _attempts.clear();
   }
 }
 

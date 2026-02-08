@@ -14,6 +14,9 @@ abstract class TextSequenceRepository {
   /// Returns all text sequences with the given [difficulty] level.
   Future<List<TextSequence>> getByDifficulty(int difficulty);
 
+  /// Returns all text sequences with the given HSK [level] (1-6).
+  Future<List<TextSequence>> getByLevel(int level);
+
   /// Returns the total count of text sequences.
   Future<int> count();
 }

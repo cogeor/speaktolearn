@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../progress/domain/progress_repository.dart';
-import '../../selection/domain/get_next_tracked.dart';
+import '../../selection/domain/get_next_by_level.dart';
+import '../../settings/domain/app_settings.dart';
 import '../../text_sequences/domain/text_sequence_repository.dart';
 import 'home_state.dart';
 
@@ -10,22 +11,27 @@ class HomeController extends StateNotifier<HomeState> {
   HomeController({
     required TextSequenceRepository textSequenceRepository,
     required ProgressRepository progressRepository,
-    required GetNextTrackedSequence getNextTrackedSequence,
+    required GetNextByLevel getNextByLevel,
+    required AsyncValue<AppSettings> settings,
   }) : _textSequenceRepository = textSequenceRepository,
        _progressRepository = progressRepository,
-       _getNextTrackedSequence = getNextTrackedSequence,
+       _getNextByLevel = getNextByLevel,
+       _settings = settings,
        super(const HomeState()) {
     _init();
   }
 
   final TextSequenceRepository _textSequenceRepository;
   final ProgressRepository _progressRepository;
-  final GetNextTrackedSequence _getNextTrackedSequence;
+  final GetNextByLevel _getNextByLevel;
+  final AsyncValue<AppSettings> _settings;
+
+  int get _currentLevel => _settings.valueOrNull?.currentLevel ?? 1;
 
   Future<void> _init() async {
     state = state.copyWith(isLoading: true);
 
-    final sequence = await _getNextTrackedSequence();
+    final sequence = await _getNextByLevel(level: _currentLevel);
 
     if (sequence == null) {
       state = state.copyWith(isLoading: false, isEmptyTracked: true);
@@ -42,9 +48,10 @@ class HomeController extends StateNotifier<HomeState> {
     );
   }
 
-  /// Advances to the next tracked sequence, excluding the current one.
+  /// Advances to a random sequence from the current level, excluding the current one.
   Future<void> next() async {
-    final sequence = await _getNextTrackedSequence(
+    final sequence = await _getNextByLevel(
+      level: _currentLevel,
       currentId: state.current?.id,
     );
 
