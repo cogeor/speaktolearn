@@ -30,6 +30,9 @@ mixin _$AppSettings {
   String? get preferredVoiceId => throw _privateConstructorUsedError;
   VoicePreference get voicePreference => throw _privateConstructorUsedError;
 
+  /// Current HSK level (1-6). Defaults to 1.
+  int get currentLevel => throw _privateConstructorUsedError;
+
   /// Serializes this AppSettings to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -56,6 +59,7 @@ abstract class $AppSettingsCopyWith<$Res> {
     bool autoPlayExample,
     String? preferredVoiceId,
     VoicePreference voicePreference,
+    int currentLevel,
   });
 }
 
@@ -82,6 +86,7 @@ class _$AppSettingsCopyWithImpl<$Res, $Val extends AppSettings>
     Object? autoPlayExample = null,
     Object? preferredVoiceId = freezed,
     Object? voicePreference = null,
+    Object? currentLevel = null,
   }) {
     return _then(
       _value.copyWith(
@@ -117,6 +122,10 @@ class _$AppSettingsCopyWithImpl<$Res, $Val extends AppSettings>
                 ? _value.voicePreference
                 : voicePreference // ignore: cast_nullable_to_non_nullable
                       as VoicePreference,
+            currentLevel: null == currentLevel
+                ? _value.currentLevel
+                : currentLevel // ignore: cast_nullable_to_non_nullable
+                      as int,
           )
           as $Val,
     );
@@ -141,6 +150,7 @@ abstract class _$$AppSettingsImplCopyWith<$Res>
     bool autoPlayExample,
     String? preferredVoiceId,
     VoicePreference voicePreference,
+    int currentLevel,
   });
 }
 
@@ -166,6 +176,7 @@ class __$$AppSettingsImplCopyWithImpl<$Res>
     Object? autoPlayExample = null,
     Object? preferredVoiceId = freezed,
     Object? voicePreference = null,
+    Object? currentLevel = null,
   }) {
     return _then(
       _$AppSettingsImpl(
@@ -201,6 +212,10 @@ class __$$AppSettingsImplCopyWithImpl<$Res>
             ? _value.voicePreference
             : voicePreference // ignore: cast_nullable_to_non_nullable
                   as VoicePreference,
+        currentLevel: null == currentLevel
+            ? _value.currentLevel
+            : currentLevel // ignore: cast_nullable_to_non_nullable
+                  as int,
       ),
     );
   }
@@ -217,7 +232,8 @@ class _$AppSettingsImpl implements _AppSettings {
     this.playbackSpeed = 1.0,
     this.autoPlayExample = false,
     this.preferredVoiceId,
-    this.voicePreference = VoicePreference.systemDefault,
+    this.voicePreference = VoicePreference.noPreference,
+    this.currentLevel = 1,
   });
 
   factory _$AppSettingsImpl.fromJson(Map<String, dynamic> json) =>
@@ -247,9 +263,14 @@ class _$AppSettingsImpl implements _AppSettings {
   @JsonKey()
   final VoicePreference voicePreference;
 
+  /// Current HSK level (1-6). Defaults to 1.
+  @override
+  @JsonKey()
+  final int currentLevel;
+
   @override
   String toString() {
-    return 'AppSettings(uiLanguageCode: $uiLanguageCode, targetLanguageCode: $targetLanguageCode, showRomanization: $showRomanization, showGloss: $showGloss, playbackSpeed: $playbackSpeed, autoPlayExample: $autoPlayExample, preferredVoiceId: $preferredVoiceId, voicePreference: $voicePreference)';
+    return 'AppSettings(uiLanguageCode: $uiLanguageCode, targetLanguageCode: $targetLanguageCode, showRomanization: $showRomanization, showGloss: $showGloss, playbackSpeed: $playbackSpeed, autoPlayExample: $autoPlayExample, preferredVoiceId: $preferredVoiceId, voicePreference: $voicePreference, currentLevel: $currentLevel)';
   }
 
   @override
@@ -272,7 +293,9 @@ class _$AppSettingsImpl implements _AppSettings {
             (identical(other.preferredVoiceId, preferredVoiceId) ||
                 other.preferredVoiceId == preferredVoiceId) &&
             (identical(other.voicePreference, voicePreference) ||
-                other.voicePreference == voicePreference));
+                other.voicePreference == voicePreference) &&
+            (identical(other.currentLevel, currentLevel) ||
+                other.currentLevel == currentLevel));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -287,6 +310,7 @@ class _$AppSettingsImpl implements _AppSettings {
     autoPlayExample,
     preferredVoiceId,
     voicePreference,
+    currentLevel,
   );
 
   /// Create a copy of AppSettings
@@ -313,6 +337,7 @@ abstract class _AppSettings implements AppSettings {
     final bool autoPlayExample,
     final String? preferredVoiceId,
     final VoicePreference voicePreference,
+    final int currentLevel,
   }) = _$AppSettingsImpl;
 
   factory _AppSettings.fromJson(Map<String, dynamic> json) =
@@ -334,6 +359,10 @@ abstract class _AppSettings implements AppSettings {
   String? get preferredVoiceId;
   @override
   VoicePreference get voicePreference;
+
+  /// Current HSK level (1-6). Defaults to 1.
+  @override
+  int get currentLevel;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.

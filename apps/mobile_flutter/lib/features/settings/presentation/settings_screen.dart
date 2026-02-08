@@ -72,8 +72,8 @@ class SettingsScreen extends ConsumerWidget {
 
   String _voicePreferenceLabel(VoicePreference pref) {
     switch (pref) {
-      case VoicePreference.systemDefault:
-        return 'System Default';
+      case VoicePreference.noPreference:
+        return 'No Preference';
       case VoicePreference.male:
         return 'Male';
       case VoicePreference.female:

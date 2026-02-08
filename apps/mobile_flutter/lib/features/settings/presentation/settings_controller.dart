@@ -35,4 +35,13 @@ class SettingsController extends AsyncNotifier<AppSettings> {
     await _repository.updateSettings(updated);
     state = AsyncValue.data(updated);
   }
+
+  /// Updates the current HSK level (1-6).
+  Future<void> updateCurrentLevel(int level) async {
+    assert(level >= 1 && level <= 6, 'Level must be between 1 and 6');
+    final current = state.value ?? const AppSettings();
+    final updated = current.copyWith(currentLevel: level.clamp(1, 6));
+    await _repository.updateSettings(updated);
+    state = AsyncValue.data(updated);
+  }
 }

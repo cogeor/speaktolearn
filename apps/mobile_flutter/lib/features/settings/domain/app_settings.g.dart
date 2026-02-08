@@ -20,7 +20,8 @@ _$AppSettingsImpl _$$AppSettingsImplFromJson(Map<String, dynamic> json) =>
             _$VoicePreferenceEnumMap,
             json['voicePreference'],
           ) ??
-          VoicePreference.systemDefault,
+          VoicePreference.noPreference,
+      currentLevel: (json['currentLevel'] as num?)?.toInt() ?? 1,
     );
 
 Map<String, dynamic> _$$AppSettingsImplToJson(_$AppSettingsImpl instance) =>
@@ -33,10 +34,11 @@ Map<String, dynamic> _$$AppSettingsImplToJson(_$AppSettingsImpl instance) =>
       'autoPlayExample': instance.autoPlayExample,
       'preferredVoiceId': instance.preferredVoiceId,
       'voicePreference': _$VoicePreferenceEnumMap[instance.voicePreference]!,
+      'currentLevel': instance.currentLevel,
     };
 
 const _$VoicePreferenceEnumMap = {
-  VoicePreference.systemDefault: 'systemDefault',
+  VoicePreference.noPreference: 'systemDefault',
   VoicePreference.male: 'male',
   VoicePreference.female: 'female',
 };
