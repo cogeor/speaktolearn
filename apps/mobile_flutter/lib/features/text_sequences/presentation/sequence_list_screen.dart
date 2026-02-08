@@ -74,8 +74,6 @@ class SequenceListScreen extends ConsumerWidget {
                             controller.select(item.id);
                             context.go('/');
                           },
-                          onToggleTrack: () =>
-                              controller.toggleTracked(item.id),
                         );
                       },
                     ),

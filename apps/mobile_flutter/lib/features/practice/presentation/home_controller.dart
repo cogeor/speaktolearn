@@ -34,7 +34,7 @@ class HomeController extends StateNotifier<HomeState> {
     final sequence = await _getNextByLevel(level: _currentLevel);
 
     if (sequence == null) {
-      state = state.copyWith(isLoading: false, isEmptyTracked: true);
+      state = state.copyWith(isLoading: false);
       return;
     }
 
@@ -44,7 +44,6 @@ class HomeController extends StateNotifier<HomeState> {
       current: sequence,
       currentProgress: progress,
       isLoading: false,
-      isEmptyTracked: false,
     );
   }
 
@@ -56,7 +55,6 @@ class HomeController extends StateNotifier<HomeState> {
     );
 
     if (sequence == null) {
-      state = state.copyWith(isEmptyTracked: true);
       return;
     }
 
@@ -65,7 +63,6 @@ class HomeController extends StateNotifier<HomeState> {
     state = state.copyWith(
       current: sequence,
       currentProgress: progress,
-      isEmptyTracked: false,
     );
   }
 
@@ -84,7 +81,6 @@ class HomeController extends StateNotifier<HomeState> {
     state = state.copyWith(
       current: sequence,
       currentProgress: progress,
-      isEmptyTracked: false,
     );
   }
 

@@ -40,7 +40,6 @@ class SequenceListController
       return SequenceListItem(
         id: sequence.id,
         text: sequence.text,
-        isTracked: progress?.tracked ?? false,
         bestScore: progress?.bestScore,
         hskLevel: sequence.hskLevel,
       );
@@ -54,11 +53,8 @@ class SequenceListController
       }).toList();
     }
 
-    // Sort: tracked first, then by HSK level, then alphabetically
+    // Sort by HSK level, then alphabetically
     items.sort((a, b) {
-      if (a.isTracked != b.isTracked) {
-        return a.isTracked ? -1 : 1;
-      }
       // Sort by HSK level (null at end)
       final aLevel = a.hskLevel ?? 999;
       final bLevel = b.hskLevel ?? 999;
@@ -69,15 +65,6 @@ class SequenceListController
     });
 
     return items;
-  }
-
-  /// Toggles the tracked status of a sequence.
-  Future<void> toggleTracked(String id) async {
-    final progressRepo = ref.read(progressRepositoryProvider);
-    await progressRepo.toggleTracked(id);
-
-    // Refresh the list
-    ref.invalidateSelf();
   }
 
   /// Selects a sequence for practice on the home screen.

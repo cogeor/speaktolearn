@@ -29,6 +29,5 @@ class HomeState with _$HomeState {
     TextSequence? current,
     TextSequenceProgress? currentProgress,
     @Default(true) bool isLoading,
-    @Default(false) bool isEmptyTracked,
   }) = _HomeState;
 }

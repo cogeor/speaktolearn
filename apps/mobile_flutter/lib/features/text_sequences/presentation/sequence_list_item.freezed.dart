@@ -19,7 +19,6 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$SequenceListItem {
   String get id => throw _privateConstructorUsedError;
   String get text => throw _privateConstructorUsedError;
-  bool get isTracked => throw _privateConstructorUsedError;
   int? get bestScore => throw _privateConstructorUsedError;
   int? get hskLevel => throw _privateConstructorUsedError;
 
@@ -37,13 +36,7 @@ abstract class $SequenceListItemCopyWith<$Res> {
     $Res Function(SequenceListItem) then,
   ) = _$SequenceListItemCopyWithImpl<$Res, SequenceListItem>;
   @useResult
-  $Res call({
-    String id,
-    String text,
-    bool isTracked,
-    int? bestScore,
-    int? hskLevel,
-  });
+  $Res call({String id, String text, int? bestScore, int? hskLevel});
 }
 
 /// @nodoc
@@ -63,7 +56,6 @@ class _$SequenceListItemCopyWithImpl<$Res, $Val extends SequenceListItem>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? isTracked = null,
     Object? bestScore = freezed,
     Object? hskLevel = freezed,
   }) {
@@ -77,10 +69,6 @@ class _$SequenceListItemCopyWithImpl<$Res, $Val extends SequenceListItem>
                 ? _value.text
                 : text // ignore: cast_nullable_to_non_nullable
                       as String,
-            isTracked: null == isTracked
-                ? _value.isTracked
-                : isTracked // ignore: cast_nullable_to_non_nullable
-                      as bool,
             bestScore: freezed == bestScore
                 ? _value.bestScore
                 : bestScore // ignore: cast_nullable_to_non_nullable
@@ -104,13 +92,7 @@ abstract class _$$SequenceListItemImplCopyWith<$Res>
   ) = __$$SequenceListItemImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({
-    String id,
-    String text,
-    bool isTracked,
-    int? bestScore,
-    int? hskLevel,
-  });
+  $Res call({String id, String text, int? bestScore, int? hskLevel});
 }
 
 /// @nodoc
@@ -129,7 +111,6 @@ class __$$SequenceListItemImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? isTracked = null,
     Object? bestScore = freezed,
     Object? hskLevel = freezed,
   }) {
@@ -143,10 +124,6 @@ class __$$SequenceListItemImplCopyWithImpl<$Res>
             ? _value.text
             : text // ignore: cast_nullable_to_non_nullable
                   as String,
-        isTracked: null == isTracked
-            ? _value.isTracked
-            : isTracked // ignore: cast_nullable_to_non_nullable
-                  as bool,
         bestScore: freezed == bestScore
             ? _value.bestScore
             : bestScore // ignore: cast_nullable_to_non_nullable
@@ -166,7 +143,6 @@ class _$SequenceListItemImpl implements _SequenceListItem {
   const _$SequenceListItemImpl({
     required this.id,
     required this.text,
-    required this.isTracked,
     this.bestScore,
     this.hskLevel,
   });
@@ -176,15 +152,13 @@ class _$SequenceListItemImpl implements _SequenceListItem {
   @override
   final String text;
   @override
-  final bool isTracked;
-  @override
   final int? bestScore;
   @override
   final int? hskLevel;
 
   @override
   String toString() {
-    return 'SequenceListItem(id: $id, text: $text, isTracked: $isTracked, bestScore: $bestScore, hskLevel: $hskLevel)';
+    return 'SequenceListItem(id: $id, text: $text, bestScore: $bestScore, hskLevel: $hskLevel)';
   }
 
   @override
@@ -194,8 +168,6 @@ class _$SequenceListItemImpl implements _SequenceListItem {
             other is _$SequenceListItemImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.text, text) || other.text == text) &&
-            (identical(other.isTracked, isTracked) ||
-                other.isTracked == isTracked) &&
             (identical(other.bestScore, bestScore) ||
                 other.bestScore == bestScore) &&
             (identical(other.hskLevel, hskLevel) ||
@@ -203,8 +175,7 @@ class _$SequenceListItemImpl implements _SequenceListItem {
   }
 
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, text, isTracked, bestScore, hskLevel);
+  int get hashCode => Object.hash(runtimeType, id, text, bestScore, hskLevel);
 
   /// Create a copy of SequenceListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -222,7 +193,6 @@ abstract class _SequenceListItem implements SequenceListItem {
   const factory _SequenceListItem({
     required final String id,
     required final String text,
-    required final bool isTracked,
     final int? bestScore,
     final int? hskLevel,
   }) = _$SequenceListItemImpl;
@@ -231,8 +201,6 @@ abstract class _SequenceListItem implements SequenceListItem {
   String get id;
   @override
   String get text;
-  @override
-  bool get isTracked;
   @override
   int? get bestScore;
   @override

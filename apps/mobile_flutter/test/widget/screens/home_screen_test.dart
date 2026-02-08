@@ -80,17 +80,6 @@ void main() {
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
-
-    testWidgets('shows empty state when no tracked sequences', (tester) async {
-      await tester.pumpWidget(
-        buildTestWidget(
-          initialState: const HomeState(isLoading: false, isEmptyTracked: true),
-        ),
-      );
-
-      expect(find.text('No tracked sequences'), findsOneWidget);
-      expect(find.text('Open list'), findsOneWidget);
-    });
   });
 
   group('HomeScreen content', () {
@@ -99,7 +88,6 @@ void main() {
         buildTestWidget(
           initialState: const HomeState(
             isLoading: false,
-            isEmptyTracked: false,
             current: testSequence,
           ),
         ),
@@ -113,7 +101,6 @@ void main() {
         buildTestWidget(
           initialState: const HomeState(
             isLoading: false,
-            isEmptyTracked: false,
             current: testSequence,
             currentProgress: testProgress,
           ),
@@ -128,7 +115,6 @@ void main() {
         buildTestWidget(
           initialState: const HomeState(
             isLoading: false,
-            isEmptyTracked: false,
             current: testSequence,
           ),
         ),
@@ -141,7 +127,6 @@ void main() {
       final controller = FakeHomeController(
         const HomeState(
           isLoading: false,
-          isEmptyTracked: false,
           current: testSequence,
         ),
       );
@@ -150,7 +135,6 @@ void main() {
         buildTestWidget(
           initialState: const HomeState(
             isLoading: false,
-            isEmptyTracked: false,
             current: testSequence,
           ),
           controller: controller,
@@ -169,21 +153,14 @@ void main() {
     testWidgets('shows list icon button', (tester) async {
       await tester.pumpWidget(
         buildTestWidget(
-          initialState: const HomeState(isLoading: false, isEmptyTracked: true),
+          initialState: const HomeState(
+            isLoading: false,
+            current: testSequence,
+          ),
         ),
       );
 
       expect(find.byIcon(Icons.list), findsOneWidget);
-    });
-
-    testWidgets('has Home title', (tester) async {
-      await tester.pumpWidget(
-        buildTestWidget(
-          initialState: const HomeState(isLoading: false, isEmptyTracked: true),
-        ),
-      );
-
-      expect(find.text('Home'), findsOneWidget);
     });
   });
 }

@@ -7,7 +7,6 @@ class SequenceListItem with _$SequenceListItem {
   const factory SequenceListItem({
     required String id,
     required String text,
-    required bool isTracked,
     int? bestScore,
     int? hskLevel,
   }) = _SequenceListItem;

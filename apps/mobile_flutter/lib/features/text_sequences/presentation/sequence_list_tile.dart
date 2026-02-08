@@ -11,7 +11,6 @@ class SequenceListTile extends StatelessWidget {
     super.key,
     required this.item,
     required this.onTap,
-    required this.onToggleTrack,
   });
 
   /// The sequence item to display.
@@ -19,9 +18,6 @@ class SequenceListTile extends StatelessWidget {
 
   /// Called when the tile is tapped.
   final VoidCallback onTap;
-
-  /// Called when the track/untrack button is pressed.
-  final VoidCallback onToggleTrack;
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +37,6 @@ class SequenceListTile extends StatelessWidget {
               style: TextStyle(color: item.bestScore!.scoreColor),
             )
           : null,
-      trailing: IconButton(
-        icon: Icon(item.isTracked ? Icons.star : Icons.star_border),
-        onPressed: onToggleTrack,
-      ),
       onTap: onTap,
     );
   }

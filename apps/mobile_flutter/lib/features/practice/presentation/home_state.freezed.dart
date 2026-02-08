@@ -21,7 +21,6 @@ mixin _$HomeState {
   TextSequenceProgress? get currentProgress =>
       throw _privateConstructorUsedError;
   bool get isLoading => throw _privateConstructorUsedError;
-  bool get isEmptyTracked => throw _privateConstructorUsedError;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
@@ -39,7 +38,6 @@ abstract class $HomeStateCopyWith<$Res> {
     TextSequence? current,
     TextSequenceProgress? currentProgress,
     bool isLoading,
-    bool isEmptyTracked,
   });
 
   $TextSequenceCopyWith<$Res>? get current;
@@ -64,7 +62,6 @@ class _$HomeStateCopyWithImpl<$Res, $Val extends HomeState>
     Object? current = freezed,
     Object? currentProgress = freezed,
     Object? isLoading = null,
-    Object? isEmptyTracked = null,
   }) {
     return _then(
       _value.copyWith(
@@ -79,10 +76,6 @@ class _$HomeStateCopyWithImpl<$Res, $Val extends HomeState>
             isLoading: null == isLoading
                 ? _value.isLoading
                 : isLoading // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            isEmptyTracked: null == isEmptyTracked
-                ? _value.isEmptyTracked
-                : isEmptyTracked // ignore: cast_nullable_to_non_nullable
                       as bool,
           )
           as $Val,
@@ -133,7 +126,6 @@ abstract class _$$HomeStateImplCopyWith<$Res>
     TextSequence? current,
     TextSequenceProgress? currentProgress,
     bool isLoading,
-    bool isEmptyTracked,
   });
 
   @override
@@ -159,7 +151,6 @@ class __$$HomeStateImplCopyWithImpl<$Res>
     Object? current = freezed,
     Object? currentProgress = freezed,
     Object? isLoading = null,
-    Object? isEmptyTracked = null,
   }) {
     return _then(
       _$HomeStateImpl(
@@ -175,10 +166,6 @@ class __$$HomeStateImplCopyWithImpl<$Res>
             ? _value.isLoading
             : isLoading // ignore: cast_nullable_to_non_nullable
                   as bool,
-        isEmptyTracked: null == isEmptyTracked
-            ? _value.isEmptyTracked
-            : isEmptyTracked // ignore: cast_nullable_to_non_nullable
-                  as bool,
       ),
     );
   }
@@ -191,7 +178,6 @@ class _$HomeStateImpl implements _HomeState {
     this.current,
     this.currentProgress,
     this.isLoading = true,
-    this.isEmptyTracked = false,
   });
 
   @override
@@ -201,13 +187,10 @@ class _$HomeStateImpl implements _HomeState {
   @override
   @JsonKey()
   final bool isLoading;
-  @override
-  @JsonKey()
-  final bool isEmptyTracked;
 
   @override
   String toString() {
-    return 'HomeState(current: $current, currentProgress: $currentProgress, isLoading: $isLoading, isEmptyTracked: $isEmptyTracked)';
+    return 'HomeState(current: $current, currentProgress: $currentProgress, isLoading: $isLoading)';
   }
 
   @override
@@ -219,19 +202,12 @@ class _$HomeStateImpl implements _HomeState {
             (identical(other.currentProgress, currentProgress) ||
                 other.currentProgress == currentProgress) &&
             (identical(other.isLoading, isLoading) ||
-                other.isLoading == isLoading) &&
-            (identical(other.isEmptyTracked, isEmptyTracked) ||
-                other.isEmptyTracked == isEmptyTracked));
+                other.isLoading == isLoading));
   }
 
   @override
-  int get hashCode => Object.hash(
-    runtimeType,
-    current,
-    currentProgress,
-    isLoading,
-    isEmptyTracked,
-  );
+  int get hashCode =>
+      Object.hash(runtimeType, current, currentProgress, isLoading);
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
@@ -247,7 +223,6 @@ abstract class _HomeState implements HomeState {
     final TextSequence? current,
     final TextSequenceProgress? currentProgress,
     final bool isLoading,
-    final bool isEmptyTracked,
   }) = _$HomeStateImpl;
 
   @override
@@ -256,8 +231,6 @@ abstract class _HomeState implements HomeState {
   TextSequenceProgress? get currentProgress;
   @override
   bool get isLoading;
-  @override
-  bool get isEmptyTracked;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
