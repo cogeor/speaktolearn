@@ -22,8 +22,11 @@ Generate practical Mandarin Chinese sentences for language learners.
    - Social: friends, family, hobbies
 
 4. **Romanization**
-   - Use standard pinyin with tone marks
-   - Include tone numbers as alternative: wo3 (wo3)
+   - ALWAYS use standard pinyin with tone diacritics (e.g., ni hao, xie xie, wo ai ni)
+   - Use proper Unicode tone marks: a, e, i, o, u (first tone), a, e, i, o, u (second tone), a, e, i, o, u (third tone), a, e, i, o, u (fourth tone)
+   - NEVER use numerical tone notation (e.g., ni3 hao3, wo3) - this is INCORRECT
+   - Examples of CORRECT pinyin: ni hao, zai jian, wo hen gao xing
+   - Examples of INCORRECT pinyin: ni3 hao3, zai4 jian4, wo3 hen3 gao1 xing4
 
 5. **Tokens**
    - Split by natural word boundaries
@@ -32,12 +35,12 @@ Generate practical Mandarin Chinese sentences for language learners.
 ## Examples
 
 Difficulty 1 (Beginner):
-- 你好！ (ni3 hao3) - Hello!
-- 谢谢。 (xie4 xie) - Thank you.
+- 你好！ (ni hao) - Hello!
+- 谢谢。 (xie xie) - Thank you.
 
 Difficulty 2 (Elementary):
-- 我想喝水。 (wo3 xiang3 he1 shui3) - I want to drink water.
-- 这个多少钱？ (zhe4 ge duo1 shao3 qian2) - How much is this?
+- 我想喝水。 (wo xiang he shui) - I want to drink water.
+- 这个多少钱？ (zhe ge duo shao qian) - How much is this?
 
 Difficulty 3 (Intermediate):
-- 请问，去火车站怎么走？ (qing3 wen4, qu4 huo3 che1 zhan4 zen3 me zou3) - Excuse me, how do I get to the train station?
+- 请问，去火车站怎么走？ (qing wen, qu huo che zhan zen me zou) - Excuse me, how do I get to the train station?

@@ -13,6 +13,8 @@ from ..models.text_sequence import TextSequence
 class TextGenerator:
     """Generates text sequences using LLM."""
     _trailing_punctuation = re.compile(r"[.?!,;:。！？、，；：…]+$")
+    # Pattern to detect numerical pinyin like "ni3", "hao3", "wo3"
+    _numerical_pinyin_pattern = re.compile(r"[a-zA-Z]+[1-4](?:\s|$|,)")
 
     def __init__(self, config: Config) -> None:
         """Initialize the text generator.
@@ -103,20 +105,26 @@ class TextGenerator:
         Returns:
             System prompt string for the LLM
         """
+        pinyin_instruction = ""
+        if language.lower().startswith("zh"):
+            pinyin_instruction = """
+- For pinyin: ALWAYS use tone diacritics (e.g., ni hao, xie xie, wo ai ni)
+- NEVER use numerical tones (e.g., ni3 hao3 is WRONG, ni hao is CORRECT)"""
+
         return f"""You are a language learning content generator.
 Generate sentences in {language} for language learners.
 
 Requirements:
 - Difficulty level: {difficulty}/5
 - Tags to include: {', '.join(tags) if tags else 'general'}
-- Include romanization (pinyin for Chinese, romaji for Japanese)
+- Include romanization (pinyin for Chinese, romaji for Japanese){pinyin_instruction}
 - Include English translation
 - Keep sentences practical and commonly used
 - Vary sentence structures
 
 Output format: JSON array of objects with keys:
 - text: the sentence in target language
-- romanization: pronunciation guide
+- romanization: pronunciation guide (with tone diacritics for Chinese, NOT numbers)
 - translation: English translation
 - tokens: array of individual words/characters
 - tags: relevant tags"""
@@ -183,3 +191,35 @@ Output format: JSON array of objects with keys:
         if language.lower().startswith("zh"):
             normalized = self._trailing_punctuation.sub("", normalized)
         return normalized
+
+    @classmethod
+    def has_numerical_pinyin(cls, romanization: str) -> bool:
+        """Check if romanization contains numerical pinyin notation.
+
+        Args:
+            romanization: The pinyin string to check
+
+        Returns:
+            True if numerical pinyin (e.g., "ni3 hao3") is detected, False otherwise
+        """
+        return bool(cls._numerical_pinyin_pattern.search(romanization))
+
+    @classmethod
+    def validate_pinyin(cls, items: list[dict]) -> list[str]:
+        """Validate that pinyin in items uses diacritics, not numbers.
+
+        Args:
+            items: List of sentence items with romanization field
+
+        Returns:
+            List of validation errors (empty if all valid)
+        """
+        errors = []
+        for item in items:
+            romanization = item.get("romanization", "")
+            if cls.has_numerical_pinyin(romanization):
+                text = item.get("text", item.get("id", "unknown"))
+                errors.append(
+                    f"Numerical pinyin detected in '{text}': '{romanization}'"
+                )
+        return errors
