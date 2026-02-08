@@ -1,6 +1,7 @@
 """Pitch extraction and normalization.
 
 This module provides functions for speaker-independent F0 analysis:
+- Extract F0 using pYIN algorithm
 - Convert F0 from Hz to semitones
 - Compute robust statistics (median, MAD) over voiced frames
 - Z-score normalization using robust statistics
@@ -13,6 +14,50 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .types import FrameTrack
+
+
+def extract_f0_pyin(
+    audio: NDArray[np.floating],
+    sr: int = 16000,
+    fmin: float = 50.0,
+    fmax: float = 500.0,
+    hop_length: int = 160,
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+    """Extract F0 using pYIN algorithm.
+
+    pYIN is a probabilistic variant of YIN that provides:
+    - Frame-level F0 estimates in Hz
+    - Voicing probability per frame
+
+    Args:
+        audio: Audio samples as float array (mono, normalized to [-1, 1]).
+        sr: Sample rate in Hz (default 16000).
+        fmin: Minimum F0 frequency in Hz (default 50).
+        fmax: Maximum F0 frequency in Hz (default 500).
+        hop_length: Hop length in samples (default 160 = 10ms at 16kHz).
+
+    Returns:
+        Tuple of (f0_hz, voicing) where:
+        - f0_hz: F0 values in Hz, shape [T]. Unvoiced frames have value 0.
+        - voicing: Voicing probability per frame, shape [T], range [0, 1].
+    """
+    import librosa
+
+    f0, voiced_flag, voiced_probs = librosa.pyin(
+        audio,
+        fmin=fmin,
+        fmax=fmax,
+        sr=sr,
+        hop_length=hop_length,
+    )
+
+    # Replace NaN with 0 for unvoiced frames
+    f0 = np.nan_to_num(f0, nan=0.0)
+
+    # Use voiced_probs if available, otherwise convert flag to float
+    voicing = voiced_probs if voiced_probs is not None else voiced_flag.astype(float)
+
+    return f0.astype(np.float64), voicing.astype(np.float64)
 
 
 def hz_to_semitones(

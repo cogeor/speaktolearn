@@ -4,12 +4,14 @@ Tests the core invariants of speaker-independent F0 normalization:
 - Hz to semitones conversion handles edge cases
 - Robust statistics are computed correctly
 - Normalized contours are invariant to speaker pitch range
+- pYIN pitch extraction
 """
 
 import numpy as np
 import pytest
 
 from mandarin_grader.pitch import (
+    extract_f0_pyin,
     hz_to_semitones,
     normalize_f0,
     normalize_frame_track,
@@ -292,3 +294,100 @@ class TestNormalizeFrameTrack:
         result_manual = normalize_f0(semitones, track.voicing)
 
         np.testing.assert_array_equal(result_convenience, result_manual)
+
+
+# Check if librosa is available for pYIN tests
+try:
+    import librosa
+    HAS_LIBROSA = True
+except ImportError:
+    HAS_LIBROSA = False
+
+
+@pytest.mark.skipif(not HAS_LIBROSA, reason="librosa not installed")
+class TestExtractF0Pyin:
+    """Tests for pYIN-based F0 extraction."""
+
+    def test_returns_correct_shapes(self) -> None:
+        """F0 and voicing arrays have correct shapes."""
+        # Generate 1 second of audio at 16kHz
+        sr = 16000
+        duration = 1.0
+        audio = np.zeros(int(sr * duration), dtype=np.float64)
+
+        f0, voicing = extract_f0_pyin(audio, sr=sr)
+
+        # With hop_length=160, we expect ~100 frames per second
+        expected_frames = int(sr * duration / 160)
+        # Allow some tolerance for frame boundary handling
+        assert abs(len(f0) - expected_frames) <= 2
+        assert len(f0) == len(voicing)
+
+    def test_silent_audio_is_unvoiced(self) -> None:
+        """Silent audio should have low voicing probability."""
+        sr = 16000
+        audio = np.zeros(sr, dtype=np.float64)  # 1 second of silence
+
+        f0, voicing = extract_f0_pyin(audio, sr=sr)
+
+        # All frames should be unvoiced (voicing prob low)
+        assert np.mean(voicing) < 0.5
+
+    def test_sine_wave_is_voiced(self) -> None:
+        """Pure tone should be detected as voiced with correct F0."""
+        sr = 16000
+        freq = 200.0  # 200 Hz sine wave
+        duration = 0.5
+        t = np.linspace(0, duration, int(sr * duration), dtype=np.float64)
+        audio = 0.5 * np.sin(2 * np.pi * freq * t)
+
+        f0, voicing = extract_f0_pyin(audio, sr=sr)
+
+        # Most frames should be voiced
+        voiced_mask = voicing > 0.5
+        assert np.sum(voiced_mask) > len(f0) * 0.5  # At least half voiced
+
+        # Voiced frames should have F0 near 200 Hz
+        voiced_f0 = f0[voiced_mask]
+        if len(voiced_f0) > 0:
+            assert np.abs(np.median(voiced_f0) - freq) < 20  # Within 20 Hz
+
+    def test_f0_no_nan_values(self) -> None:
+        """F0 array should not contain NaN values."""
+        sr = 16000
+        audio = np.random.randn(sr).astype(np.float64) * 0.1
+
+        f0, voicing = extract_f0_pyin(audio, sr=sr)
+
+        assert not np.any(np.isnan(f0))
+        assert not np.any(np.isnan(voicing))
+
+    def test_custom_frequency_range(self) -> None:
+        """Custom fmin/fmax parameters are respected."""
+        sr = 16000
+        freq = 100.0  # Low frequency
+        duration = 0.5
+        t = np.linspace(0, duration, int(sr * duration), dtype=np.float64)
+        audio = 0.5 * np.sin(2 * np.pi * freq * t)
+
+        # Use fmin=80, fmax=150 to include 100 Hz
+        f0, voicing = extract_f0_pyin(audio, sr=sr, fmin=80.0, fmax=150.0)
+
+        # Should detect the tone
+        voiced_f0 = f0[voicing > 0.5]
+        if len(voiced_f0) > 0:
+            assert np.abs(np.median(voiced_f0) - freq) < 20
+
+    def test_custom_hop_length(self) -> None:
+        """Custom hop_length affects number of output frames."""
+        sr = 16000
+        duration = 1.0
+        audio = np.zeros(int(sr * duration), dtype=np.float64)
+
+        # Default hop_length=160 -> ~100 frames/sec
+        f0_default, _ = extract_f0_pyin(audio, sr=sr, hop_length=160)
+
+        # Double hop_length -> half the frames
+        f0_double, _ = extract_f0_pyin(audio, sr=sr, hop_length=320)
+
+        assert abs(len(f0_default) - 2 * len(f0_double)) <= 2

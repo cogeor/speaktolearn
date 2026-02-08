@@ -1,2 +1,4 @@
 # Delegate runtime files
 .delegate/
+
+__pycache__/
