@@ -28,10 +28,30 @@ class _SeededRandom implements Random {
 }
 
 void main() {
-  const level1Seq1 = TextSequence(id: 'l1-001', text: '你好', language: 'zh', hskLevel: 1);
-  const level1Seq2 = TextSequence(id: 'l1-002', text: '谢谢', language: 'zh', hskLevel: 1);
-  const level1Seq3 = TextSequence(id: 'l1-003', text: '再见', language: 'zh', hskLevel: 1);
-  const level2Seq1 = TextSequence(id: 'l2-001', text: '学习', language: 'zh', hskLevel: 2);
+  const level1Seq1 = TextSequence(
+    id: 'l1-001',
+    text: '你好',
+    language: 'zh',
+    hskLevel: 1,
+  );
+  const level1Seq2 = TextSequence(
+    id: 'l1-002',
+    text: '谢谢',
+    language: 'zh',
+    hskLevel: 1,
+  );
+  const level1Seq3 = TextSequence(
+    id: 'l1-003',
+    text: '再见',
+    language: 'zh',
+    hskLevel: 1,
+  );
+  const level2Seq1 = TextSequence(
+    id: 'l2-001',
+    text: '学习',
+    language: 'zh',
+    hskLevel: 2,
+  );
 
   group('GetNextByLevel', () {
     test('returns null when no sequences exist for level', () async {
@@ -44,7 +64,11 @@ void main() {
     });
 
     test('returns a sequence from the requested level', () async {
-      final repo = MockTextSequenceRepository([level1Seq1, level1Seq2, level2Seq1]);
+      final repo = MockTextSequenceRepository([
+        level1Seq1,
+        level1Seq2,
+        level2Seq1,
+      ]);
       final useCase = GetNextByLevel(
         textSequenceRepository: repo,
         random: _SeededRandom([0]),
@@ -80,7 +104,11 @@ void main() {
     });
 
     test('selects randomly from available sequences', () async {
-      final repo = MockTextSequenceRepository([level1Seq1, level1Seq2, level1Seq3]);
+      final repo = MockTextSequenceRepository([
+        level1Seq1,
+        level1Seq2,
+        level1Seq3,
+      ]);
 
       // First call returns index 0
       final useCase1 = GetNextByLevel(

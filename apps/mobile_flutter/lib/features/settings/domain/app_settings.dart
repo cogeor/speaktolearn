@@ -33,6 +33,7 @@ class AppSettings with _$AppSettings {
     @Default(false) bool autoPlayExample,
     String? preferredVoiceId,
     @Default(VoicePreference.noPreference) VoicePreference voicePreference,
+
     /// Current HSK level (1-6). Defaults to 1.
     @Default(1) int currentLevel,
   }) = _AppSettings;

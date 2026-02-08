@@ -125,10 +125,7 @@ void main() {
 
     testWidgets('next button calls controller.next', (tester) async {
       final controller = FakeHomeController(
-        const HomeState(
-          isLoading: false,
-          current: testSequence,
-        ),
+        const HomeState(isLoading: false, current: testSequence),
       );
 
       await tester.pumpWidget(
@@ -146,7 +143,6 @@ void main() {
 
       expect(controller.nextCalled, isTrue);
     });
-
   });
 
   group('HomeScreen app bar', () {

@@ -60,10 +60,7 @@ class HomeController extends StateNotifier<HomeState> {
 
     final progress = await _progressRepository.getProgress(sequence.id);
 
-    state = state.copyWith(
-      current: sequence,
-      currentProgress: progress,
-    );
+    state = state.copyWith(current: sequence, currentProgress: progress);
   }
 
   /// Sets the current sequence by its ID.
@@ -78,10 +75,7 @@ class HomeController extends StateNotifier<HomeState> {
 
     final progress = await _progressRepository.getProgress(sequence.id);
 
-    state = state.copyWith(
-      current: sequence,
-      currentProgress: progress,
-    );
+    state = state.copyWith(current: sequence, currentProgress: progress);
   }
 
   /// Refreshes the progress for the current sequence.

@@ -63,8 +63,8 @@ class HomeScreen extends ConsumerWidget {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.current == null
-              ? const _NoSentenceState()
-              : _HomeContent(state: state, controller: controller),
+          ? const _NoSentenceState()
+          : _HomeContent(state: state, controller: controller),
     );
   }
 }
@@ -90,16 +90,16 @@ class _NoSentenceState extends StatelessWidget {
           Text(
             'No sentences available for this level',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
             'Try selecting a different HSK level above',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+              color: Theme.of(context).colorScheme.outline,
+            ),
             textAlign: TextAlign.center,
           ),
           const Spacer(),

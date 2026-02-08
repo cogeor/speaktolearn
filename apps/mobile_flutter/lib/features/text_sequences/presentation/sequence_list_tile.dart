@@ -7,11 +7,7 @@ import 'widgets/hsk_badge.dart';
 /// A list tile widget for displaying a sequence item.
 class SequenceListTile extends StatelessWidget {
   /// Creates a SequenceListTile.
-  const SequenceListTile({
-    super.key,
-    required this.item,
-    required this.onTap,
-  });
+  const SequenceListTile({super.key, required this.item, required this.onTap});
 
   /// The sequence item to display.
   final SequenceListItem item;

@@ -7,21 +7,9 @@ import 'package:speak_to_learn/features/text_sequences/presentation/sequence_lis
 
 void main() {
   const testItems = [
-    SequenceListItem(
-      id: 'test-001',
-      text: '你好',
-      bestScore: 85,
-    ),
-    SequenceListItem(
-      id: 'test-002',
-      text: '谢谢',
-      bestScore: null,
-    ),
-    SequenceListItem(
-      id: 'test-003',
-      text: '再见',
-      bestScore: 70,
-    ),
+    SequenceListItem(id: 'test-001', text: '你好', bestScore: 85),
+    SequenceListItem(id: 'test-002', text: '谢谢', bestScore: null),
+    SequenceListItem(id: 'test-003', text: '再见', bestScore: 70),
   ];
 
   group('SequenceListTile', () {
@@ -36,10 +24,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.darkTheme,
           home: Scaffold(
-            body: SequenceListTile(
-              item: item,
-              onTap: () {},
-            ),
+            body: SequenceListTile(item: item, onTap: () {}),
           ),
         ),
       );
@@ -48,20 +33,13 @@ void main() {
     });
 
     testWidgets('shows best score when available', (tester) async {
-      const item = SequenceListItem(
-        id: 'test-001',
-        text: '你好',
-        bestScore: 85,
-      );
+      const item = SequenceListItem(id: 'test-001', text: '你好', bestScore: 85);
 
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.darkTheme,
           home: Scaffold(
-            body: SequenceListTile(
-              item: item,
-              onTap: () {},
-            ),
+            body: SequenceListTile(item: item, onTap: () {}),
           ),
         ),
       );
@@ -80,10 +58,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.darkTheme,
           home: Scaffold(
-            body: SequenceListTile(
-              item: item,
-              onTap: () {},
-            ),
+            body: SequenceListTile(item: item, onTap: () {}),
           ),
         ),
       );
@@ -103,10 +78,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.darkTheme,
           home: Scaffold(
-            body: SequenceListTile(
-              item: item,
-              onTap: () => tapped = true,
-            ),
+            body: SequenceListTile(item: item, onTap: () => tapped = true),
           ),
         ),
       );
@@ -127,10 +99,7 @@ void main() {
             body: ListView.builder(
               itemCount: testItems.length,
               itemBuilder: (context, index) {
-                return SequenceListTile(
-                  item: testItems[index],
-                  onTap: () {},
-                );
+                return SequenceListTile(item: testItems[index], onTap: () {});
               },
             ),
           ),

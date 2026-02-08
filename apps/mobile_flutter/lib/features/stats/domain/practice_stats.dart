@@ -35,8 +35,8 @@ class PracticeStats with _$PracticeStats {
       if ((date.day * 7 + i) % 5 == 0) continue;
 
       // Weekend days tend to have more practice
-      final isWeekend = dayOfWeek == DateTime.saturday ||
-          dayOfWeek == DateTime.sunday;
+      final isWeekend =
+          dayOfWeek == DateTime.saturday || dayOfWeek == DateTime.sunday;
       final baseAttempts = isWeekend ? 8 : 4;
 
       // Add some variation based on day
@@ -51,7 +51,8 @@ class PracticeStats with _$PracticeStats {
 
     return PracticeStats(
       totalAttempts: totalAttempts,
-      sequencesPracticed: (totalAttempts * 0.7).round(), // ~70% unique sequences
+      sequencesPracticed: (totalAttempts * 0.7)
+          .round(), // ~70% unique sequences
       averageScore: 72.5, // Realistic average score
       currentStreak: 5,
       longestStreak: 14,

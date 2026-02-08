@@ -74,8 +74,8 @@ class SettingsScreen extends ConsumerWidget {
                   child: Text(
                     'Debug',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                 ),
                 ListTile(
@@ -120,10 +120,7 @@ class SettingsScreen extends ConsumerWidget {
 
       // Get all sequences and pick a subset (up to 80 sequences)
       final allSequences = await textSequenceRepo.getAll();
-      final sequenceIds = allSequences
-          .take(80)
-          .map((s) => s.id)
-          .toList();
+      final sequenceIds = allSequences.take(80).map((s) => s.id).toList();
 
       await progressRepo.generateFakeStats(sequenceIds: sequenceIds);
 
@@ -143,10 +140,7 @@ class SettingsScreen extends ConsumerWidget {
       if (context.mounted) {
         Navigator.of(context).pop(); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -186,19 +180,14 @@ class SettingsScreen extends ConsumerWidget {
       ref.invalidate(statsControllerProvider);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('All stats cleared.'),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('All stats cleared.')));
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }

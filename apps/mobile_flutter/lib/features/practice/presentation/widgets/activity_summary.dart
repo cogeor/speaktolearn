@@ -34,8 +34,8 @@ class ActivitySummary extends ConsumerWidget {
                     Text(
                       'Activity this week',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -58,7 +58,8 @@ class ActivitySummary extends ConsumerWidget {
                     children: [
                       Text(
                         '$count',
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                        style: Theme.of(context).textTheme.headlineLarge
+                            ?.copyWith(
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.primary,
                             ),
@@ -67,8 +68,8 @@ class ActivitySummary extends ConsumerWidget {
                       Text(
                         count == 1 ? 'practice session' : 'practice sessions',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),

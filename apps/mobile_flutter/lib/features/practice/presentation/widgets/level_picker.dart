@@ -8,10 +8,7 @@ import '../../../settings/presentation/settings_controller.dart';
 /// Displays the current level and allows the user to change it.
 /// Level changes are persisted to settings and trigger a sentence reload.
 class LevelPicker extends ConsumerWidget {
-  const LevelPicker({
-    super.key,
-    this.onLevelChanged,
-  });
+  const LevelPicker({super.key, this.onLevelChanged});
 
   /// Optional callback when level changes. Called after settings are updated.
   final void Function(int level)? onLevelChanged;
@@ -24,10 +21,7 @@ class LevelPicker extends ConsumerWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          'Level',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Level', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(width: 12),
         DropdownButton<int>(
           value: currentLevel,
@@ -39,9 +33,9 @@ class LevelPicker extends ConsumerWidget {
               value: level,
               child: Text(
                 'HSK $level',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             );
           }),

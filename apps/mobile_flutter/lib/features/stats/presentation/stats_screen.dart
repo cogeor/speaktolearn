@@ -46,7 +46,11 @@ class _StatsContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.bar_chart_outlined, size: 80, color: AppTheme.subtle),
+              const Icon(
+                Icons.bar_chart_outlined,
+                size: 80,
+                color: AppTheme.subtle,
+              ),
               const SizedBox(height: 24),
               Text(
                 'No practice data yet',

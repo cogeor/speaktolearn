@@ -15,9 +15,7 @@ void main() {
     return ProviderScope(
       overrides: [
         // Override the async provider to return the provided stats directly
-        statsControllerProvider.overrideWith(
-          () => _TestStatsController(stats),
-        ),
+        statsControllerProvider.overrideWith(() => _TestStatsController(stats)),
         // Override base dependencies to avoid Hive initialization
         textSequenceRepositoryProvider.overrideWithValue(
           MockTextSequenceRepository(),
@@ -33,16 +31,14 @@ void main() {
         audioRecorderProvider.overrideWithValue(FakeAudioRecorder()),
         audioPlayerProvider.overrideWithValue(FakeAudioPlayer()),
       ],
-      child: MaterialApp(
-        theme: AppTheme.darkTheme,
-        home: const StatsScreen(),
-      ),
+      child: MaterialApp(theme: AppTheme.darkTheme, home: const StatsScreen()),
     );
   }
 
   group('StatsScreen empty state', () {
-    testWidgets('shows empty state message when totalAttempts is 0',
-        (tester) async {
+    testWidgets('shows empty state message when totalAttempts is 0', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         buildTestWidget(const PracticeStats(totalAttempts: 0)),
       );
@@ -51,7 +47,8 @@ void main() {
       expect(find.text('No practice data yet'), findsOneWidget);
       expect(
         find.text(
-            'Complete some practice sessions to see your statistics here.'),
+          'Complete some practice sessions to see your statistics here.',
+        ),
         findsOneWidget,
       );
     });
@@ -75,11 +72,10 @@ void main() {
       expect(find.byIcon(Icons.play_arrow), findsOneWidget);
     });
 
-    testWidgets('renders without crash when all fields are default',
-        (tester) async {
-      await tester.pumpWidget(
-        buildTestWidget(const PracticeStats()),
-      );
+    testWidgets('renders without crash when all fields are default', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildTestWidget(const PracticeStats()));
       await tester.pumpAndSettle();
 
       // Should not throw and should show empty state
@@ -90,13 +86,15 @@ void main() {
   group('StatsScreen with data', () {
     testWidgets('shows stats grid when data exists', (tester) async {
       await tester.pumpWidget(
-        buildTestWidget(const PracticeStats(
-          totalAttempts: 50,
-          sequencesPracticed: 10,
-          averageScore: 75.5,
-          currentStreak: 3,
-          longestStreak: 7,
-        )),
+        buildTestWidget(
+          const PracticeStats(
+            totalAttempts: 50,
+            sequencesPracticed: 10,
+            averageScore: 75.5,
+            currentStreak: 3,
+            longestStreak: 7,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -108,11 +106,13 @@ void main() {
 
     testWidgets('shows dash for null averageScore', (tester) async {
       await tester.pumpWidget(
-        buildTestWidget(const PracticeStats(
-          totalAttempts: 5,
-          sequencesPracticed: 2,
-          averageScore: null,
-        )),
+        buildTestWidget(
+          const PracticeStats(
+            totalAttempts: 5,
+            sequencesPracticed: 2,
+            averageScore: null,
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -121,10 +121,9 @@ void main() {
 
     testWidgets('does not show empty state when data exists', (tester) async {
       await tester.pumpWidget(
-        buildTestWidget(const PracticeStats(
-          totalAttempts: 10,
-          sequencesPracticed: 5,
-        )),
+        buildTestWidget(
+          const PracticeStats(totalAttempts: 10, sequencesPracticed: 5),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -137,18 +136,14 @@ void main() {
 
   group('StatsScreen app bar', () {
     testWidgets('has Statistics title', (tester) async {
-      await tester.pumpWidget(
-        buildTestWidget(const PracticeStats()),
-      );
+      await tester.pumpWidget(buildTestWidget(const PracticeStats()));
       await tester.pumpAndSettle();
 
       expect(find.text('Statistics'), findsOneWidget);
     });
 
     testWidgets('has back button', (tester) async {
-      await tester.pumpWidget(
-        buildTestWidget(const PracticeStats()),
-      );
+      await tester.pumpWidget(buildTestWidget(const PracticeStats()));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
