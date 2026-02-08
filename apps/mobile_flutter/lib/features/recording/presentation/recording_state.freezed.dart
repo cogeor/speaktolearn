@@ -17,8 +17,8 @@ final _privateConstructorUsedError = UnsupportedError(
 
 /// @nodoc
 mixin _$RecordingState {
-  bool get isRecording => throw _privateConstructorUsedError;
-  bool get isScoring => throw _privateConstructorUsedError;
+  /// The current phase in the recording state machine.
+  RecordingPhase get phase => throw _privateConstructorUsedError;
   bool get isPlaying => throw _privateConstructorUsedError;
   bool get hasLatestRecording => throw _privateConstructorUsedError;
   String? get error => throw _privateConstructorUsedError;
@@ -47,8 +47,7 @@ abstract class $RecordingStateCopyWith<$Res> {
   ) = _$RecordingStateCopyWithImpl<$Res, RecordingState>;
   @useResult
   $Res call({
-    bool isRecording,
-    bool isScoring,
+    RecordingPhase phase,
     bool isPlaying,
     bool hasLatestRecording,
     String? error,
@@ -75,8 +74,7 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? isRecording = null,
-    Object? isScoring = null,
+    Object? phase = null,
     Object? isPlaying = null,
     Object? hasLatestRecording = null,
     Object? error = freezed,
@@ -86,14 +84,10 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
   }) {
     return _then(
       _value.copyWith(
-            isRecording: null == isRecording
-                ? _value.isRecording
-                : isRecording // ignore: cast_nullable_to_non_nullable
-                      as bool,
-            isScoring: null == isScoring
-                ? _value.isScoring
-                : isScoring // ignore: cast_nullable_to_non_nullable
-                      as bool,
+            phase: null == phase
+                ? _value.phase
+                : phase // ignore: cast_nullable_to_non_nullable
+                      as RecordingPhase,
             isPlaying: null == isPlaying
                 ? _value.isPlaying
                 : isPlaying // ignore: cast_nullable_to_non_nullable
@@ -148,8 +142,7 @@ abstract class _$$RecordingStateImplCopyWith<$Res>
   @override
   @useResult
   $Res call({
-    bool isRecording,
-    bool isScoring,
+    RecordingPhase phase,
     bool isPlaying,
     bool hasLatestRecording,
     String? error,
@@ -176,8 +169,7 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   @override
   $Res call({
-    Object? isRecording = null,
-    Object? isScoring = null,
+    Object? phase = null,
     Object? isPlaying = null,
     Object? hasLatestRecording = null,
     Object? error = freezed,
@@ -187,14 +179,10 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
   }) {
     return _then(
       _$RecordingStateImpl(
-        isRecording: null == isRecording
-            ? _value.isRecording
-            : isRecording // ignore: cast_nullable_to_non_nullable
-                  as bool,
-        isScoring: null == isScoring
-            ? _value.isScoring
-            : isScoring // ignore: cast_nullable_to_non_nullable
-                  as bool,
+        phase: null == phase
+            ? _value.phase
+            : phase // ignore: cast_nullable_to_non_nullable
+                  as RecordingPhase,
         isPlaying: null == isPlaying
             ? _value.isPlaying
             : isPlaying // ignore: cast_nullable_to_non_nullable
@@ -226,24 +214,21 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
 
 /// @nodoc
 
-class _$RecordingStateImpl implements _RecordingState {
+class _$RecordingStateImpl extends _RecordingState {
   const _$RecordingStateImpl({
-    this.isRecording = false,
-    this.isScoring = false,
+    this.phase = RecordingPhase.idle,
     this.isPlaying = false,
     this.hasLatestRecording = false,
     this.error,
     this.latestGrade,
     this.remainingSeconds,
     this.totalDurationSeconds,
-  });
+  }) : super._();
 
+  /// The current phase in the recording state machine.
   @override
   @JsonKey()
-  final bool isRecording;
-  @override
-  @JsonKey()
-  final bool isScoring;
+  final RecordingPhase phase;
   @override
   @JsonKey()
   final bool isPlaying;
@@ -267,7 +252,7 @@ class _$RecordingStateImpl implements _RecordingState {
 
   @override
   String toString() {
-    return 'RecordingState(isRecording: $isRecording, isScoring: $isScoring, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, error: $error, latestGrade: $latestGrade, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds)';
+    return 'RecordingState(phase: $phase, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, error: $error, latestGrade: $latestGrade, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds)';
   }
 
   @override
@@ -275,10 +260,7 @@ class _$RecordingStateImpl implements _RecordingState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$RecordingStateImpl &&
-            (identical(other.isRecording, isRecording) ||
-                other.isRecording == isRecording) &&
-            (identical(other.isScoring, isScoring) ||
-                other.isScoring == isScoring) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
             (identical(other.isPlaying, isPlaying) ||
                 other.isPlaying == isPlaying) &&
             (identical(other.hasLatestRecording, hasLatestRecording) ||
@@ -295,8 +277,7 @@ class _$RecordingStateImpl implements _RecordingState {
   @override
   int get hashCode => Object.hash(
     runtimeType,
-    isRecording,
-    isScoring,
+    phase,
     isPlaying,
     hasLatestRecording,
     error,
@@ -317,10 +298,9 @@ class _$RecordingStateImpl implements _RecordingState {
       );
 }
 
-abstract class _RecordingState implements RecordingState {
+abstract class _RecordingState extends RecordingState {
   const factory _RecordingState({
-    final bool isRecording,
-    final bool isScoring,
+    final RecordingPhase phase,
     final bool isPlaying,
     final bool hasLatestRecording,
     final String? error,
@@ -328,11 +308,11 @@ abstract class _RecordingState implements RecordingState {
     final int? remainingSeconds,
     final int? totalDurationSeconds,
   }) = _$RecordingStateImpl;
+  const _RecordingState._() : super._();
 
+  /// The current phase in the recording state machine.
   @override
-  bool get isRecording;
-  @override
-  bool get isScoring;
+  RecordingPhase get phase;
   @override
   bool get isPlaying;
   @override

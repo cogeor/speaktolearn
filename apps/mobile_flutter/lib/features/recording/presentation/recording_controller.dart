@@ -67,9 +67,9 @@ class RecordingController extends StateNotifier<RecordingState> {
 
   /// Starts recording audio for the given text sequence.
   ///
-  /// Sets [RecordingState.isRecording] to true on success.
+  /// Transitions to [RecordingPhase.recording] on success.
   /// Starts an auto-stop timer based on the expected duration.
-  /// On failure, sets [RecordingState.error] with the error message.
+  /// On failure, transitions to [RecordingPhase.error] with error message.
   Future<void> startRecording(TextSequence textSequence) async {
     // Calculate expected duration from text
     final duration = calculateRecordingDuration(
@@ -80,7 +80,7 @@ class RecordingController extends StateNotifier<RecordingState> {
     _currentTextSequence = textSequence;
 
     state = state.copyWith(
-      isRecording: true,
+      phase: RecordingPhase.recording,
       error: null,
       remainingSeconds: _remainingSeconds,
       totalDurationSeconds: _remainingSeconds,
@@ -118,7 +118,7 @@ class RecordingController extends StateNotifier<RecordingState> {
         HapticFeedback.heavyImpact();
         _cancelTimers();
         state = state.copyWith(
-          isRecording: false,
+          phase: RecordingPhase.error,
           error: _errorToMessage(error),
           remainingSeconds: null,
           totalDurationSeconds: null,
@@ -128,6 +128,9 @@ class RecordingController extends StateNotifier<RecordingState> {
   }
 
   /// Stops the current recording without scoring.
+  ///
+  /// Transitions to [RecordingPhase.idle] on success.
+  /// Transitions to [RecordingPhase.error] on failure.
   Future<void> stopRecording() async {
     _cancelTimers();
 
@@ -141,7 +144,7 @@ class RecordingController extends StateNotifier<RecordingState> {
         // Haptic feedback on successful stop
         HapticFeedback.lightImpact();
         state = state.copyWith(
-          isRecording: false,
+          phase: RecordingPhase.idle,
           remainingSeconds: null,
           totalDurationSeconds: null,
         );
@@ -150,7 +153,7 @@ class RecordingController extends StateNotifier<RecordingState> {
         // Haptic feedback on failure
         HapticFeedback.heavyImpact();
         state = state.copyWith(
-          isRecording: false,
+          phase: RecordingPhase.error,
           error: _errorToMessage(error),
           remainingSeconds: null,
           totalDurationSeconds: null,
@@ -161,14 +164,15 @@ class RecordingController extends StateNotifier<RecordingState> {
 
   /// Stops recording and scores the pronunciation against the given text sequence.
   ///
-  /// Sets [RecordingState.isScoring] to true while scoring is in progress.
+  /// State transitions: recording -> saving -> scoring -> complete
   /// On success, saves the attempt and returns the [Grade].
-  /// On failure, sets [RecordingState.error] and returns null.
+  /// On failure, transitions to [RecordingPhase.error] and returns null.
   Future<Grade?> stopAndScore(TextSequence textSequence) async {
     _cancelTimers();
 
+    // Transition to saving phase
     state = state.copyWith(
-      isScoring: true,
+      phase: RecordingPhase.saving,
       error: null,
       remainingSeconds: null,
       totalDurationSeconds: null,
@@ -184,70 +188,105 @@ class RecordingController extends StateNotifier<RecordingState> {
         // Haptic feedback on successful stop
         HapticFeedback.lightImpact();
 
-        try {
-          final recording = Recording(
-            id: const Uuid().v4(),
-            textSequenceId: textSequence.id,
-            createdAt: DateTime.now(),
-            filePath: filePath,
-          );
+        final recording = await _saveRecording(filePath, textSequence);
+        if (recording == null) return null;
 
-          final grade = await _scorer.score(textSequence, recording);
-
-          final attempt = ScoreAttempt(
-            id: const Uuid().v4(),
-            textSequenceId: textSequence.id,
-            gradedAt: DateTime.now(),
-            score: grade.overall,
-            method: grade.method,
-            recognizedText: grade.recognizedText,
-            details: {
-              ...?grade.details,
-              'accuracy': grade.accuracy,
-              'completeness': grade.completeness,
-            },
-          );
-
-          await _progressRepository.saveAttempt(attempt);
-
-          // Save recording to enable replay functionality
-          await _repository.saveLatest(recording);
-
-          // Haptic feedback based on score quality
-          if (grade.overall >= 80) {
-            HapticFeedback.mediumImpact(); // Good score celebration
-          }
-
-          state = state.copyWith(
-            isRecording: false,
-            isScoring: false,
-            hasLatestRecording: true,
-            latestGrade: grade,
-          );
-
-          return grade;
-        } catch (e) {
-          // Haptic feedback on scoring failure
-          HapticFeedback.heavyImpact();
-          state = state.copyWith(
-            isRecording: false,
-            isScoring: false,
-            error: 'Scoring failed: ${e.toString()}',
-          );
-          return null;
-        }
+        return _scoreRecording(recording, textSequence);
       },
       failure: (error) {
         // Haptic feedback on recording failure
         HapticFeedback.heavyImpact();
         state = state.copyWith(
-          isRecording: false,
-          isScoring: false,
+          phase: RecordingPhase.error,
           error: _errorToMessage(error),
         );
         return null;
       },
     );
+  }
+
+  /// Saves the recording file and transitions to scoring phase.
+  ///
+  /// Creates a [Recording] object and saves it to the repository.
+  /// Returns the recording on success, null on failure.
+  Future<Recording?> _saveRecording(
+    String filePath,
+    TextSequence textSequence,
+  ) async {
+    try {
+      final recording = Recording(
+        id: const Uuid().v4(),
+        textSequenceId: textSequence.id,
+        createdAt: DateTime.now(),
+        filePath: filePath,
+      );
+
+      // Save recording to enable replay functionality
+      await _repository.saveLatest(recording);
+
+      // Transition to scoring phase after file is saved
+      state = state.copyWith(phase: RecordingPhase.scoring);
+
+      return recording;
+    } catch (e) {
+      HapticFeedback.heavyImpact();
+      state = state.copyWith(
+        phase: RecordingPhase.error,
+        error: 'Failed to save recording: ${e.toString()}',
+      );
+      return null;
+    }
+  }
+
+  /// Scores the recording and transitions to complete phase.
+  ///
+  /// Calls the scorer, saves the attempt, and returns the [Grade].
+  /// Returns null on failure.
+  Future<Grade?> _scoreRecording(
+    Recording recording,
+    TextSequence textSequence,
+  ) async {
+    try {
+      final grade = await _scorer.score(textSequence, recording);
+
+      final attempt = ScoreAttempt(
+        id: const Uuid().v4(),
+        textSequenceId: textSequence.id,
+        gradedAt: DateTime.now(),
+        score: grade.overall,
+        method: grade.method,
+        recognizedText: grade.recognizedText,
+        details: {
+          ...?grade.details,
+          'accuracy': grade.accuracy,
+          'completeness': grade.completeness,
+        },
+      );
+
+      await _progressRepository.saveAttempt(attempt);
+
+      // Haptic feedback based on score quality
+      if (grade.overall >= 80) {
+        HapticFeedback.mediumImpact(); // Good score celebration
+      }
+
+      // Transition to complete phase
+      state = state.copyWith(
+        phase: RecordingPhase.complete,
+        hasLatestRecording: true,
+        latestGrade: grade,
+      );
+
+      return grade;
+    } catch (e) {
+      // Haptic feedback on scoring failure
+      HapticFeedback.heavyImpact();
+      state = state.copyWith(
+        phase: RecordingPhase.error,
+        error: 'Scoring failed: ${e.toString()}',
+      );
+      return null;
+    }
   }
 
   /// Checks if a latest recording exists for the given text sequence.
