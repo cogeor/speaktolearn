@@ -22,7 +22,8 @@ final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
     return HomeController(
       textSequenceRepository: ref.watch(textSequenceRepositoryProvider),
       progressRepository: ref.watch(progressRepositoryProvider),
-      getNextTrackedSequence: ref.watch(getNextTrackedSequenceProvider),
+      getNextByLevel: ref.watch(getNextByLevelProvider),
+      settings: ref.watch(settingsControllerProvider),
     );
   },
 );
@@ -38,7 +39,6 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
         leading: IconButton(
           icon: const Icon(Icons.list),
           onPressed: () => context.go('/list'),
