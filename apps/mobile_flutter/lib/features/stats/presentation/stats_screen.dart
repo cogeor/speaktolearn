@@ -40,15 +40,32 @@ class _StatsContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (stats.totalAttempts == 0) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.bar_chart, size: 64, color: AppTheme.subtle),
-            SizedBox(height: 16),
-            Text('No practice data yet'),
-            Text('Start practicing to see your stats!'),
-          ],
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.bar_chart_outlined, size: 80, color: AppTheme.subtle),
+              const SizedBox(height: 24),
+              Text(
+                'No practice data yet',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Complete some practice sessions to see your statistics here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppTheme.subtle),
+              ),
+              const SizedBox(height: 32),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/'),
+                icon: const Icon(Icons.play_arrow),
+                label: const Text('Start Practicing'),
+              ),
+            ],
+          ),
         ),
       );
     }

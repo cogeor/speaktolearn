@@ -1,7 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/di.dart';
 import '../domain/practice_stats.dart';
+
+/// Provider to toggle demo mode for stats (debug builds only).
+final statsDemoModeProvider = StateProvider<bool>((ref) => false);
 
 /// Provider for the stats controller.
 final statsControllerProvider =
@@ -11,6 +15,14 @@ final statsControllerProvider =
 class StatsController extends AsyncNotifier<PracticeStats> {
   @override
   Future<PracticeStats> build() async {
+    // In debug mode, check if demo mode is enabled
+    if (kDebugMode) {
+      final demoMode = ref.watch(statsDemoModeProvider);
+      if (demoMode) {
+        return PracticeStats.demo();
+      }
+    }
+
     final progressRepo = ref.watch(progressRepositoryProvider);
 
     // Get all tracked sequences
