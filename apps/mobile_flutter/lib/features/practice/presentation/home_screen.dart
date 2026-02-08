@@ -14,6 +14,8 @@ import '../../progress/domain/text_sequence_progress.dart';
 import 'home_controller.dart';
 import 'home_state.dart';
 import 'practice_sheet.dart';
+import 'widgets/activity_summary.dart';
+import 'widgets/level_picker.dart';
 import 'widgets/score_bar.dart';
 
 /// Provider for the home screen controller.
@@ -43,6 +45,10 @@ class HomeScreen extends ConsumerWidget {
           icon: const Icon(Icons.list),
           onPressed: () => context.go('/list'),
         ),
+        title: LevelPicker(
+          onLevelChanged: (_) => ref.invalidate(homeControllerProvider),
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.bar_chart),
@@ -56,31 +62,47 @@ class HomeScreen extends ConsumerWidget {
       ),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : state.isEmptyTracked
-          ? const _EmptyState()
-          : _HomeContent(state: state, controller: controller),
+          : state.current == null
+              ? const _NoSentenceState()
+              : _HomeContent(state: state, controller: controller),
     );
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+/// Displayed when no sentence is available for the current level.
+class _NoSentenceState extends StatelessWidget {
+  const _NoSentenceState();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.all(24),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'No tracked sequences',
-            style: Theme.of(context).textTheme.titleMedium,
+          const ActivitySummary(),
+          const Spacer(),
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Theme.of(context).colorScheme.outline,
           ),
           const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => context.go('/list'),
-            child: const Text('Open list'),
+          Text(
+            'No sentences available for this level',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+            textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Try selecting a different HSK level above',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+            textAlign: TextAlign.center,
+          ),
+          const Spacer(),
         ],
       ),
     );
