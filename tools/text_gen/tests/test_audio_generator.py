@@ -1,14 +1,13 @@
 """Unit tests for AudioGenerator with mocked OpenAI TTS API."""
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
 
-from text_gen.generators.audio_generator import AudioGenerator
+import pytest
+
 from text_gen.config import Config, OpenAIConfig, TTSConfig
+from text_gen.generators.audio_generator import AudioGenerator
 from text_gen.models.dataset import Dataset
 from text_gen.models.text_sequence import TextSequence
-from text_gen.models.voice import VoiceRef
 
 
 @pytest.fixture
@@ -28,7 +27,7 @@ def mock_config():
 def sample_dataset():
     """Create a sample dataset for testing."""
     dataset = Dataset(dataset_id="test_v1", language="zh-CN")
-    dataset.add_item(TextSequence.create(index=1, text="你好"))
+    dataset.add_item(TextSequence.create(index=1, text="hello"))
     return dataset
 
 
@@ -47,7 +46,6 @@ def test_generate_audio_creates_file(mock_config, sample_dataset, tmp_path):
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
 
-        # Mock TTS response
         mock_response = Mock()
         mock_response.iter_bytes.return_value = [b"fake audio data"]
         mock_client.audio.speech.create.return_value = mock_response
@@ -66,22 +64,22 @@ def test_generate_audio_creates_file(mock_config, sample_dataset, tmp_path):
             output_dir=output_dir,
         )
 
-        # Verify file was created
         assert result is not None
         assert result.exists()
-        assert result.name == "ts_000001.opus"
+        assert result.name == "ts_000001.mp3"
 
-        # Verify API was called correctly
         mock_client.audio.speech.create.assert_called_once_with(
             model="tts-1",
             voice="nova",
-            input="你好",
-            response_format="opus",
+            input="hello",
+            response_format="mp3",
         )
 
 
-def test_generate_audio_skips_existing(mock_config, sample_dataset, tmp_path):
-    """Verify audio generation skips existing files."""
+def test_generate_audio_skips_existing_when_hash_matches(
+    mock_config, sample_dataset, tmp_path
+):
+    """Verify audio generation reuses existing file only when hash matches."""
     with patch("text_gen.generators.audio_generator.OpenAI") as mock_openai_class:
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
@@ -92,20 +90,57 @@ def test_generate_audio_skips_existing(mock_config, sample_dataset, tmp_path):
         output_dir = tmp_path / "output"
         (output_dir / "female").mkdir(parents=True)
 
-        # Create existing file
-        existing_file = output_dir / "female" / f"{item.id}.opus"
+        existing_file = output_dir / "female" / f"{item.id}.mp3"
         existing_file.write_bytes(b"existing audio")
+        text_hash = generator._text_hash(item.text)
 
         result = generator._generate_audio(
             item=item,
             voice_name="female",
             voice_id="nova",
             output_dir=output_dir,
+            text_hash=text_hash,
+            manifest_hash=text_hash,
         )
 
-        # Should return existing file without calling API
         assert result == existing_file
         mock_client.audio.speech.create.assert_not_called()
+
+
+def test_generate_audio_regenerates_when_hash_mismatches(
+    mock_config, sample_dataset, tmp_path
+):
+    """Verify stale existing file is regenerated when hash mismatches."""
+    with patch("text_gen.generators.audio_generator.OpenAI") as mock_openai_class:
+        mock_client = MagicMock()
+        mock_openai_class.return_value = mock_client
+
+        mock_response = Mock()
+        mock_response.iter_bytes.return_value = [b"fresh audio data"]
+        mock_client.audio.speech.create.return_value = mock_response
+
+        generator = AudioGenerator(mock_config)
+
+        item = sample_dataset.items[0]
+        output_dir = tmp_path / "output"
+        (output_dir / "female").mkdir(parents=True)
+
+        existing_file = output_dir / "female" / f"{item.id}.mp3"
+        existing_file.write_bytes(b"stale audio")
+        text_hash = generator._text_hash(item.text)
+
+        result = generator._generate_audio(
+            item=item,
+            voice_name="female",
+            voice_id="nova",
+            output_dir=output_dir,
+            text_hash=text_hash,
+            manifest_hash="old_hash",
+        )
+
+        assert result == existing_file
+        assert existing_file.read_bytes() == b"fresh audio data"
+        mock_client.audio.speech.create.assert_called_once()
 
 
 def test_add_audio_ref_creates_voice_ref(mock_config, sample_dataset, tmp_path):
@@ -115,19 +150,17 @@ def test_add_audio_ref_creates_voice_ref(mock_config, sample_dataset, tmp_path):
 
     item = sample_dataset.items[0]
     output_dir = tmp_path / "output"
-    audio_path = output_dir / "female" / "ts_000001.opus"
+    audio_path = output_dir / "female" / "ts_000001.mp3"
 
-    # Add audio reference
     generator._add_audio_ref(item, "female", audio_path, output_dir)
 
-    # Verify example_audio was created
     assert item.example_audio is not None
     assert len(item.example_audio.voices) == 1
 
     voice_ref = item.example_audio.voices[0]
     assert voice_ref.id == "f1"
     assert voice_ref.label == {"en": "Female"}
-    assert voice_ref.uri == "assets://examples/female/ts_000001.opus"
+    assert voice_ref.uri == "assets://examples/female/ts_000001.mp3"
 
 
 def test_add_audio_ref_replaces_existing_voice(mock_config, sample_dataset, tmp_path):
@@ -137,13 +170,11 @@ def test_add_audio_ref_replaces_existing_voice(mock_config, sample_dataset, tmp_
 
     item = sample_dataset.items[0]
     output_dir = tmp_path / "output"
-    audio_path = output_dir / "female" / "ts_000001.opus"
+    audio_path = output_dir / "female" / "ts_000001.mp3"
 
-    # Add audio reference twice
     generator._add_audio_ref(item, "female", audio_path, output_dir)
     generator._add_audio_ref(item, "female", audio_path, output_dir)
 
-    # Should still have only one voice reference
     assert len(item.example_audio.voices) == 1
 
 
@@ -155,15 +186,13 @@ def test_add_audio_ref_multiple_voices(mock_config, sample_dataset, tmp_path):
     item = sample_dataset.items[0]
     output_dir = tmp_path / "output"
 
-    # Add both female and male voices
     generator._add_audio_ref(
-        item, "female", output_dir / "female" / "ts_000001.opus", output_dir
+        item, "female", output_dir / "female" / "ts_000001.mp3", output_dir
     )
     generator._add_audio_ref(
-        item, "male", output_dir / "male" / "ts_000001.opus", output_dir
+        item, "male", output_dir / "male" / "ts_000001.mp3", output_dir
     )
 
-    # Should have two voice references
     assert len(item.example_audio.voices) == 2
     voice_ids = {v.id for v in item.example_audio.voices}
     assert voice_ids == {"f1", "m1"}
@@ -175,7 +204,6 @@ def test_generate_all_creates_directories(mock_config, sample_dataset, tmp_path)
         mock_client = MagicMock()
         mock_openai_class.return_value = mock_client
 
-        # Mock TTS response
         mock_response = Mock()
         mock_response.iter_bytes.return_value = [b"fake audio data"]
         mock_client.audio.speech.create.return_value = mock_response
@@ -189,6 +217,6 @@ def test_generate_all_creates_directories(mock_config, sample_dataset, tmp_path)
             voices=["female", "male"],
         )
 
-        # Verify directories were created
         assert (output_dir / "female").exists()
         assert (output_dir / "male").exists()
+        assert (output_dir / ".audio_manifest.json").exists()

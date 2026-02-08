@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/di.dart';
 import 'sequence_list_controller.dart';
 import 'sequence_list_tile.dart';
 import 'widgets/hsk_filter_chips.dart';
@@ -59,9 +60,7 @@ class SequenceListScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(child: Text(error.toString())),
               data: (items) => items.isEmpty
-                  ? const Center(
-                      child: Text('No sequences match the filter'),
-                    )
+                  ? const Center(child: Text('No sequences match the filter'))
                   : ListView.separated(
                       itemCount: items.length,
                       separatorBuilder: (context, index) => const Divider(),
@@ -69,11 +68,14 @@ class SequenceListScreen extends ConsumerWidget {
                         final item = items[index];
                         return SequenceListTile(
                           item: item,
-                          onTap: () {
+                          onTap: () async {
+                            await ref.read(audioPlayerProvider).stop();
+                            if (!context.mounted) return;
                             controller.select(item.id);
                             context.go('/');
                           },
-                          onToggleTrack: () => controller.toggleTracked(item.id),
+                          onToggleTrack: () =>
+                              controller.toggleTracked(item.id),
                         );
                       },
                     ),

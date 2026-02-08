@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../core/audio/audio_player.dart';
 import '../core/storage/hive_boxes.dart';
@@ -29,7 +34,9 @@ import '../features/text_sequences/domain/text_sequence_repository.dart';
 
 /// Provider for Hive boxes. Override in createOverrides().
 final hiveBoxProvider = Provider.family<Box<dynamic>, String>((ref, boxName) {
-  throw UnimplementedError('hiveBoxProvider must be overridden with actual boxes');
+  throw UnimplementedError(
+    'hiveBoxProvider must be overridden with actual boxes',
+  );
 });
 
 /// Provider for audio player instance.
@@ -88,10 +95,7 @@ final speechRecognizerProvider = Provider<SpeechRecognizer>((ref) {
 final pronunciationScorerProvider = Provider<PronunciationScorer>((ref) {
   final recognizer = ref.watch(speechRecognizerProvider);
   final calculator = CerCalculator();
-  return AsrSimilarityScorer(
-    recognizer: recognizer,
-    calculator: calculator,
-  );
+  return AsrSimilarityScorer(recognizer: recognizer, calculator: calculator);
 });
 
 /// Provider for sequence ranker.
@@ -111,14 +115,64 @@ final getNextTrackedSequenceProvider = Provider<GetNextTrackedSequence>((ref) {
 /// Provider for recording controller.
 final recordingControllerProvider =
     StateNotifierProvider<RecordingController, RecordingState>((ref) {
-  return RecordingController(
-    recorder: ref.watch(audioRecorderProvider),
-    repository: ref.watch(recordingRepositoryProvider),
-    scorer: ref.watch(pronunciationScorerProvider),
-    progressRepository: ref.watch(progressRepositoryProvider),
-    audioPlayer: ref.watch(audioPlayerProvider),
-  );
-});
+      return RecordingController(
+        recorder: ref.watch(audioRecorderProvider),
+        repository: ref.watch(recordingRepositoryProvider),
+        scorer: ref.watch(pronunciationScorerProvider),
+        progressRepository: ref.watch(progressRepositoryProvider),
+        audioPlayer: ref.watch(audioPlayerProvider),
+      );
+    });
+
+const _datasetFingerprintKey = '__dataset_fingerprint_v1';
+const _datasetAssetPath = 'assets/datasets/sentences.zh.json';
+
+Future<String?> _loadDatasetFingerprint() async {
+  try {
+    final jsonString = await rootBundle.loadString(_datasetAssetPath);
+    final json = jsonDecode(jsonString) as Map<String, dynamic>;
+    final datasetId = json['dataset_id'] as String?;
+    final generatedAt = json['generated_at'] as String?;
+    if (datasetId == null || generatedAt == null) {
+      return null;
+    }
+    return '$datasetId|$generatedAt';
+  } catch (_) {
+    return null;
+  }
+}
+
+Future<void> _clearRecordingsDir() async {
+  try {
+    final appDir = await getApplicationDocumentsDirectory();
+    final recordingsDir = Directory('${appDir.path}/recordings');
+    if (await recordingsDir.exists()) {
+      await recordingsDir.delete(recursive: true);
+    }
+  } catch (_) {
+    // Non-fatal; best-effort cleanup.
+  }
+}
+
+Future<void> _resetStateIfDatasetChanged({
+  required Box<dynamic> progressBox,
+  required Box<dynamic> attemptsBox,
+  required Box<dynamic> settingsBox,
+}) async {
+  final currentFingerprint = await _loadDatasetFingerprint();
+  if (currentFingerprint == null) return;
+
+  final stored = settingsBox.get(_datasetFingerprintKey) as String?;
+
+  // If the fingerprint changes (or this key is absent from older app versions),
+  // invalidate per-sequence state that is keyed by sequence IDs.
+  if (stored != currentFingerprint) {
+    await progressBox.clear();
+    await attemptsBox.clear();
+    await _clearRecordingsDir();
+    await settingsBox.put(_datasetFingerprintKey, currentFingerprint);
+  }
+}
 
 /// Creates provider overrides for app initialization.
 ///
@@ -128,6 +182,11 @@ Future<List<Override>> createOverrides() async {
   final progressBox = await Hive.openBox<dynamic>(HiveBoxes.progress);
   final attemptsBox = await Hive.openBox<dynamic>(HiveBoxes.attempts);
   final settingsBox = await Hive.openBox<dynamic>(HiveBoxes.settings);
+  await _resetStateIfDatasetChanged(
+    progressBox: progressBox,
+    attemptsBox: attemptsBox,
+    settingsBox: settingsBox,
+  );
 
   return [
     hiveBoxProvider(HiveBoxes.progress).overrideWithValue(progressBox),

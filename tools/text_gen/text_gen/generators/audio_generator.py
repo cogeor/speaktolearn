@@ -1,6 +1,8 @@
 """Audio generator using OpenAI TTS API."""
 
 from concurrent.futures import ThreadPoolExecutor
+import hashlib
+import json
 from pathlib import Path
 
 from openai import OpenAI
@@ -45,25 +47,35 @@ class AudioGenerator:
         for voice in voices:
             (output_dir / voice).mkdir(parents=True, exist_ok=True)
 
+        manifest_path = output_dir / ".audio_manifest.json"
+        manifest = self._load_manifest(manifest_path)
+
         # Generate audio in parallel
         with ThreadPoolExecutor(max_workers=4) as executor:
             futures = []
             for item in dataset.items:
+                text_hash = self._text_hash(item.text)
                 for voice in voices:
+                    voice_manifest = manifest.get(voice, {})
                     future = executor.submit(
                         self._generate_audio,
                         item=item,
                         voice_name=voice,
                         voice_id=voice_configs[voice],
                         output_dir=output_dir,
+                        text_hash=text_hash,
+                        manifest_hash=voice_manifest.get(item.id),
                     )
-                    futures.append((item, voice, future))
+                    futures.append((item, voice, text_hash, future))
 
             # Collect results and update dataset
-            for item, voice, future in futures:
+            for item, voice, text_hash, future in futures:
                 audio_path = future.result()
                 if audio_path:
                     self._add_audio_ref(item, voice, audio_path, output_dir)
+                    manifest.setdefault(voice, {})[item.id] = text_hash
+
+        self._save_manifest(manifest_path, manifest)
 
     def _generate_audio(
         self,
@@ -71,6 +83,8 @@ class AudioGenerator:
         voice_name: str,
         voice_id: str,
         output_dir: Path,
+        text_hash: str | None = None,
+        manifest_hash: str | None = None,
     ) -> Path | None:
         """Generate audio for a single sequence.
 
@@ -84,9 +98,10 @@ class AudioGenerator:
             Path to the generated audio file, or None if generation failed
         """
         output_path = output_dir / voice_name / f"{item.id}.mp3"
+        text_hash = text_hash or self._text_hash(item.text)
 
-        # Skip if audio file already exists
-        if output_path.exists():
+        # Reuse only when audio exists and was generated from identical text.
+        if output_path.exists() and manifest_hash == text_hash:
             return output_path
 
         try:
@@ -107,6 +122,33 @@ class AudioGenerator:
         except Exception as e:
             print(f"Error generating audio for {item.id}: {e}")
             return None
+
+    def _text_hash(self, text: str) -> str:
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+    def _load_manifest(self, manifest_path: Path) -> dict[str, dict[str, str]]:
+        if not manifest_path.exists():
+            return {}
+        try:
+            with open(manifest_path, encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                return {
+                    voice: mapping
+                    for voice, mapping in data.items()
+                    if isinstance(mapping, dict)
+                }
+        except (json.JSONDecodeError, OSError):
+            pass
+        return {}
+
+    def _save_manifest(
+        self,
+        manifest_path: Path,
+        manifest: dict[str, dict[str, str]],
+    ) -> None:
+        with open(manifest_path, "w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, ensure_ascii=False, sort_keys=True)
 
     def _add_audio_ref(
         self,

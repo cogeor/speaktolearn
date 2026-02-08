@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
+import '../../example_audio/presentation/example_audio_controller.dart';
+import '../../recording/presentation/recording_controller.dart';
+import '../../recording/presentation/recording_state.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../settings/presentation/settings_controller.dart';
 import '../../text_sequences/domain/text_sequence.dart';
@@ -11,18 +14,18 @@ import '../../progress/domain/text_sequence_progress.dart';
 import 'home_controller.dart';
 import 'home_state.dart';
 import 'practice_sheet.dart';
-import 'widgets/record_fab.dart';
 import 'widgets/score_bar.dart';
 
 /// Provider for the home screen controller.
-final homeControllerProvider =
-    StateNotifierProvider<HomeController, HomeState>((ref) {
-  return HomeController(
-    textSequenceRepository: ref.watch(textSequenceRepositoryProvider),
-    progressRepository: ref.watch(progressRepositoryProvider),
-    getNextTrackedSequence: ref.watch(getNextTrackedSequenceProvider),
-  );
-});
+final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
+  (ref) {
+    return HomeController(
+      textSequenceRepository: ref.watch(textSequenceRepositoryProvider),
+      progressRepository: ref.watch(progressRepositoryProvider),
+      getNextTrackedSequence: ref.watch(getNextTrackedSequenceProvider),
+    );
+  },
+);
 
 /// Home screen that displays the current practice sequence.
 class HomeScreen extends ConsumerWidget {
@@ -32,41 +35,6 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(homeControllerProvider);
     final controller = ref.read(homeControllerProvider.notifier);
-    // Watch recording state - single source of truth for recording status
-    final recordingState = ref.watch(recordingControllerProvider);
-    final recordingController = ref.read(recordingControllerProvider.notifier);
-
-    // Derive recording status from RecordingState
-    final recordingStatus = recordingState.recordingStatus;
-
-    // Handle FAB press based on current recording status
-    void handleFabPress() async {
-      if (state.current == null) return;
-
-      switch (recordingStatus) {
-        case RecordingStatus.idle:
-          // Start recording
-          await recordingController.startRecording(state.current!);
-          // Check if recording actually started (no error)
-          final newRecordingState = ref.read(recordingControllerProvider);
-          if (newRecordingState.error != null && context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(newRecordingState.error!)),
-            );
-          }
-          break;
-
-        case RecordingStatus.recording:
-          // Stop and score
-          await recordingController.stopAndScore(state.current!);
-          await controller.refreshProgress();
-          break;
-
-        case RecordingStatus.processing:
-          // Do nothing - button is disabled during processing
-          break;
-      }
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -97,15 +65,8 @@ class HomeScreen extends ConsumerWidget {
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.isEmptyTracked
-              ? const _EmptyState()
-              : _HomeContent(state: state, controller: controller),
-      floatingActionButton: state.current != null && !state.isLoading && !state.isEmptyTracked
-          ? RecordFAB(
-              status: recordingStatus,
-              onPressed: handleFabPress,
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+          ? const _EmptyState()
+          : _HomeContent(state: state, controller: controller),
     );
   }
 }
@@ -135,10 +96,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _HomeContent extends ConsumerStatefulWidget {
-  const _HomeContent({
-    required this.state,
-    required this.controller,
-  });
+  const _HomeContent({required this.state, required this.controller});
 
   final HomeState state;
   final HomeController controller;
@@ -171,10 +129,8 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => PracticeSheet(
-        sequence: sequence,
-        progress: progress,
-      ),
+      builder: (context) =>
+          PracticeSheet(sequence: sequence, progress: progress),
     );
   }
 
@@ -190,7 +146,8 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
   /// Selects voice based on user's VoicePreference setting.
   String _selectVoice(List<ExampleVoice> voices) {
     final settingsAsync = ref.read(settingsControllerProvider);
-    final preference = settingsAsync.valueOrNull?.voicePreference ??
+    final preference =
+        settingsAsync.valueOrNull?.voicePreference ??
         VoicePreference.systemDefault;
 
     if (preference == VoicePreference.systemDefault) {
@@ -209,14 +166,15 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
   @override
   Widget build(BuildContext context) {
     final sequence = widget.state.current!;
-    final hasPinyin = sequence.romanization != null &&
-                      sequence.romanization!.isNotEmpty;
+    final hasPinyin =
+        sequence.romanization != null && sequence.romanization!.isNotEmpty;
     final hasAudio = sequence.voices != null && sequence.voices!.isNotEmpty;
     final audioState = ref.watch(exampleAudioControllerProvider);
 
     // Watch settings for reactive pinyin visibility
     final settingsAsync = ref.watch(settingsControllerProvider);
-    final showRomanizationSetting = settingsAsync.valueOrNull?.showRomanization ?? true;
+    final showRomanizationSetting =
+        settingsAsync.valueOrNull?.showRomanization ?? true;
     final showPinyin = _pinyinOverride ?? showRomanizationSetting;
 
     return Column(
@@ -248,39 +206,33 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                     if (hasPinyin) ...[
                       const SizedBox(height: 12),
                       GestureDetector(
-                        onTap: () => setState(() => _pinyinOverride = !showPinyin),
+                        onTap: () =>
+                            setState(() => _pinyinOverride = !showPinyin),
                         child: Text(
                           showPinyin
                               ? sequence.romanization!
                               : '(tap to show pinyin)',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: showPinyin
-                                ? Theme.of(context).colorScheme.secondary
-                                : AppTheme.subtle,
-                            fontStyle: showPinyin
-                                ? FontStyle.normal
-                                : FontStyle.italic,
-                          ),
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(
+                                color: showPinyin
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : AppTheme.subtle,
+                                fontStyle: showPinyin
+                                    ? FontStyle.normal
+                                    : FontStyle.italic,
+                              ),
                           textAlign: TextAlign.center,
                         ),
                       ),
                     ],
                     const SizedBox(height: 24),
-                    if (hasAudio)
-                      Align(
-                        alignment: Alignment.center,
-                        child: IconButton(
-                          onPressed: audioState.isPlaying
-                              ? null
-                              : () => _playAudio(sequence),
-                          icon: Icon(
-                            audioState.isPlaying
-                                ? Icons.volume_up
-                                : Icons.play_arrow,
-                          ),
-                          iconSize: 32,
-                        ),
-                      ),
+                    // Audio controls row: Play, Record, Replay
+                    _AudioControlsRow(
+                      sequence: sequence,
+                      hasAudio: hasAudio,
+                      audioState: audioState,
+                      onPlayAudio: () => _playAudio(sequence),
+                    ),
                   ],
                 ),
               ),
@@ -288,7 +240,12 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80), // Extra bottom padding for FAB
+          padding: const EdgeInsets.fromLTRB(
+            16,
+            16,
+            16,
+            24,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -298,7 +255,8 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                     Text(
                       'Best: ${widget.state.currentProgress!.bestScore}',
                       style: TextStyle(
-                        color: widget.state.currentProgress!.bestScore!.scoreColor,
+                        color:
+                            widget.state.currentProgress!.bestScore!.scoreColor,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -317,7 +275,12 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                   width: 180,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: widget.controller.next,
+                    onPressed: () async {
+                      await ref
+                          .read(exampleAudioControllerProvider.notifier)
+                          .stop();
+                      await widget.controller.next();
+                    },
                     style: ElevatedButton.styleFrom(
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(26),
@@ -338,6 +301,144 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Column of audio controls: Play example (top), Record (middle), Replay (bottom).
+class _AudioControlsRow extends ConsumerWidget {
+  const _AudioControlsRow({
+    required this.sequence,
+    required this.hasAudio,
+    required this.audioState,
+    required this.onPlayAudio,
+  });
+
+  final TextSequence sequence;
+  final bool hasAudio;
+  final ExampleAudioState audioState;
+  final VoidCallback onPlayAudio;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recordingState = ref.watch(recordingControllerProvider);
+    final recordingController = ref.read(recordingControllerProvider.notifier);
+    final recordingStatus = recordingState.recordingStatus;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Play example audio button (top)
+        if (hasAudio) ...[
+          IconButton(
+            onPressed: audioState.isPlaying ? null : onPlayAudio,
+            icon: Icon(
+              audioState.isPlaying ? Icons.volume_up : Icons.play_arrow,
+            ),
+            iconSize: 32,
+            tooltip: 'Play example',
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Record button (central, larger)
+        _buildRecordButton(
+          context,
+          ref,
+          recordingStatus,
+          recordingController,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Replay button (always visible, greyed when no recording)
+        _buildReplayButton(
+          context,
+          ref,
+          recordingState,
+          recordingController,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecordButton(
+    BuildContext context,
+    WidgetRef ref,
+    RecordingStatus status,
+    RecordingController controller,
+  ) {
+    final isProcessing = status == RecordingStatus.processing;
+    final isRecording = status == RecordingStatus.recording;
+
+    return FloatingActionButton(
+      heroTag: 'record_fab',
+      onPressed: isProcessing
+          ? null
+          : () async {
+              debugPrint('🎤 Record button pressed. isRecording=$isRecording');
+              try {
+                if (isRecording) {
+                  debugPrint('🎤 Stopping and scoring...');
+                  await controller.stopAndScore(sequence);
+                  ref.read(homeControllerProvider.notifier).refreshProgress();
+                  debugPrint('🎤 Scoring complete');
+                } else {
+                  debugPrint('🎤 Starting recording...');
+                  await controller.startRecording(sequence);
+                  final newState = ref.read(recordingControllerProvider);
+                  debugPrint('🎤 Recording started. Error: ${newState.error}');
+                  if (newState.error != null && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(newState.error!)),
+                    );
+                  }
+                }
+              } catch (e, stackTrace) {
+                debugPrint('🎤 ERROR: $e');
+                debugPrint('🎤 Stack: $stackTrace');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Recording error: $e')),
+                  );
+                }
+              }
+            },
+      child: _buildRecordIcon(status),
+    );
+  }
+
+  Widget _buildRecordIcon(RecordingStatus status) {
+    switch (status) {
+      case RecordingStatus.idle:
+        return const Icon(Icons.mic);
+      case RecordingStatus.recording:
+        return const Icon(Icons.stop, color: Colors.red);
+      case RecordingStatus.processing:
+        return const SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+        );
+    }
+  }
+
+  Widget _buildReplayButton(
+    BuildContext context,
+    WidgetRef ref,
+    RecordingState recordingState,
+    RecordingController controller,
+  ) {
+    final hasRecording = recordingState.hasLatestRecording;
+    final isPlaying = recordingState.isPlaying;
+
+    return IconButton(
+      onPressed: hasRecording && !isPlaying
+          ? () => controller.replayLatest(sequence.id)
+          : null,
+      icon: const Icon(Icons.loop),
+      iconSize: 32,
+      tooltip: hasRecording ? 'Replay recording' : 'No recording yet',
     );
   }
 }

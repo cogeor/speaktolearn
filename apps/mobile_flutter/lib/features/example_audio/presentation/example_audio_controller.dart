@@ -25,9 +25,9 @@ class ExampleAudioController extends StateNotifier<ExampleAudioState> {
   ExampleAudioController({
     required AudioPlayer player,
     required ExampleAudioRepository repository,
-  })  : _player = player,
-        _repository = repository,
-        super(const ExampleAudioState()) {
+  }) : _player = player,
+       _repository = repository,
+       super(const ExampleAudioState()) {
     _listenToPlaybackState();
   }
 
@@ -43,10 +43,7 @@ class ExampleAudioController extends StateNotifier<ExampleAudioState> {
       // Clear current ids when playback completes or stops
       if (playbackState == PlaybackState.completed ||
           playbackState == PlaybackState.idle) {
-        state = state.copyWith(
-          currentSequenceId: null,
-          currentVoiceId: null,
-        );
+        state = state.copyWith(currentSequenceId: null, currentVoiceId: null);
       }
     });
   }
@@ -60,6 +57,9 @@ class ExampleAudioController extends StateNotifier<ExampleAudioState> {
     if (audioSource == null) {
       return;
     }
+
+    // Prevent any previous clip from continuing when a new sequence is selected.
+    await _player.stop();
 
     state = state.copyWith(
       currentSequenceId: sequence.id,

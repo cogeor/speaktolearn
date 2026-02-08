@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -85,8 +86,10 @@ class RecordingController extends StateNotifier<RecordingState> {
       totalDurationSeconds: _remainingSeconds,
     );
 
-    // Start waveform visualization
-    await waveformController.record();
+    // NOTE: waveformController.record() disabled - conflicts with _recorder
+    // causing silent audio. Waveform visualization temporarily unavailable.
+    // TODO: Use single recorder for both visualization and file capture
+    // await waveformController.record();
 
     final result = await _recorder.start();
 
@@ -128,8 +131,8 @@ class RecordingController extends StateNotifier<RecordingState> {
   Future<void> stopRecording() async {
     _cancelTimers();
 
-    // Stop waveform visualization
-    await waveformController.stop();
+    // Stop waveform visualization (disabled - see startRecording)
+    // await waveformController.stop();
 
     final result = await _recorder.stop();
 
@@ -171,8 +174,8 @@ class RecordingController extends StateNotifier<RecordingState> {
       totalDurationSeconds: null,
     );
 
-    // Stop waveform visualization
-    await waveformController.stop();
+    // Stop waveform visualization (disabled - see startRecording)
+    // await waveformController.stop();
 
     final stopResult = await _recorder.stop();
 
@@ -260,25 +263,31 @@ class RecordingController extends StateNotifier<RecordingState> {
   /// Sets [RecordingState.isPlaying] to true while playing.
   /// Does nothing if no recording exists for the sequence.
   Future<void> replayLatest(String textSequenceId) async {
+    debugPrint('🔊 replayLatest called for $textSequenceId');
     final recording = await _repository.getLatest(textSequenceId);
-    if (recording == null) return;
+    debugPrint('🔊 Got recording: ${recording?.filePath}');
+    if (recording == null) {
+      debugPrint('🔊 No recording found, returning');
+      return;
+    }
 
     state = state.copyWith(isPlaying: true);
+    debugPrint('🔊 Loading audio from ${recording.filePath}');
     await _audioPlayer.load(FileAudioSource(recording.filePath));
+    
+    // Get duration and wait for that time + buffer
+    final duration = _audioPlayer.duration ?? const Duration(seconds: 5);
+    debugPrint('🔊 Audio duration: ${duration.inMilliseconds}ms');
+    
     await _audioPlayer.play();
+    debugPrint('🔊 Playing audio');
 
-    // Wait for playback to complete with timeout
-    try {
-      await _audioPlayer.stateStream.firstWhere(
-        (playbackState) =>
-            playbackState == PlaybackState.completed ||
-            playbackState == PlaybackState.idle ||
-            playbackState == PlaybackState.error,
-      ).timeout(const Duration(seconds: 30));
-    } catch (_) {
-      // Timeout or error - ensure we clean up
-      await _audioPlayer.stop();
-    }
+    // Wait for the duration of the audio plus a small buffer
+    await Future.delayed(duration + const Duration(milliseconds: 500));
+    debugPrint('🔊 Playback complete (duration elapsed)');
+    
+    // Stop to ensure cleanup
+    await _audioPlayer.stop();
 
     state = state.copyWith(isPlaying: false);
   }
@@ -292,9 +301,9 @@ class RecordingController extends StateNotifier<RecordingState> {
   Future<void> cancel() async {
     _cancelTimers();
 
-    // Stop waveform if recording
+    // Stop waveform if recording (disabled - see startRecording)
     if (state.isRecording) {
-      await waveformController.stop();
+      // await waveformController.stop();
       await _recorder.stop();
     }
     if (state.isPlaying) {
