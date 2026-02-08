@@ -35,4 +35,22 @@ abstract class ProgressRepository {
 
   /// Returns all attempts across all sequences.
   Future<List<ScoreAttempt>> getAllAttempts();
+
+  // Debug methods
+
+  /// Generates fake practice data for testing the stats screen.
+  /// Only available in debug builds.
+  ///
+  /// [sequenceIds] - List of sequence IDs to generate attempts for.
+  /// [days] - Number of days of data to generate (default: 60).
+  /// [attemptsPerDay] - Number of attempts per day (default: 10).
+  Future<void> generateFakeStats({
+    required List<String> sequenceIds,
+    int days = 60,
+    int attemptsPerDay = 10,
+  });
+
+  /// Clears all progress and attempt data.
+  /// Only available in debug builds.
+  Future<void> clearAllStats();
 }

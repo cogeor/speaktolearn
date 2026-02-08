@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:hive/hive.dart';
+import 'package:uuid/uuid.dart';
 
 import '../domain/progress_repository.dart';
 import '../domain/score_attempt.dart';
@@ -156,5 +159,84 @@ class ProgressRepositoryImpl implements ProgressRepository {
       }
     }
     return result;
+  }
+
+  @override
+  Future<void> generateFakeStats({
+    required List<String> sequenceIds,
+    int days = 60,
+    int attemptsPerDay = 10,
+  }) async {
+    if (sequenceIds.isEmpty) return;
+
+    final random = Random(42); // Fixed seed for reproducibility
+    final uuid = const Uuid();
+    final now = DateTime.now();
+
+    // Gap days to test streak logic (relative to start)
+    const gapDays = {15, 35};
+
+    for (var dayOffset = days; dayOffset > 0; dayOffset--) {
+      // Skip gap days to test streak reset
+      if (gapDays.contains(days - dayOffset)) continue;
+
+      final dayDate = now.subtract(Duration(days: dayOffset));
+
+      for (var i = 0; i < attemptsPerDay; i++) {
+        // Pick a random sequence
+        final sequenceId = sequenceIds[random.nextInt(sequenceIds.length)];
+
+        // Generate score based on progression (earlier = lower, later = higher)
+        final score = _generateProgressiveScore(dayOffset, days, random);
+
+        // Randomize time within the day (8am - 10pm)
+        final hour = 8 + random.nextInt(14);
+        final minute = random.nextInt(60);
+        final gradedAt = DateTime(
+          dayDate.year,
+          dayDate.month,
+          dayDate.day,
+          hour,
+          minute,
+        );
+
+        final attempt = ScoreAttempt(
+          id: uuid.v4(),
+          textSequenceId: sequenceId,
+          gradedAt: gradedAt,
+          score: score,
+          method: 'asr_similarity',
+          recognizedText: null,
+          details: null,
+        );
+
+        await saveAttempt(attempt);
+      }
+    }
+  }
+
+  /// Generates a score based on day progression.
+  /// Earlier days have lower scores, later days have higher scores.
+  int _generateProgressiveScore(int dayOffset, int totalDays, Random random) {
+    // dayOffset is days from now, so higher dayOffset = earlier in the past
+    // progress: 0.0 = earliest day, 1.0 = most recent day
+    final progress = 1 - (dayOffset / totalDays);
+
+    // Base range shifts higher as progress increases
+    final baseMin = 40 + (progress * 30).round(); // 40 -> 70
+    final baseMax = 75 + (progress * 25).round(); // 75 -> 100
+
+    // 5% chance of an outlier (lower score)
+    if (random.nextDouble() < 0.05) {
+      return 40 + random.nextInt(baseMin - 40 + 1);
+    }
+
+    return baseMin + random.nextInt(baseMax - baseMin + 1);
+  }
+
+  @override
+  Future<void> clearAllStats() async {
+    await _progressBox.clear();
+    await _attemptsBox.clear();
   }
 }
