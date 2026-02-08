@@ -4,11 +4,7 @@ part 'app_settings.freezed.dart';
 part 'app_settings.g.dart';
 
 /// Voice preference for TTS playback.
-enum VoicePreference {
-  systemDefault,
-  male,
-  female,
-}
+enum VoicePreference { systemDefault, male, female }
 
 @freezed
 class AppSettings with _$AppSettings {

@@ -12,19 +12,15 @@ import 'widgets/score_bar.dart';
 /// Provider for example audio controller.
 final exampleAudioControllerProvider =
     StateNotifierProvider<ExampleAudioController, ExampleAudioState>((ref) {
-  return ExampleAudioController(
-    player: ref.watch(audioPlayerProvider),
-    repository: ref.watch(exampleAudioRepositoryProvider),
-  );
-});
+      return ExampleAudioController(
+        player: ref.watch(audioPlayerProvider),
+        repository: ref.watch(exampleAudioRepositoryProvider),
+      );
+    });
 
 /// Bottom sheet for practicing a text sequence.
 class PracticeSheet extends ConsumerStatefulWidget {
-  const PracticeSheet({
-    super.key,
-    required this.sequence,
-    this.progress,
-  });
+  const PracticeSheet({super.key, required this.sequence, this.progress});
 
   final TextSequence sequence;
   final TextSequenceProgress? progress;
@@ -85,10 +81,7 @@ class _PracticeSheetState extends ConsumerState<PracticeSheet> {
             const SizedBox(height: 16),
             _ReplayButton(sequence: widget.sequence),
             const SizedBox(height: 16),
-            _ScoreDisplay(
-              progress: widget.progress,
-              sequence: widget.sequence,
-            ),
+            _ScoreDisplay(progress: widget.progress, sequence: widget.sequence),
             const SizedBox(height: 24),
           ],
         ),
@@ -195,10 +188,7 @@ class _ReplayButton extends ConsumerWidget {
 
 /// Displays latest and best scores with detailed breakdown.
 class _ScoreDisplay extends ConsumerWidget {
-  const _ScoreDisplay({
-    required this.progress,
-    required this.sequence,
-  });
+  const _ScoreDisplay({required this.progress, required this.sequence});
 
   final TextSequenceProgress? progress;
   final TextSequence sequence;
@@ -215,20 +205,15 @@ class _ScoreDisplay extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _ScoreLabel(
-              label: 'Latest',
-              score: progress?.lastScore,
-            ),
+            _ScoreLabel(label: 'Latest', score: progress?.lastScore),
             const SizedBox(width: 24),
-            _ScoreLabel(
-              label: 'Best',
-              score: progress?.bestScore,
-            ),
+            _ScoreLabel(label: 'Best', score: progress?.bestScore),
           ],
         ),
         // Detailed breakdown (if available from latest grade)
         if (latestGrade != null &&
-            (latestGrade.accuracy != null || latestGrade.completeness != null)) ...[
+            (latestGrade.accuracy != null ||
+                latestGrade.completeness != null)) ...[
           const SizedBox(height: 16),
           _DetailedScoreRow(
             accuracy: latestGrade.accuracy,
@@ -250,10 +235,7 @@ class _ScoreDisplay extends ConsumerWidget {
 
 /// Row showing accuracy and completeness scores.
 class _DetailedScoreRow extends StatelessWidget {
-  const _DetailedScoreRow({
-    this.accuracy,
-    this.completeness,
-  });
+  const _DetailedScoreRow({this.accuracy, this.completeness});
 
   final int? accuracy;
   final int? completeness;
@@ -280,10 +262,7 @@ class _DetailedScoreRow extends StatelessWidget {
 
 /// Small score label for secondary metrics.
 class _MiniScoreLabel extends StatelessWidget {
-  const _MiniScoreLabel({
-    required this.label,
-    required this.score,
-  });
+  const _MiniScoreLabel({required this.label, required this.score});
 
   final String label;
   final int score;
@@ -293,10 +272,7 @@ class _MiniScoreLabel extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: Theme.of(context).textTheme.labelSmall,
-        ),
+        Text(label, style: Theme.of(context).textTheme.labelSmall),
         Text(
           '$score%',
           style: TextStyle(
@@ -331,15 +307,14 @@ class _RecognizedTextComparison extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'You said:',
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
+          Text('You said:', style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 4),
           Text(
             recognized.isNotEmpty ? recognized : '(nothing detected)',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontStyle: recognized.isEmpty ? FontStyle.italic : FontStyle.normal,
+              fontStyle: recognized.isEmpty
+                  ? FontStyle.italic
+                  : FontStyle.normal,
             ),
           ),
         ],
@@ -350,10 +325,7 @@ class _RecognizedTextComparison extends StatelessWidget {
 
 /// Helper widget to display a score label with visual bar.
 class _ScoreLabel extends StatelessWidget {
-  const _ScoreLabel({
-    required this.label,
-    required this.score,
-  });
+  const _ScoreLabel({required this.label, required this.score});
 
   final String label;
   final int? score;
@@ -365,10 +337,7 @@ class _ScoreLabel extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(label, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 4),
           Text(
             score?.toString() ?? '-',
@@ -379,10 +348,7 @@ class _ScoreLabel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          ScoreBar(
-            score: score,
-            height: 6,
-          ),
+          ScoreBar(score: score, height: 6),
         ],
       ),
     );
@@ -404,9 +370,7 @@ class _RecordingWaveformDisplay extends ConsumerWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: RecordingWaveform(
-        controller: controller.waveformController,
-      ),
+      child: RecordingWaveform(controller: controller.waveformController),
     );
   }
 }

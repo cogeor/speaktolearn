@@ -81,11 +81,14 @@ void main() {
       await tester.waitForScoring();
     });
 
-    testWidgets('displays score after scoring completes with perfect match',
-        (tester) async {
+    testWidgets('displays score after scoring completes with perfect match', (
+      tester,
+    ) async {
       // Arrange
       final recognizer = MockSpeechRecognizer();
-      recognizer.setupPerfectMatch('\u4f60\u597d'); // Perfect match with test sequence
+      recognizer.setupPerfectMatch(
+        '\u4f60\u597d',
+      ); // Perfect match with test sequence
       await tester.pumpIntegrationApp(
         trackedIds: {'test-001'},
         speechRecognizer: recognizer,
@@ -160,8 +163,9 @@ void main() {
   });
 
   group('Practice Flow - Progress Persistence', () {
-    testWidgets('score persists and shows on home screen after scoring',
-        (tester) async {
+    testWidgets('score persists and shows on home screen after scoring', (
+      tester,
+    ) async {
       // Arrange
       final recognizer = MockSpeechRecognizer();
       recognizer.setupPerfectMatch('\u4f60\u597d');
@@ -273,19 +277,22 @@ void main() {
       await tester.waitForScoring();
     });
 
-    testWidgets('example audio buttons are visible on home screen with voices',
-        (tester) async {
-      // Arrange
-      await tester.pumpIntegrationApp(trackedIds: {'test-001'});
+    testWidgets(
+      'example audio buttons are visible on home screen with voices',
+      (tester) async {
+        // Arrange
+        await tester.pumpIntegrationApp(trackedIds: {'test-001'});
 
-      // Assert - play button is displayed (for example audio)
-      expect(find.byIcon(Icons.play_arrow), findsOneWidget);
-    });
+        // Assert - play button is displayed (for example audio)
+        expect(find.byIcon(Icons.play_arrow), findsOneWidget);
+      },
+    );
   });
 
   group('Practice Flow - Practice Sheet', () {
-    testWidgets('practice sheet opens when tapping sequence text',
-        (tester) async {
+    testWidgets('practice sheet opens when tapping sequence text', (
+      tester,
+    ) async {
       // Arrange
       await tester.pumpIntegrationApp(trackedIds: {'test-001'});
 
@@ -331,8 +338,9 @@ void main() {
       expect(IntegrationFinders.bestScoreLabel, findsOneWidget);
     });
 
-    testWidgets('replay button appears after recording in practice sheet',
-        (tester) async {
+    testWidgets('replay button appears after recording in practice sheet', (
+      tester,
+    ) async {
       // Arrange
       final recognizer = MockSpeechRecognizer();
       recognizer.setupPerfectMatch('\u4f60\u597d');
@@ -355,8 +363,9 @@ void main() {
   });
 
   group('Practice Flow - Edge Cases', () {
-    testWidgets('can cancel recording by closing practice sheet',
-        (tester) async {
+    testWidgets('can cancel recording by closing practice sheet', (
+      tester,
+    ) async {
       // Arrange
       await tester.pumpIntegrationApp(trackedIds: {'test-001'});
       await tester.openPracticeSheet();
@@ -386,14 +395,12 @@ void main() {
       await tester.pumpAndSettle();
 
       // Should be in a valid state (not crashed)
-      expect(
-        IntegrationFinders.recordFab,
-        findsOneWidget,
-      );
+      expect(IntegrationFinders.recordFab, findsOneWidget);
     });
 
-    testWidgets('multiple sequences can be practiced in sequence',
-        (tester) async {
+    testWidgets('multiple sequences can be practiced in sequence', (
+      tester,
+    ) async {
       // Arrange
       final recognizer = MockSpeechRecognizer();
       recognizer.setupPerfectMatch('\u4f60\u597d');

@@ -147,7 +147,9 @@ void main() {
 
       test('propagates inner failure', () {
         const result = Success<int, String>(10);
-        final chained = result.flatMap<String>((v) => const Failure('inner error'));
+        final chained = result.flatMap<String>(
+          (v) => const Failure('inner error'),
+        );
         expect(chained.errorOrNull, 'inner error');
         expect(chained.isFailure, isTrue);
       });

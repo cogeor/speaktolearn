@@ -34,10 +34,7 @@ class RecordingWaveform extends StatelessWidget {
           spacing: 4.0,
           waveThickness: 3.0,
           showDurationLabel: false,
-          durationStyle: TextStyle(
-            color: colorScheme.onSurface,
-            fontSize: 12,
-          ),
+          durationStyle: TextStyle(color: colorScheme.onSurface, fontSize: 12),
         ),
       ),
     );

@@ -38,8 +38,9 @@ class HskFilterChips extends StatelessWidget {
               label: const Text('All'),
               selected: isAllSelected,
               onSelected: (_) => onClear(),
-              selectedColor:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+              selectedColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.2),
               checkmarkColor: Theme.of(context).colorScheme.primary,
             ),
           ),

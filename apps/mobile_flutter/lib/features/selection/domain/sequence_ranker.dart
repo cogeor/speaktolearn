@@ -47,7 +47,11 @@ class DefaultSequenceRanker implements SequenceRanker {
     final ranked = sequences.map((seq) {
       final progress = progressMap[seq.id];
       final priority = _computePriority(progress);
-      return RankedSequence(sequence: seq, priority: priority, progress: progress);
+      return RankedSequence(
+        sequence: seq,
+        priority: priority,
+        progress: progress,
+      );
     }).toList();
 
     ranked.sort((a, b) => b.priority.compareTo(a.priority));
@@ -91,7 +95,9 @@ class DefaultSequenceRanker implements SequenceRanker {
         .difference(progress.lastAttemptAt!)
         .inDays
         .toDouble();
-    final recencyPenalty = daysSincePractice < 1 ? 50.0 : (50.0 / daysSincePractice);
+    final recencyPenalty = daysSincePractice < 1
+        ? 50.0
+        : (50.0 / daysSincePractice);
 
     return need - recencyPenalty;
   }

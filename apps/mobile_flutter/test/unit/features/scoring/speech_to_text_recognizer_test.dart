@@ -4,7 +4,6 @@ import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-import 'package:speak_to_learn/core/result.dart';
 import 'package:speak_to_learn/features/scoring/data/speech_recognizer.dart';
 import 'package:speak_to_learn/features/scoring/data/speech_to_text_recognizer.dart';
 
@@ -32,10 +31,11 @@ class MockSpeechToText implements SpeechToText {
   /// Simulates receiving a recognition result.
   void simulateResult(String recognizedWords, {bool isFinal = true}) {
     if (_onResultCallback != null) {
-      _onResultCallback!(SpeechRecognitionResult(
-        [SpeechRecognitionWords(recognizedWords, [recognizedWords], 1.0)],
-        isFinal,
-      ));
+      _onResultCallback!(
+        SpeechRecognitionResult([
+          SpeechRecognitionWords(recognizedWords, [recognizedWords], 1.0),
+        ], isFinal),
+      );
     }
   }
 
@@ -132,12 +132,11 @@ class MockSpeechToText implements SpeechToText {
   @override
   double get lastSoundLevel => 0.0;
 
-  @override
   bool get hasSpeech => _isAvailable;
 
-  @override
-  SpeechRecognitionResult get lastResult =>
-      SpeechRecognitionResult([SpeechRecognitionWords('', [''], 0.0)], true);
+  SpeechRecognitionResult get lastResult => SpeechRecognitionResult([
+    SpeechRecognitionWords('', [''], 0.0),
+  ], true);
 
   @override
   Future<LocaleName> systemLocale() async =>
@@ -172,27 +171,27 @@ void main() {
   setUpAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('flutter.baseflow.com/permissions/methods'),
-      (MethodCall methodCall) async {
-        // Return granted (1) for all permission requests
-        if (methodCall.method == 'requestPermissions') {
-          final List<int> permissions = methodCall.arguments.cast<int>();
-          return {for (final p in permissions) p: 1}; // 1 = granted
-        }
-        if (methodCall.method == 'checkPermissionStatus') {
-          return 1; // granted
-        }
-        return null;
-      },
-    );
+          const MethodChannel('flutter.baseflow.com/permissions/methods'),
+          (MethodCall methodCall) async {
+            // Return granted (1) for all permission requests
+            if (methodCall.method == 'requestPermissions') {
+              final List<int> permissions = methodCall.arguments.cast<int>();
+              return {for (final p in permissions) p: 1}; // 1 = granted
+            }
+            if (methodCall.method == 'checkPermissionStatus') {
+              return 1; // granted
+            }
+            return null;
+          },
+        );
   });
 
   tearDownAll(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
-      const MethodChannel('flutter.baseflow.com/permissions/methods'),
-      null,
-    );
+          const MethodChannel('flutter.baseflow.com/permissions/methods'),
+          null,
+        );
   });
 
   group('SpeechToTextRecognizer', () {
@@ -219,9 +218,7 @@ void main() {
 
       test('returns true when Taiwan locale is available', () async {
         mockSpeech.initializeSucceeds = true;
-        mockSpeech.availableLocales = [
-          LocaleName('zh-TW', 'Chinese (Taiwan)'),
-        ];
+        mockSpeech.availableLocales = [LocaleName('zh-TW', 'Chinese (Taiwan)')];
 
         final result = await recognizer.isAvailable();
 
@@ -250,26 +247,28 @@ void main() {
     });
 
     group('recognize', () {
-      test('returns cached text after startListening and stopListening',
-          () async {
-        const testPath = '/path/to/recording.wav';
-        const expectedText = 'ni hao';
+      test(
+        'returns cached text after startListening and stopListening',
+        () async {
+          const testPath = '/path/to/recording.wav';
+          const expectedText = 'ni hao';
 
-        // Start listening
-        await recognizer.startListening(testPath);
+          // Start listening
+          await recognizer.startListening(testPath);
 
-        // Simulate recognition result
-        mockSpeech.simulateResult(expectedText);
+          // Simulate recognition result
+          mockSpeech.simulateResult(expectedText);
 
-        // Stop listening to cache the result
-        await recognizer.stopListening();
+          // Stop listening to cache the result
+          await recognizer.stopListening();
 
-        // Recognize should return the cached text
-        final result = await recognizer.recognize(testPath, 'zh-CN');
+          // Recognize should return the cached text
+          final result = await recognizer.recognize(testPath, 'zh-CN');
 
-        expect(result.isSuccess, isTrue);
-        expect(result.valueOrNull, expectedText);
-      });
+          expect(result.isSuccess, isTrue);
+          expect(result.valueOrNull, expectedText);
+        },
+      );
 
       test('returns audioReadError when path was not processed', () async {
         const testPath = '/path/to/unprocessed.wav';
@@ -318,8 +317,7 @@ void main() {
         expect(secondResult.errorOrNull, RecognitionError.audioReadError);
       });
 
-      test('updates cached text with latest result during listening',
-          () async {
+      test('updates cached text with latest result during listening', () async {
         const testPath = '/path/to/recording.wav';
 
         await recognizer.startListening(testPath);
@@ -365,24 +363,26 @@ void main() {
         expect(result.errorOrNull, RecognitionError.notAvailable);
       });
 
-      test('stops previous listening session before starting new one',
-          () async {
-        await recognizer.startListening('/first/path.wav');
+      test(
+        'stops previous listening session before starting new one',
+        () async {
+          await recognizer.startListening('/first/path.wav');
 
-        // Simulate that we are listening
-        expect(mockSpeech.listenWasCalled, isTrue);
+          // Simulate that we are listening
+          expect(mockSpeech.listenWasCalled, isTrue);
 
-        // Reset tracking
-        mockSpeech.stopWasCalled = false;
-        mockSpeech.listenWasCalled = false;
+          // Reset tracking
+          mockSpeech.stopWasCalled = false;
+          mockSpeech.listenWasCalled = false;
 
-        // Start new session
-        await recognizer.startListening('/second/path.wav');
+          // Start new session
+          await recognizer.startListening('/second/path.wav');
 
-        // Should have stopped and started again
-        expect(mockSpeech.stopWasCalled, isTrue);
-        expect(mockSpeech.listenWasCalled, isTrue);
-      });
+          // Should have stopped and started again
+          expect(mockSpeech.stopWasCalled, isTrue);
+          expect(mockSpeech.listenWasCalled, isTrue);
+        },
+      );
     });
 
     group('stopListening', () {

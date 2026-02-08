@@ -23,7 +23,10 @@ class TestData {
       difficulty: 1,
       voices: [
         ExampleVoice(id: 'male', uri: 'assets://examples/male/test-001.m4a'),
-        ExampleVoice(id: 'female', uri: 'assets://examples/female/test-001.m4a'),
+        ExampleVoice(
+          id: 'female',
+          uri: 'assets://examples/female/test-001.m4a',
+        ),
       ],
     ),
     TextSequence(
@@ -92,10 +95,7 @@ class IntegrationFinders {
 
   /// Find a ListTile containing the given text.
   static Finder listTileWithText(String text) {
-    return find.ancestor(
-      of: find.text(text),
-      matching: find.byType(ListTile),
-    );
+    return find.ancestor(of: find.text(text), matching: find.byType(ListTile));
   }
 
   /// Find the star button within a list tile for a specific sequence.

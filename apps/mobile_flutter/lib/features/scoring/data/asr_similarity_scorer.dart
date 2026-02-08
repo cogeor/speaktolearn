@@ -15,8 +15,8 @@ class AsrSimilarityScorer implements PronunciationScorer {
   AsrSimilarityScorer({
     required SpeechRecognizer recognizer,
     CerCalculator? calculator,
-  })  : _recognizer = recognizer,
-        _calculator = calculator ?? CerCalculator();
+  }) : _recognizer = recognizer,
+       _calculator = calculator ?? CerCalculator();
 
   final SpeechRecognizer _recognizer;
   final CerCalculator _calculator;
@@ -55,9 +55,7 @@ class AsrSimilarityScorer implements PronunciationScorer {
           method: _method,
           accuracy: 0,
           completeness: 0,
-          details: {
-            'error': error.name,
-          },
+          details: {'error': error.name},
         );
       },
     );

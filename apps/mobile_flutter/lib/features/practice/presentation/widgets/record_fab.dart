@@ -10,11 +10,7 @@ import '../home_state.dart';
 /// - recording: stop icon, red with pulse animation
 /// - processing: circular progress indicator
 class RecordFAB extends StatefulWidget {
-  const RecordFAB({
-    super.key,
-    required this.status,
-    required this.onPressed,
-  });
+  const RecordFAB({super.key, required this.status, required this.onPressed});
 
   final RecordingStatus status;
   final VoidCallback? onPressed;

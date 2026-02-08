@@ -11,10 +11,10 @@ class HomeController extends StateNotifier<HomeState> {
     required TextSequenceRepository textSequenceRepository,
     required ProgressRepository progressRepository,
     required GetNextTrackedSequence getNextTrackedSequence,
-  })  : _textSequenceRepository = textSequenceRepository,
-        _progressRepository = progressRepository,
-        _getNextTrackedSequence = getNextTrackedSequence,
-        super(const HomeState()) {
+  }) : _textSequenceRepository = textSequenceRepository,
+       _progressRepository = progressRepository,
+       _getNextTrackedSequence = getNextTrackedSequence,
+       super(const HomeState()) {
     _init();
   }
 
@@ -28,10 +28,7 @@ class HomeController extends StateNotifier<HomeState> {
     final sequence = await _getNextTrackedSequence();
 
     if (sequence == null) {
-      state = state.copyWith(
-        isLoading: false,
-        isEmptyTracked: true,
-      );
+      state = state.copyWith(isLoading: false, isEmptyTracked: true);
       return;
     }
 
@@ -47,7 +44,9 @@ class HomeController extends StateNotifier<HomeState> {
 
   /// Advances to the next tracked sequence, excluding the current one.
   Future<void> next() async {
-    final sequence = await _getNextTrackedSequence(currentId: state.current?.id);
+    final sequence = await _getNextTrackedSequence(
+      currentId: state.current?.id,
+    );
 
     if (sequence == null) {
       state = state.copyWith(isEmptyTracked: true);

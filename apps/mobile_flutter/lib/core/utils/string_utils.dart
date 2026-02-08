@@ -14,7 +14,8 @@ String normalizeZhText(String input) {
   // Chinese punctuation + ASCII punctuation
   // Using Unicode property escapes for brackets
   final punctuation = RegExp(
-    '[。，！？、；：""''（）【】《》〈〉…—·\\s.,!?;:"\'()\\[\\]<>]',
+    '[。，！？、；：""'
+    '（）【】《》〈〉…—·\\s.,!?;:"\'()\\[\\]<>]',
   );
 
   var result = input.replaceAll(punctuation, '');

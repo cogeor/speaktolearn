@@ -9,8 +9,8 @@ part 'home_state.freezed.dart';
 /// Recording status for FAB display.
 /// Derived from [RecordingState] to maintain single source of truth.
 enum RecordingStatus {
-  idle,       // Ready to record - show mic icon
-  recording,  // Currently recording - show stop icon, red pulsing
+  idle, // Ready to record - show mic icon
+  recording, // Currently recording - show stop icon, red pulsing
   processing, // Scoring in progress - show spinner
 }
 

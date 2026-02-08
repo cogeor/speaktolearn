@@ -29,6 +29,5 @@ class Grade with _$Grade {
     Map<String, dynamic>? details,
   }) = _Grade;
 
-  factory Grade.fromJson(Map<String, dynamic> json) =>
-      _$GradeFromJson(json);
+  factory Grade.fromJson(Map<String, dynamic> json) => _$GradeFromJson(json);
 }

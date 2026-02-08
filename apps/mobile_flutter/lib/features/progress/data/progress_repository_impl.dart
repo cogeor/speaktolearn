@@ -9,8 +9,8 @@ class ProgressRepositoryImpl implements ProgressRepository {
   ProgressRepositoryImpl({
     required Box<dynamic> progressBox,
     required Box<dynamic> attemptsBox,
-  })  : _progressBox = progressBox,
-        _attemptsBox = attemptsBox;
+  }) : _progressBox = progressBox,
+       _attemptsBox = attemptsBox;
 
   static const _maxAttempts = 50;
 
@@ -23,7 +23,9 @@ class ProgressRepositoryImpl implements ProgressRepository {
     if (data == null) {
       return TextSequenceProgress.initial();
     }
-    return TextSequenceProgress.fromJson(Map<String, dynamic>.from(data as Map));
+    return TextSequenceProgress.fromJson(
+      Map<String, dynamic>.from(data as Map),
+    );
   }
 
   @override
@@ -100,10 +102,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
     }
 
     // Save attempts as list of JSON maps
-    await _attemptsBox.put(
-      key,
-      updated.map((a) => a.toJson()).toList(),
-    );
+    await _attemptsBox.put(key, updated.map((a) => a.toJson()).toList());
 
     // Update progress with new best score if better
     final currentProgress = await getProgress(key);
@@ -129,9 +128,10 @@ class ProgressRepositoryImpl implements ProgressRepository {
     if (data == null) return [];
 
     final list = (data as List)
-        .map((item) => ScoreAttempt.fromJson(
-              Map<String, dynamic>.from(item as Map),
-            ))
+        .map(
+          (item) =>
+              ScoreAttempt.fromJson(Map<String, dynamic>.from(item as Map)),
+        )
         .toList();
 
     if (limit != null && limit < list.length) {
@@ -147,9 +147,10 @@ class ProgressRepositoryImpl implements ProgressRepository {
       final data = _attemptsBox.get(key);
       if (data != null) {
         final attempts = (data as List)
-            .map((item) => ScoreAttempt.fromJson(
-                  Map<String, dynamic>.from(item as Map),
-                ))
+            .map(
+              (item) =>
+                  ScoreAttempt.fromJson(Map<String, dynamic>.from(item as Map)),
+            )
             .toList();
         result.addAll(attempts);
       }

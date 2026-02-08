@@ -7,8 +7,8 @@ import '../domain/settings_repository.dart';
 /// Provider for the settings controller.
 final settingsControllerProvider =
     AsyncNotifierProvider<SettingsController, AppSettings>(
-  SettingsController.new,
-);
+      SettingsController.new,
+    );
 
 /// Controller for managing application settings.
 class SettingsController extends AsyncNotifier<AppSettings> {

@@ -5,9 +5,7 @@ import '../domain/practice_stats.dart';
 
 /// Provider for the stats controller.
 final statsControllerProvider =
-    AsyncNotifierProvider<StatsController, PracticeStats>(
-  StatsController.new,
-);
+    AsyncNotifierProvider<StatsController, PracticeStats>(StatsController.new);
 
 /// Controller for computing and managing practice statistics.
 class StatsController extends AsyncNotifier<PracticeStats> {
@@ -35,7 +33,8 @@ class StatsController extends AsyncNotifier<PracticeStats> {
           progress.lastAttemptAt!.month,
           progress.lastAttemptAt!.day,
         );
-        dailyAttempts[date] = (dailyAttempts[date] ?? 0) + progress.attemptCount;
+        dailyAttempts[date] =
+            (dailyAttempts[date] ?? 0) + progress.attemptCount;
       }
     }
 
@@ -53,7 +52,9 @@ class StatsController extends AsyncNotifier<PracticeStats> {
 
     return PracticeStats(
       totalAttempts: totalAttempts,
-      sequencesPracticed: trackedProgress.where((p) => p.attemptCount > 0).length,
+      sequencesPracticed: trackedProgress
+          .where((p) => p.attemptCount > 0)
+          .length,
       averageScore: averageScore,
       currentStreak: streak.current,
       longestStreak: streak.longest,
@@ -90,7 +91,9 @@ class StatsController extends AsyncNotifier<PracticeStats> {
           tempStreak++;
           if (currentStreak > 0) currentStreak++;
         } else {
-          longestStreak = tempStreak > longestStreak ? tempStreak : longestStreak;
+          longestStreak = tempStreak > longestStreak
+              ? tempStreak
+              : longestStreak;
           tempStreak = 1;
           currentStreak = 0;
         }

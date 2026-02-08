@@ -8,9 +8,8 @@ part 'record_audio_use_case.freezed.dart';
 /// Parameters for starting a recording.
 @freezed
 class RecordAudioParams with _$RecordAudioParams {
-  const factory RecordAudioParams({
-    required String textSequenceId,
-  }) = _RecordAudioParams;
+  const factory RecordAudioParams({required String textSequenceId}) =
+      _RecordAudioParams;
 }
 
 /// Result of a recording operation.
@@ -43,7 +42,8 @@ final class RecordingFailed extends RecordAudioResult {
 /// - Managing recording state
 class StartRecordingUseCase
     extends FutureUseCase<RecordAudioParams, RecordAudioResult> {
-  StartRecordingUseCase({required AudioRecorder recorder}) : _recorder = recorder;
+  StartRecordingUseCase({required AudioRecorder recorder})
+    : _recorder = recorder;
 
   final AudioRecorder _recorder;
 
@@ -62,7 +62,8 @@ class StartRecordingUseCase
 ///
 /// Returns the file path of the recorded audio on success.
 class StopRecordingUseCase extends FutureUseCase<NoParams, RecordAudioResult> {
-  StopRecordingUseCase({required AudioRecorder recorder}) : _recorder = recorder;
+  StopRecordingUseCase({required AudioRecorder recorder})
+    : _recorder = recorder;
 
   final AudioRecorder _recorder;
 

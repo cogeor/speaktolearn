@@ -6,11 +6,7 @@ import 'package:flutter/material.dart';
 /// Levels range from 1 (beginner) to 6 (advanced).
 class HskBadge extends StatelessWidget {
   /// Creates an HskBadge.
-  const HskBadge({
-    super.key,
-    required this.level,
-    this.compact = false,
-  });
+  const HskBadge({super.key, required this.level, this.compact = false});
 
   /// The HSK level (1-6).
   final int level;
@@ -21,17 +17,11 @@ class HskBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 6 : 8,
-        vertical: 2,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: compact ? 6 : 8, vertical: 2),
       decoration: BoxDecoration(
         color: _levelColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(
-          color: _levelColor.withValues(alpha: 0.5),
-          width: 1,
-        ),
+        border: Border.all(color: _levelColor.withValues(alpha: 0.5), width: 1),
       ),
       child: Text(
         compact ? '$level' : 'HSK $level',

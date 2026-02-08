@@ -50,9 +50,9 @@ class ScoreBar extends StatelessWidget {
           Text(
             score != null ? '$score%' : '-',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: _barColor,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: _barColor,
+              fontWeight: FontWeight.w500,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),

@@ -46,23 +46,26 @@ class TextSequenceDto {
   }
 
   TextSequence toDomain(String language) => TextSequence(
-        id: id,
-        text: text,
-        language: language,
-        romanization: romanization,
-        gloss: gloss ?? {},
-        tokens: tokens ?? [],
-        tags: tags ?? [],
-        difficulty: difficulty ?? 1,
-        hskLevel: _parseHskFromTags(),
-        voices: exampleAudio?.voices
-                .map((v) => ExampleVoice(
-                      id: v.id,
-                      label: v.label,
-                      uri: v.uri,
-                      durationMs: v.durationMs,
-                    ))
-                .toList() ??
-            [],
-      );
+    id: id,
+    text: text,
+    language: language,
+    romanization: romanization,
+    gloss: gloss ?? {},
+    tokens: tokens ?? [],
+    tags: tags ?? [],
+    difficulty: difficulty ?? 1,
+    hskLevel: _parseHskFromTags(),
+    voices:
+        exampleAudio?.voices
+            .map(
+              (v) => ExampleVoice(
+                id: v.id,
+                label: v.label,
+                uri: v.uri,
+                durationMs: v.durationMs,
+              ),
+            )
+            .toList() ??
+        [],
+  );
 }

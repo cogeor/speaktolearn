@@ -41,7 +41,7 @@ final class ScoringFailure extends ScorePronunciationResult {
 class ScorePronunciationUseCase
     extends FutureUseCase<ScorePronunciationParams, ScorePronunciationResult> {
   ScorePronunciationUseCase({required PronunciationScorer scorer})
-      : _scorer = scorer;
+    : _scorer = scorer;
 
   final PronunciationScorer _scorer;
 

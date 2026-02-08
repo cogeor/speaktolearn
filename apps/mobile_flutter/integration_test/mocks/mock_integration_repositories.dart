@@ -51,10 +51,10 @@ class MockIntegrationTextSequenceRepository implements TextSequenceRepository {
 /// Mock ProgressRepository for integration tests.
 class MockIntegrationProgressRepository implements ProgressRepository {
   MockIntegrationProgressRepository({Set<String>? trackedIds})
-      : _progress = {
-          for (final id in trackedIds ?? <String>{})
-            id: const TextSequenceProgress(tracked: true),
-        };
+    : _progress = {
+        for (final id in trackedIds ?? <String>{})
+          id: const TextSequenceProgress(tracked: true),
+      };
 
   final Map<String, TextSequenceProgress> _progress;
   final Map<String, List<ScoreAttempt>> _attempts = {};
@@ -66,7 +66,8 @@ class MockIntegrationProgressRepository implements ProgressRepository {
 
   @override
   Future<Map<String, TextSequenceProgress>> getProgressMap(
-      List<String> ids) async {
+    List<String> ids,
+  ) async {
     final map = <String, TextSequenceProgress>{};
     for (final id in ids) {
       map[id] = _progress[id] ?? TextSequenceProgress.initial();
@@ -119,8 +120,10 @@ class MockIntegrationProgressRepository implements ProgressRepository {
   }
 
   @override
-  Future<List<ScoreAttempt>> getAttempts(String textSequenceId,
-      {int? limit}) async {
+  Future<List<ScoreAttempt>> getAttempts(
+    String textSequenceId, {
+    int? limit,
+  }) async {
     final attempts = _attempts[textSequenceId] ?? [];
     if (limit != null && attempts.length > limit) {
       return attempts.sublist(attempts.length - limit);
@@ -172,7 +175,9 @@ class MockIntegrationExampleAudioRepository implements ExampleAudioRepository {
 
   @override
   Future<AudioSource?> resolveVoice(
-      TextSequence sequence, String voiceId) async {
+    TextSequence sequence,
+    String voiceId,
+  ) async {
     return FileAudioSource('/mock/audio.m4a');
   }
 

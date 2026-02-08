@@ -17,7 +17,7 @@ class MockTextSequenceRepository implements TextSequenceRepository {
   final List<TextSequence> _sequences;
 
   MockTextSequenceRepository([List<TextSequence>? sequences])
-      : _sequences = sequences ?? [];
+    : _sequences = sequences ?? [];
 
   @override
   Future<List<TextSequence>> getAll() async => _sequences;
@@ -57,7 +57,8 @@ class MockProgressRepository implements ProgressRepository {
 
   @override
   Future<Map<String, TextSequenceProgress>> getProgressMap(
-      List<String> ids) async {
+    List<String> ids,
+  ) async {
     final map = <String, TextSequenceProgress>{};
     for (final id in ids) {
       map[id] = _progress[id] ?? TextSequenceProgress.initial();
@@ -98,7 +99,8 @@ class MockProgressRepository implements ProgressRepository {
 
     final current =
         _progress[attempt.textSequenceId] ?? TextSequenceProgress.initial();
-    final isBest = current.bestScore == null || attempt.score > current.bestScore!;
+    final isBest =
+        current.bestScore == null || attempt.score > current.bestScore!;
     _progress[attempt.textSequenceId] = current.copyWith(
       attemptCount: current.attemptCount + 1,
       lastAttemptAt: attempt.gradedAt,
@@ -109,8 +111,10 @@ class MockProgressRepository implements ProgressRepository {
   }
 
   @override
-  Future<List<ScoreAttempt>> getAttempts(String textSequenceId,
-      {int? limit}) async {
+  Future<List<ScoreAttempt>> getAttempts(
+    String textSequenceId, {
+    int? limit,
+  }) async {
     final attempts = _attempts[textSequenceId] ?? [];
     if (limit != null && attempts.length > limit) {
       return attempts.sublist(attempts.length - limit);
@@ -200,7 +204,9 @@ class MockExampleAudioRepository implements ExampleAudioRepository {
 
   @override
   Future<AudioSource?> resolveVoice(
-      TextSequence sequence, String voiceId) async {
+    TextSequence sequence,
+    String voiceId,
+  ) async {
     final voices = sequence.voices;
     if (voices == null || voices.isEmpty) return null;
 

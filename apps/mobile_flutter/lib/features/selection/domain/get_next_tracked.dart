@@ -9,9 +9,9 @@ class GetNextTrackedSequence {
     required TextSequenceRepository textSequenceRepository,
     required ProgressRepository progressRepository,
     required SequenceRanker ranker,
-  })  : _textSequenceRepository = textSequenceRepository,
-        _progressRepository = progressRepository,
-        _ranker = ranker;
+  }) : _textSequenceRepository = textSequenceRepository,
+       _progressRepository = progressRepository,
+       _ranker = ranker;
 
   final TextSequenceRepository _textSequenceRepository;
   final ProgressRepository _progressRepository;

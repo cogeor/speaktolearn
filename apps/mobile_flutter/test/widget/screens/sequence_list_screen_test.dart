@@ -7,9 +7,24 @@ import 'package:speak_to_learn/features/text_sequences/presentation/sequence_lis
 
 void main() {
   const testItems = [
-    SequenceListItem(id: 'test-001', text: '你好', isTracked: true, bestScore: 85),
-    SequenceListItem(id: 'test-002', text: '谢谢', isTracked: false, bestScore: null),
-    SequenceListItem(id: 'test-003', text: '再见', isTracked: false, bestScore: 70),
+    SequenceListItem(
+      id: 'test-001',
+      text: '你好',
+      isTracked: true,
+      bestScore: 85,
+    ),
+    SequenceListItem(
+      id: 'test-002',
+      text: '谢谢',
+      isTracked: false,
+      bestScore: null,
+    ),
+    SequenceListItem(
+      id: 'test-003',
+      text: '再见',
+      isTracked: false,
+      bestScore: 70,
+    ),
   ];
 
   group('SequenceListTile', () {
@@ -215,7 +230,9 @@ void main() {
       expect(find.text('再见'), findsOneWidget);
     });
 
-    testWidgets('shows correct star icons for mixed tracked status', (tester) async {
+    testWidgets('shows correct star icons for mixed tracked status', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.darkTheme,

@@ -18,9 +18,8 @@ import 'speech_recognizer.dart';
 /// 2. Call [stopListening] when recording ends
 /// 3. Call [recognize] with the audio path to retrieve cached result
 class SpeechToTextRecognizer implements SpeechRecognizer {
-  SpeechToTextRecognizer({
-    stt.SpeechToText? speechToText,
-  }) : _speech = speechToText ?? stt.SpeechToText();
+  SpeechToTextRecognizer({stt.SpeechToText? speechToText})
+    : _speech = speechToText ?? stt.SpeechToText();
 
   final stt.SpeechToText _speech;
   bool _isInitialized = false;
@@ -165,10 +164,11 @@ class SpeechToTextRecognizer implements SpeechRecognizer {
 
     // Check if Chinese locale is available
     final locales = await _speech.locales();
-    return locales.any((locale) =>
-      locale.localeId.startsWith('zh') ||
-      locale.localeId.contains('CN') ||
-      locale.localeId.contains('TW')
+    return locales.any(
+      (locale) =>
+          locale.localeId.startsWith('zh') ||
+          locale.localeId.contains('CN') ||
+          locale.localeId.contains('TW'),
     );
   }
 

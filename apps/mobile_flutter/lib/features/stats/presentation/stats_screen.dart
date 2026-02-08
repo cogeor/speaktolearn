@@ -108,16 +108,10 @@ class _StatsContent extends StatelessWidget {
         const SizedBox(height: 24),
         const Text(
           'Activity',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 12),
-        ActivityHeatmap(
-          dailyAttempts: stats.dailyAttempts,
-          weeks: 13,
-        ),
+        ActivityHeatmap(dailyAttempts: stats.dailyAttempts, weeks: 13),
       ],
     );
   }
@@ -149,9 +143,9 @@ class _StatCard extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: valueColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: valueColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             Text(
               label,

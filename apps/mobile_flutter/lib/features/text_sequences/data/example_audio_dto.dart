@@ -10,12 +10,7 @@ class VoiceDto {
   @JsonKey(name: 'duration_ms')
   final int? durationMs;
 
-  VoiceDto({
-    required this.id,
-    this.label,
-    required this.uri,
-    this.durationMs,
-  });
+  VoiceDto({required this.id, this.label, required this.uri, this.durationMs});
 
   factory VoiceDto.fromJson(Map<String, dynamic> json) =>
       _$VoiceDtoFromJson(json);
@@ -27,9 +22,7 @@ class VoiceDto {
 class ExampleAudioDto {
   final List<VoiceDto> voices;
 
-  ExampleAudioDto({
-    required this.voices,
-  });
+  ExampleAudioDto({required this.voices});
 
   factory ExampleAudioDto.fromJson(Map<String, dynamic> json) =>
       _$ExampleAudioDtoFromJson(json);

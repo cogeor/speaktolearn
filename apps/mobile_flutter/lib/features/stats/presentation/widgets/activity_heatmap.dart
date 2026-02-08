@@ -48,9 +48,7 @@ class ActivityHeatmap extends StatelessWidget {
             _buildDayLabels(),
             const SizedBox(width: 4),
             // Heatmap grid
-            Expanded(
-              child: _buildGrid(dates, maxAttempts, today),
-            ),
+            Expanded(child: _buildGrid(dates, maxAttempts, today)),
           ],
         ),
         const SizedBox(height: 8),
@@ -229,7 +227,7 @@ class ActivityHeatmap extends StatelessWidget {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     return names[month];
   }

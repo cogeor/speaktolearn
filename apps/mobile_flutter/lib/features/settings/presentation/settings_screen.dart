@@ -54,7 +54,9 @@ class SettingsScreen extends ConsumerWidget {
               SwitchListTile(
                 secondary: const Icon(Icons.translate),
                 title: const Text('Show Pinyin by Default'),
-                subtitle: const Text('Display romanization when viewing sentences'),
+                subtitle: const Text(
+                  'Display romanization when viewing sentences',
+                ),
                 value: settings.showRomanization,
                 onChanged: (value) {
                   controller.updateShowPinyinByDefault(value);

@@ -33,10 +33,11 @@ sealed class Result<T, E> {
   };
 
   /// Chains another Result-returning operation.
-  Result<U, E> flatMap<U>(Result<U, E> Function(T value) transform) => switch (this) {
-    Success(:final value) => transform(value),
-    Failure(:final error) => Failure(error),
-  };
+  Result<U, E> flatMap<U>(Result<U, E> Function(T value) transform) =>
+      switch (this) {
+        Success(:final value) => transform(value),
+        Failure(:final error) => Failure(error),
+      };
 
   /// Executes the appropriate callback based on the result.
   R when<R>({
@@ -55,8 +56,7 @@ final class Success<T, E> extends Result<T, E> {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Success<T, E> && other.value == value;
+      identical(this, other) || other is Success<T, E> && other.value == value;
 
   @override
   int get hashCode => value.hashCode;
@@ -72,8 +72,7 @@ final class Failure<T, E> extends Result<T, E> {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Failure<T, E> && other.error == error;
+      identical(this, other) || other is Failure<T, E> && other.error == error;
 
   @override
   int get hashCode => error.hashCode;

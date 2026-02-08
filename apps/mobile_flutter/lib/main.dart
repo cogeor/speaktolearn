@@ -14,10 +14,5 @@ void main() async {
   // Create provider overrides
   final overrides = await createOverrides();
 
-  runApp(
-    ProviderScope(
-      overrides: overrides,
-      child: const SpeakToLearnApp(),
-    ),
-  );
+  runApp(ProviderScope(overrides: overrides, child: const SpeakToLearnApp()));
 }

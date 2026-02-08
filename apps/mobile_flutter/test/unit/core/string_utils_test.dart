@@ -129,10 +129,7 @@ void main() {
         levenshteinDistance('abc', 'def'),
         levenshteinDistance('def', 'abc'),
       );
-      expect(
-        levenshteinDistance('你好', '再见'),
-        levenshteinDistance('再见', '你好'),
-      );
+      expect(levenshteinDistance('你好', '再见'), levenshteinDistance('再见', '你好'));
     });
   });
 

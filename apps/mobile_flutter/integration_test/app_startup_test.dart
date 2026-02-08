@@ -32,8 +32,9 @@ void main() {
       expect(IntegrationFinders.listButton, findsOneWidget);
     });
 
-    testWidgets('home screen shows empty state when no tracked sequences',
-        (tester) async {
+    testWidgets('home screen shows empty state when no tracked sequences', (
+      tester,
+    ) async {
       // Arrange - no tracked sequences
       await tester.pumpIntegrationApp(trackedIds: {});
 
@@ -42,8 +43,9 @@ void main() {
       expect(IntegrationFinders.openListButton, findsOneWidget);
     });
 
-    testWidgets('home screen shows current sequence when tracked',
-        (tester) async {
+    testWidgets('home screen shows current sequence when tracked', (
+      tester,
+    ) async {
       // Arrange - track the first sequence
       await tester.pumpIntegrationApp(trackedIds: {'test-001'});
 
@@ -51,17 +53,20 @@ void main() {
       expect(IntegrationFinders.sequenceText('你好'), findsOneWidget);
     });
 
-    testWidgets('home screen shows bookmark button when sequence is displayed',
-        (tester) async {
-      // Arrange
-      await tester.pumpIntegrationApp(trackedIds: {'test-001'});
+    testWidgets(
+      'home screen shows bookmark button when sequence is displayed',
+      (tester) async {
+        // Arrange
+        await tester.pumpIntegrationApp(trackedIds: {'test-001'});
 
-      // Assert - bookmark filled icon (since it's tracked)
-      expect(IntegrationFinders.bookmarkFilledIcon, findsOneWidget);
-    });
+        // Assert - bookmark filled icon (since it's tracked)
+        expect(IntegrationFinders.bookmarkFilledIcon, findsOneWidget);
+      },
+    );
 
-    testWidgets('home screen shows Next button when sequence is displayed',
-        (tester) async {
+    testWidgets('home screen shows Next button when sequence is displayed', (
+      tester,
+    ) async {
       // Arrange
       await tester.pumpIntegrationApp(trackedIds: {'test-001'});
 
@@ -117,8 +122,9 @@ void main() {
       expect(IntegrationFinders.listTitle, findsNothing);
     });
 
-    testWidgets('tapping Open list button navigates to list screen',
-        (tester) async {
+    testWidgets('tapping Open list button navigates to list screen', (
+      tester,
+    ) async {
       // Arrange - empty state shows Open list button
       await tester.pumpIntegrationApp(trackedIds: {});
 
@@ -130,24 +136,27 @@ void main() {
       expect(IntegrationFinders.listTitle, findsOneWidget);
     });
 
-    testWidgets('selecting sequence from list returns to home with that sequence',
-        (tester) async {
-      // Arrange
-      await tester.pumpIntegrationApp(trackedIds: {'test-001'});
-      await tester.navigateToListScreen();
+    testWidgets(
+      'selecting sequence from list returns to home with that sequence',
+      (tester) async {
+        // Arrange
+        await tester.pumpIntegrationApp(trackedIds: {'test-001'});
+        await tester.navigateToListScreen();
 
-      // Act - tap on a different sequence
-      await tester.tapSequence('谢谢');
+        // Act - tap on a different sequence
+        await tester.tapSequence('谢谢');
 
-      // Assert - home screen shows the selected sequence
-      expect(IntegrationFinders.homeTitle, findsOneWidget);
-      expect(IntegrationFinders.sequenceText('谢谢'), findsOneWidget);
-    });
+        // Assert - home screen shows the selected sequence
+        expect(IntegrationFinders.homeTitle, findsOneWidget);
+        expect(IntegrationFinders.sequenceText('谢谢'), findsOneWidget);
+      },
+    );
   });
 
   group('App Bar Actions', () {
-    testWidgets('bookmark button is visible when sequence is tracked',
-        (tester) async {
+    testWidgets('bookmark button is visible when sequence is tracked', (
+      tester,
+    ) async {
       // Arrange
       await tester.pumpIntegrationApp(trackedIds: {'test-001'});
 
@@ -156,8 +165,9 @@ void main() {
       expect(IntegrationFinders.bookmarkOutlineIcon, findsNothing);
     });
 
-    testWidgets('bookmark outline is visible when sequence is not tracked',
-        (tester) async {
+    testWidgets('bookmark outline is visible when sequence is not tracked', (
+      tester,
+    ) async {
       // Arrange - sequence is current but not tracked
       // (Need to select from list without tracking)
       await tester.pumpIntegrationApp(trackedIds: {'test-001'});

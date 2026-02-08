@@ -10,11 +10,7 @@ import '../mocks/mock_providers.dart';
 /// Wraps the given widget in MaterialApp with router and theme,
 /// along with test provider overrides.
 class TestApp extends StatelessWidget {
-  const TestApp({
-    super.key,
-    required this.child,
-    this.overrides = const [],
-  });
+  const TestApp({super.key, required this.child, this.overrides = const []});
 
   final Widget child;
   final List<Override> overrides;
@@ -22,10 +18,7 @@ class TestApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      overrides: [
-        ...createTestOverrides(),
-        ...overrides,
-      ],
+      overrides: [...createTestOverrides(), ...overrides],
       child: MaterialApp(
         theme: AppTheme.darkTheme,
         home: child,

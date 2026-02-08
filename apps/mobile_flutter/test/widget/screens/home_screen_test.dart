@@ -16,7 +16,7 @@ import '../../mocks/mock_repositories.dart';
 class FakeHomeController extends StateNotifier<HomeState>
     implements HomeController {
   FakeHomeController([HomeState? initialState])
-      : super(initialState ?? const HomeState());
+    : super(initialState ?? const HomeState());
 
   bool nextCalled = false;
   bool toggleTrackedCalled = false;
@@ -45,18 +45,10 @@ class FakeHomeController extends StateNotifier<HomeState>
   }
 }
 
-
 void main() {
-  const testSequence = TextSequence(
-    id: 'test-001',
-    text: '你好',
-    language: 'zh',
-  );
+  const testSequence = TextSequence(id: 'test-001', text: '你好', language: 'zh');
 
-  const testProgress = TextSequenceProgress(
-    tracked: true,
-    bestScore: 85,
-  );
+  const testProgress = TextSequenceProgress(tracked: true, bestScore: 85);
 
   Widget buildTestWidget({
     required HomeState initialState,
@@ -68,27 +60,28 @@ void main() {
       overrides: [
         homeControllerProvider.overrideWith((_) => fakeController),
         // Override all base dependencies to avoid Hive
-        textSequenceRepositoryProvider.overrideWithValue(MockTextSequenceRepository()),
+        textSequenceRepositoryProvider.overrideWithValue(
+          MockTextSequenceRepository(),
+        ),
         progressRepositoryProvider.overrideWithValue(MockProgressRepository()),
-        recordingRepositoryProvider.overrideWithValue(MockRecordingRepository()),
+        recordingRepositoryProvider.overrideWithValue(
+          MockRecordingRepository(),
+        ),
         settingsRepositoryProvider.overrideWithValue(MockSettingsRepository()),
-        exampleAudioRepositoryProvider.overrideWithValue(MockExampleAudioRepository()),
+        exampleAudioRepositoryProvider.overrideWithValue(
+          MockExampleAudioRepository(),
+        ),
         audioRecorderProvider.overrideWithValue(FakeAudioRecorder()),
         audioPlayerProvider.overrideWithValue(FakeAudioPlayer()),
       ],
-      child: MaterialApp(
-        theme: AppTheme.darkTheme,
-        home: const HomeScreen(),
-      ),
+      child: MaterialApp(theme: AppTheme.darkTheme, home: const HomeScreen()),
     );
   }
 
   group('HomeScreen empty state', () {
     testWidgets('shows loading indicator when loading', (tester) async {
       await tester.pumpWidget(
-        buildTestWidget(
-          initialState: const HomeState(isLoading: true),
-        ),
+        buildTestWidget(initialState: const HomeState(isLoading: true)),
       );
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);

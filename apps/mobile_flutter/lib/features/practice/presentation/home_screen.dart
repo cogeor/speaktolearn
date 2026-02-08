@@ -240,12 +240,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            16,
-            16,
-            16,
-            24,
-          ),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -342,22 +337,12 @@ class _AudioControlsRow extends ConsumerWidget {
         ],
 
         // Record button (central, larger)
-        _buildRecordButton(
-          context,
-          ref,
-          recordingStatus,
-          recordingController,
-        ),
+        _buildRecordButton(context, ref, recordingStatus, recordingController),
 
         const SizedBox(height: 16),
 
         // Replay button (always visible, greyed when no recording)
-        _buildReplayButton(
-          context,
-          ref,
-          recordingState,
-          recordingController,
-        ),
+        _buildReplayButton(context, ref, recordingState, recordingController),
       ],
     );
   }
@@ -389,9 +374,9 @@ class _AudioControlsRow extends ConsumerWidget {
                   final newState = ref.read(recordingControllerProvider);
                   debugPrint('🎤 Recording started. Error: ${newState.error}');
                   if (newState.error != null && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(newState.error!)),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(newState.error!)));
                   }
                 }
               } catch (e, stackTrace) {

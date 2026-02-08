@@ -9,10 +9,11 @@ import 'sequence_list_item.dart';
 final hskFilterProvider = StateProvider<Set<int>>((ref) => {});
 
 /// Provider for the sequence list controller.
-final sequenceListControllerProvider = AutoDisposeAsyncNotifierProvider<
-    SequenceListController, List<SequenceListItem>>(
-  SequenceListController.new,
-);
+final sequenceListControllerProvider =
+    AutoDisposeAsyncNotifierProvider<
+      SequenceListController,
+      List<SequenceListItem>
+    >(SequenceListController.new);
 
 /// Controller that manages the list of text sequences for browsing.
 ///

@@ -102,7 +102,9 @@ void main() {
       test('toString returns readable representation', () {
         const source = UrlAudioSource('https://example.com/audio.opus');
         expect(
-            source.toString(), 'UrlAudioSource(https://example.com/audio.opus)');
+          source.toString(),
+          'UrlAudioSource(https://example.com/audio.opus)',
+        );
       });
     });
 

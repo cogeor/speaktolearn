@@ -40,12 +40,12 @@ class RecordingController extends StateNotifier<RecordingState> {
     required PronunciationScorer scorer,
     required ProgressRepository progressRepository,
     required AudioPlayer audioPlayer,
-  })  : _recorder = recorder,
-        _repository = repository,
-        _scorer = scorer,
-        _progressRepository = progressRepository,
-        _audioPlayer = audioPlayer,
-        super(const RecordingState());
+  }) : _recorder = recorder,
+       _repository = repository,
+       _scorer = scorer,
+       _progressRepository = progressRepository,
+       _audioPlayer = audioPlayer,
+       super(const RecordingState());
 
   final AudioRecorder _recorder;
   final RecordingRepository _repository;
@@ -274,18 +274,18 @@ class RecordingController extends StateNotifier<RecordingState> {
     state = state.copyWith(isPlaying: true);
     debugPrint('🔊 Loading audio from ${recording.filePath}');
     await _audioPlayer.load(FileAudioSource(recording.filePath));
-    
+
     // Get duration and wait for that time + buffer
     final duration = _audioPlayer.duration ?? const Duration(seconds: 5);
     debugPrint('🔊 Audio duration: ${duration.inMilliseconds}ms');
-    
+
     await _audioPlayer.play();
     debugPrint('🔊 Playing audio');
 
     // Wait for the duration of the audio plus a small buffer
     await Future.delayed(duration + const Duration(milliseconds: 500));
     debugPrint('🔊 Playback complete (duration elapsed)');
-    
+
     // Stop to ensure cleanup
     await _audioPlayer.stop();
 

@@ -97,8 +97,9 @@ void main() {
       tester.verifySequenceDisplayed('\u4f60\u597d');
     });
 
-    testWidgets('tracking from list makes sequence appear on home',
-        (tester) async {
+    testWidgets('tracking from list makes sequence appear on home', (
+      tester,
+    ) async {
       // Arrange - start with no tracked sequences
       await tester.pumpIntegrationApp(trackedIds: {});
 
@@ -252,7 +253,8 @@ void main() {
     testWidgets('can untrack all sequences', (tester) async {
       // Arrange
       await tester.pumpIntegrationApp(
-          trackedIds: {'test-001', 'test-002', 'test-003'});
+        trackedIds: {'test-001', 'test-002', 'test-003'},
+      );
       await tester.navigateToListScreen();
 
       // Act - untrack all
@@ -284,8 +286,9 @@ void main() {
       tester.verifySequenceTracked('\u4f60\u597d');
     });
 
-    testWidgets('selecting sequence from list sets it as current',
-        (tester) async {
+    testWidgets('selecting sequence from list sets it as current', (
+      tester,
+    ) async {
       // Arrange
       await tester.pumpIntegrationApp(trackedIds: {'test-001'});
       await tester.navigateToListScreen();
@@ -300,7 +303,8 @@ void main() {
     testWidgets('Next button cycles through tracked sequences', (tester) async {
       // Arrange - multiple tracked
       await tester.pumpIntegrationApp(
-          trackedIds: {'test-001', 'test-002', 'test-003'});
+        trackedIds: {'test-001', 'test-002', 'test-003'},
+      );
 
       // Keep track of seen sequences
       final seen = <String>{};
