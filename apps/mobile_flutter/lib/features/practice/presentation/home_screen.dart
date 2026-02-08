@@ -52,14 +52,6 @@ class HomeScreen extends ConsumerWidget {
             icon: const Icon(Icons.settings),
             onPressed: () => context.go('/settings'),
           ),
-          IconButton(
-            icon: Icon(
-              state.currentProgress?.tracked == true
-                  ? Icons.bookmark
-                  : Icons.bookmark_border,
-            ),
-            onPressed: controller.toggleTracked,
-          ),
         ],
       ),
       body: state.isLoading
@@ -148,9 +140,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     final settingsAsync = ref.read(settingsControllerProvider);
     final preference =
         settingsAsync.valueOrNull?.voicePreference ??
-        VoicePreference.systemDefault;
+        VoicePreference.noPreference;
 
-    if (preference == VoicePreference.systemDefault) {
+    if (preference == VoicePreference.noPreference) {
       return voices.first.id;
     }
 

@@ -19,17 +19,11 @@ class FakeHomeController extends StateNotifier<HomeState>
     : super(initialState ?? const HomeState());
 
   bool nextCalled = false;
-  bool toggleTrackedCalled = false;
   String? setCurrentSequenceId;
 
   @override
   Future<void> next() async {
     nextCalled = true;
-  }
-
-  @override
-  Future<void> toggleTracked() async {
-    toggleTrackedCalled = true;
   }
 
   @override
@@ -169,53 +163,6 @@ void main() {
       expect(controller.nextCalled, isTrue);
     });
 
-    testWidgets('track icon toggles on tap', (tester) async {
-      final controller = FakeHomeController(
-        const HomeState(
-          isLoading: false,
-          isEmptyTracked: false,
-          current: testSequence,
-          currentProgress: testProgress,
-        ),
-      );
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          initialState: const HomeState(
-            isLoading: false,
-            isEmptyTracked: false,
-            current: testSequence,
-            currentProgress: testProgress,
-          ),
-          controller: controller,
-        ),
-      );
-
-      // Find the bookmark icon button in the AppBar
-      final bookmarkButton = find.byIcon(Icons.bookmark);
-      expect(bookmarkButton, findsOneWidget);
-
-      await tester.tap(bookmarkButton);
-      await tester.pump();
-
-      expect(controller.toggleTrackedCalled, isTrue);
-    });
-
-    testWidgets('shows untracked icon when not tracked', (tester) async {
-      await tester.pumpWidget(
-        buildTestWidget(
-          initialState: const HomeState(
-            isLoading: false,
-            isEmptyTracked: false,
-            current: testSequence,
-            currentProgress: TextSequenceProgress(tracked: false),
-          ),
-        ),
-      );
-
-      // Should show outline bookmark when not tracked
-      expect(find.byIcon(Icons.bookmark_border), findsOneWidget);
-    });
   });
 
   group('HomeScreen app bar', () {

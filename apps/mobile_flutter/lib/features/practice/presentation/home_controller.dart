@@ -81,16 +81,6 @@ class HomeController extends StateNotifier<HomeState> {
     );
   }
 
-  /// Toggles the tracked status of the current sequence.
-  Future<void> toggleTracked() async {
-    if (state.current == null) {
-      return;
-    }
-
-    await _progressRepository.toggleTracked(state.current!.id);
-    await refreshProgress();
-  }
-
   /// Refreshes the progress for the current sequence.
   ///
   /// Used after scoring to update the best score display.
