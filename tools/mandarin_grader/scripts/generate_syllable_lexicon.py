@@ -14,8 +14,12 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import sys
 from pathlib import Path
 from typing import Literal
+
+# Add parent package to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import numpy as np
 
@@ -117,6 +121,8 @@ async def generate_syllable_audio(
         Duration in milliseconds
     """
     import edge_tts
+    import io
+    import wave
 
     # Create pinyin with tone mark for TTS
     marked_pinyin = add_tone_mark(pinyin, tone)
@@ -126,60 +132,122 @@ async def generate_syllable_audio(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Save to temporary mp3 first
-    temp_mp3 = output_path.with_suffix(".mp3")
-    await communicate.save(str(temp_mp3))
+    # Collect audio data
+    audio_data = b""
+    async for chunk in communicate.stream():
+        if chunk["type"] == "audio":
+            audio_data += chunk["data"]
 
-    # Convert to WAV and get duration
-    duration_ms = await convert_and_trim(temp_mp3, output_path)
-
-    # Remove temp file
-    temp_mp3.unlink(missing_ok=True)
+    # edge-tts returns MP3, convert to WAV using scipy/numpy
+    duration_ms = convert_mp3_to_wav(audio_data, output_path)
 
     return duration_ms
 
 
-async def convert_and_trim(mp3_path: Path, wav_path: Path) -> int:
-    """Convert MP3 to WAV and trim silence.
+def convert_mp3_to_wav(mp3_data: bytes, wav_path: Path, target_sr: int = 16000) -> int:
+    """Convert MP3 bytes to WAV file.
 
     Args:
-        mp3_path: Input MP3 path
+        mp3_data: MP3 audio data as bytes
         wav_path: Output WAV path
+        target_sr: Target sample rate
 
     Returns:
         Duration in milliseconds
     """
-    from pydub import AudioSegment
-    from pydub.silence import detect_leading_silence
+    import tempfile
+    import subprocess
+    import wave
+    import struct
 
-    # Load audio
-    audio = AudioSegment.from_mp3(str(mp3_path))
+    # Find ffmpeg - check common locations
+    ffmpeg_paths = [
+        "ffmpeg",  # In PATH
+        r"C:\Users\costa\AppData\Local\Overwolf\Extensions\ncfplpkmiejjaklknfnkgcpapnhkggmlcppckhcb\270.0.25\obs\bin\64bit\ffmpeg.exe",
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+    ]
 
-    # Convert to mono 16kHz
-    audio = audio.set_frame_rate(16000).set_channels(1)
+    ffmpeg_cmd = None
+    for path in ffmpeg_paths:
+        try:
+            subprocess.run([path, "-version"], capture_output=True, check=True)
+            ffmpeg_cmd = path
+            break
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            continue
 
-    # Trim silence from start and end
-    def detect_trailing_silence(sound, silence_threshold=-40.0, chunk_size=10):
-        """Detect trailing silence by reversing."""
-        trim_ms = detect_leading_silence(
-            sound.reverse(), silence_threshold, chunk_size
-        )
-        return len(sound) - trim_ms
+    if ffmpeg_cmd is None:
+        raise RuntimeError("ffmpeg not found. Please install ffmpeg and add to PATH.")
 
-    start_trim = detect_leading_silence(audio, silence_threshold=-40.0)
-    end_trim = detect_trailing_silence(audio, silence_threshold=-40.0)
+    # Write MP3 to temp file
+    with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as tmp_mp3:
+        tmp_mp3.write(mp3_data)
+        tmp_mp3_path = tmp_mp3.name
 
-    # Keep a small margin (20ms) on each side
-    margin_ms = 20
-    start_trim = max(0, start_trim - margin_ms)
-    end_trim = min(len(audio), end_trim + margin_ms)
+    # Create temp WAV path
+    tmp_wav_path = tmp_mp3_path.replace(".mp3", ".wav")
 
-    trimmed = audio[start_trim:end_trim]
+    try:
+        # Convert MP3 to WAV using ffmpeg
+        subprocess.run([
+            ffmpeg_cmd, "-y", "-i", tmp_mp3_path,
+            "-ar", str(target_sr),
+            "-ac", "1",
+            "-sample_fmt", "s16",
+            "-f", "wav",
+            tmp_wav_path
+        ], capture_output=True, check=True)
 
-    # Export as WAV
-    trimmed.export(str(wav_path), format="wav")
+        # Read the WAV file using Python's wave module
+        with wave.open(tmp_wav_path, 'rb') as wf:
+            n_frames = wf.getnframes()
+            raw_data = wf.readframes(n_frames)
+            sr = wf.getframerate()
 
-    return len(trimmed)
+        # Convert bytes to numpy array of int16
+        audio = np.array(struct.unpack(f'{n_frames}h', raw_data), dtype=np.int16)
+
+        # Convert to float for processing
+        audio_float = audio.astype(np.float32) / 32768.0
+
+        # Simple silence trimming: find first/last sample above threshold
+        threshold = 0.01
+        nonsilent = np.abs(audio_float) > threshold
+
+        if np.any(nonsilent):
+            first_nonsilent = np.argmax(nonsilent)
+            last_nonsilent = len(nonsilent) - np.argmax(nonsilent[::-1]) - 1
+
+            # Add margin (20ms = 320 samples at 16kHz)
+            margin = int(0.02 * target_sr)
+            start = max(0, first_nonsilent - margin)
+            end = min(len(audio_float), last_nonsilent + margin)
+
+            audio_trimmed = audio_float[start:end]
+        else:
+            audio_trimmed = audio_float
+
+        # Convert back to int16
+        audio_int16 = (audio_trimmed * 32767).clip(-32768, 32767).astype(np.int16)
+
+        # Save using wave module
+        with wave.open(str(wav_path), 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)  # 2 bytes for int16
+            wf.setframerate(target_sr)
+            wf.writeframes(audio_int16.tobytes())
+
+        # Return duration in ms
+        duration_ms = int(len(audio_trimmed) / target_sr * 1000)
+        return duration_ms
+
+    finally:
+        # Clean up temp files
+        import os
+        if os.path.exists(tmp_mp3_path):
+            os.unlink(tmp_mp3_path)
+        if os.path.exists(tmp_wav_path):
+            os.unlink(tmp_wav_path)
 
 
 async def generate_lexicon(
