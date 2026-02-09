@@ -116,7 +116,7 @@ def extract_features(audio_path: Path, config) -> np.ndarray | None:
     from mandarin_grader.model.syllable_tone_model import extract_mel_spectrogram
 
     try:
-        audio = load_audio(audio_path, sr=config.sample_rate)
+        audio = load_audio(audio_path, target_sr=config.sample_rate)
         mel = extract_mel_spectrogram(audio, config)
         return mel
     except Exception as e:
