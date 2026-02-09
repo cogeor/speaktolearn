@@ -102,6 +102,39 @@ def load_training_data(
     return train_samples, val_samples
 
 
+def compute_class_weights(samples: list[dict], n_classes: int = 5) -> np.ndarray:
+    """Compute class weights based on inverse frequency.
+
+    Args:
+        samples: Training samples with 'tones' field
+        n_classes: Number of tone classes (0-4)
+
+    Returns:
+        Array of class weights [n_classes]
+    """
+    # Count tones
+    counts = np.zeros(n_classes, dtype=np.float32)
+    for sample in samples:
+        for tone in sample["tones"]:
+            if 0 <= tone < n_classes:
+                counts[tone] += 1
+
+    # Avoid division by zero
+    counts = np.maximum(counts, 1.0)
+
+    # Inverse frequency weighting
+    total = counts.sum()
+    weights = total / (n_classes * counts)
+
+    # Normalize so mean weight is 1.0
+    weights = weights / weights.mean()
+
+    logger.info(f"Class counts: {counts.astype(int).tolist()}")
+    logger.info(f"Class weights: {[f'{w:.2f}' for w in weights]}")
+
+    return weights
+
+
 def extract_features(audio_path: Path, config) -> np.ndarray | None:
     """Extract mel spectrogram features from audio.
 
@@ -464,6 +497,7 @@ def main():
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--sentences", type=Path, default=SENTENCES_JSON)
     parser.add_argument("--audio-dir", type=Path, default=AUDIO_DIR)
+    parser.add_argument("--no-class-weights", action="store_true", help="Disable class weighting")
 
     args = parser.parse_args()
 
@@ -514,8 +548,17 @@ def main():
         num_workers=0,
     )
 
+    # Compute class weights
+    if not args.no_class_weights:
+        class_weights = compute_class_weights(train_samples, n_classes=5)
+        weight_tensor = torch.tensor(class_weights, dtype=torch.float32, device=config.device)
+        criterion = torch.nn.CrossEntropyLoss(weight=weight_tensor)
+        logger.info("Using class-weighted loss")
+    else:
+        criterion = torch.nn.CrossEntropyLoss()
+        logger.info("Using unweighted loss")
+
     # Training setup
-    criterion = torch.nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
 
     # Training loop
