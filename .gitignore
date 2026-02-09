@@ -2,3 +2,9 @@
 .delegate/
 
 __pycache__/
+
+# Generated data (audio files, not code)
+tools/mandarin_grader/data/
+
+# RVC voice models (large binary files)
+models/rvc/
