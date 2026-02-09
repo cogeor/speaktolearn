@@ -211,7 +211,7 @@ def main():
     parser.add_argument(
         "--lexicon",
         type=Path,
-        default=Path("tools/mandarin_grader/data/syllables"),
+        default=Path("tools/mandarin_grader/data/syllables_v2"),
         help="Path to syllable lexicon",
     )
     parser.add_argument(
@@ -229,8 +229,8 @@ def main():
     parser.add_argument(
         "--voices",
         nargs="+",
-        default=["female", "male"],
-        help="Voices to generate",
+        default=["female1", "male1"],
+        help="Voices to generate (female1, female2, male1, male2)",
     )
 
     args = parser.parse_args()

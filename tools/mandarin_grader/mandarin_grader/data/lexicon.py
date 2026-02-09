@@ -128,14 +128,23 @@ class SyllableLexicon:
     def load(cls, base_path: Path) -> "SyllableLexicon":
         """Load lexicon from directory.
 
+        Supports two formats:
+        - v1: lexicon.json with entries list
+        - v2: metadata.json with voice/tone{N}/syllable.wav structure
+
         Args:
-            base_path: Directory containing lexicon.json and audio files
+            base_path: Directory containing lexicon files and audio
 
         Returns:
             SyllableLexicon instance
         """
-        lexicon_path = base_path / "lexicon.json"
+        # Try v2 format first (metadata.json with directory structure)
+        metadata_path = base_path / "metadata.json"
+        if metadata_path.exists():
+            return cls._load_v2(base_path, metadata_path)
 
+        # Fall back to v1 format (lexicon.json)
+        lexicon_path = base_path / "lexicon.json"
         if not lexicon_path.exists():
             return cls(base_path=base_path)
 
@@ -152,6 +161,55 @@ class SyllableLexicon:
                 duration_ms=entry_data.get("duration_ms", 0),
             )
             entries[entry.full_key] = entry
+
+        return cls(base_path=base_path, entries=entries)
+
+    @classmethod
+    def _load_v2(cls, base_path: Path, metadata_path: Path) -> "SyllableLexicon":
+        """Load v2 format lexicon with voice/tone{N}/syllable.wav structure."""
+        import wave
+
+        with open(metadata_path, encoding="utf-8") as f:
+            metadata = json.load(f)
+
+        voices = metadata.get("voices", {})
+        tones = metadata.get("tones", [0, 1, 2, 3, 4])
+
+        entries = {}
+
+        for voice_name in voices.keys():
+            voice_dir = base_path / voice_name
+            if not voice_dir.exists():
+                continue
+
+            for tone in tones:
+                tone_dir = voice_dir / f"tone{tone}"
+                if not tone_dir.exists():
+                    continue
+
+                for wav_file in tone_dir.glob("*.wav"):
+                    pinyin = wav_file.stem  # filename without extension
+
+                    # Get duration
+                    try:
+                        with wave.open(str(wav_file), 'rb') as wf:
+                            frames = wf.getnframes()
+                            rate = wf.getframerate()
+                            duration_ms = int(frames / rate * 1000)
+                    except Exception:
+                        duration_ms = 0
+
+                    # Relative path from base
+                    audio_path = f"{voice_name}/tone{tone}/{wav_file.name}"
+
+                    entry = SyllableEntry(
+                        pinyin=pinyin,
+                        tone=tone,
+                        voice_id=voice_name,
+                        audio_path=audio_path,
+                        duration_ms=duration_ms,
+                    )
+                    entries[entry.full_key] = entry
 
         return cls(base_path=base_path, entries=entries)
 

@@ -144,17 +144,21 @@ if TORCH_AVAILABLE:
             # Dropout
             self.dropout = nn.Dropout(config.dropout)
 
-        def forward(self, mel: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        def forward(self, mel: torch.Tensor | np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
             """Forward pass.
 
             Args:
-                mel: Mel spectrogram [batch, n_mels, time]
+                mel: Mel spectrogram [batch, n_mels, time] (tensor or numpy array)
 
             Returns:
                 Tuple of (boundary_logits, tone_logits)
                 - boundary_logits: [batch, time, 2]
                 - tone_logits: [batch, time, n_tones]
             """
+            # Convert numpy to tensor if needed
+            if isinstance(mel, np.ndarray):
+                mel = torch.from_numpy(mel).float()
+
             batch_size, n_mels, time = mel.shape
 
             # Add channel dimension: [batch, 1, n_mels, time]
@@ -182,15 +186,21 @@ if TORCH_AVAILABLE:
 
             return boundary_logits, tone_logits
 
-        def predict(self, mel: torch.Tensor) -> ModelOutput:
+        def predict(self, mel: torch.Tensor | np.ndarray) -> ModelOutput:
             """Make predictions with post-processing.
 
             Args:
-                mel: Mel spectrogram [batch, n_mels, time]
+                mel: Mel spectrogram [batch, n_mels, time] (tensor or numpy array)
 
             Returns:
                 ModelOutput with logits and decoded predictions
             """
+            # Convert numpy to tensor if needed
+            if isinstance(mel, np.ndarray):
+                mel = torch.from_numpy(mel).float()
+
+            batch_size = mel.shape[0]
+
             with torch.no_grad():
                 boundary_logits, tone_logits = self.forward(mel)
 
@@ -200,7 +210,7 @@ if TORCH_AVAILABLE:
 
             # Find syllable start frames
             syllable_starts = []
-            for b in range(mel.shape[0]):
+            for b in range(batch_size):
                 starts = torch.where(boundary_preds[b])[0].tolist()
                 if not starts or starts[0] != 0:
                     starts = [0] + starts
@@ -210,7 +220,7 @@ if TORCH_AVAILABLE:
             tone_probs = torch.softmax(tone_logits, dim=-1)
             tone_predictions = []
 
-            for b in range(mel.shape[0]):
+            for b in range(batch_size):
                 starts = syllable_starts[b]
                 tones = []
 
