@@ -17,11 +17,6 @@ import '../features/recording/data/record_plugin_recorder.dart';
 import '../features/recording/data/recording_repository_impl.dart';
 import '../features/recording/domain/audio_recorder.dart';
 import '../features/recording/domain/recording_repository.dart';
-import '../features/scoring/data/asr_similarity_scorer.dart';
-import '../features/scoring/data/cer_calculator.dart';
-import '../features/scoring/data/speech_recognizer.dart';
-import '../features/scoring/data/speech_to_text_recognizer.dart';
-import '../features/scoring/domain/pronunciation_scorer.dart';
 import '../features/selection/domain/get_next_by_level.dart';
 import '../features/recording/presentation/recording_controller.dart';
 import '../features/recording/presentation/recording_state.dart';
@@ -83,18 +78,6 @@ final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
 /// Provider for audio recorder.
 final audioRecorderProvider = Provider<AudioRecorder>((ref) {
   return RecordPluginRecorder();
-});
-
-/// Provider for speech recognizer.
-final speechRecognizerProvider = Provider<SpeechRecognizer>((ref) {
-  return SpeechToTextRecognizer();
-});
-
-/// Provider for pronunciation scorer.
-final pronunciationScorerProvider = Provider<PronunciationScorer>((ref) {
-  final recognizer = ref.watch(speechRecognizerProvider);
-  final calculator = CerCalculator();
-  return AsrSimilarityScorer(recognizer: recognizer, calculator: calculator);
 });
 
 /// Provider for GetNextByLevel use case.
