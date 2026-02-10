@@ -53,7 +53,10 @@ class FakeHomeController extends StateNotifier<HomeState>
 void main() {
   const testSequence = TextSequence(id: 'test-001', text: '你好', language: 'zh');
 
-  const testProgress = TextSequenceProgress(tracked: true, lastRating: SentenceRating.good);
+  const testProgress = TextSequenceProgress(
+    tracked: true,
+    lastRating: SentenceRating.good,
+  );
 
   Widget buildTestWidget({
     required HomeState initialState,

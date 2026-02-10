@@ -280,7 +280,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                       .read(exampleAudioControllerProvider.notifier)
                       .stop();
                   await widget.controller.rateAndNext(rating);
-                  ref.read(recordingControllerProvider.notifier).resetPlaybackState();
+                  ref
+                      .read(recordingControllerProvider.notifier)
+                      .resetPlaybackState();
                   // Invalidate stats so they refresh when stats screen is opened
                   ref.invalidate(statsControllerProvider);
                   // Invalidate sentence list so ratings are reflected

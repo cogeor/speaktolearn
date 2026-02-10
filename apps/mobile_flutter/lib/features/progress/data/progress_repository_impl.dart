@@ -149,8 +149,9 @@ class ProgressRepositoryImpl implements ProgressRepository {
       if (data != null) {
         final attempts = (data as List)
             .map(
-              (item) =>
-                  RatingAttempt.fromJson(Map<String, dynamic>.from(item as Map)),
+              (item) => RatingAttempt.fromJson(
+                Map<String, dynamic>.from(item as Map),
+              ),
             )
             .toList();
         result.addAll(attempts);

@@ -162,7 +162,10 @@ void main() {
 
       expect(demo.totalAttempts, greaterThan(0));
       expect(demo.sequencesPracticed, greaterThan(0));
-      expect(demo.hardCount + demo.almostCount + demo.goodCount + demo.easyCount, equals(demo.totalAttempts));
+      expect(
+        demo.hardCount + demo.almostCount + demo.goodCount + demo.easyCount,
+        equals(demo.totalAttempts),
+      );
       expect(demo.currentStreak, greaterThan(0));
       expect(demo.longestStreak, greaterThan(0));
       expect(demo.dailyAttempts.isNotEmpty, isTrue);

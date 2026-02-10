@@ -8,11 +8,7 @@ import '../../../progress/domain/sentence_rating.dart';
 /// If no rating is provided (null), shows a dark gray indicator.
 class RatingIndicator extends StatelessWidget {
   /// Creates a RatingIndicator.
-  const RatingIndicator({
-    super.key,
-    this.rating,
-    this.size = 16,
-  });
+  const RatingIndicator({super.key, this.rating, this.size = 16});
 
   /// The sentence rating to display. If null, shows dark gray (no rating yet).
   final SentenceRating? rating;

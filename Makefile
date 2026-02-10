@@ -1,10 +1,11 @@
-.PHONY: setup generate clean run test help
+.PHONY: setup install-hooks generate clean run test help
 
 # Default target
 help:
 	@echo "SpeakToLearn - Development Commands"
 	@echo ""
 	@echo "  make setup      - Set up Python virtual environment"
+	@echo "  make install-hooks - Configure local git hooks"
 	@echo "  make generate   - Generate text + audio and export to Flutter"
 	@echo "  make clean      - Remove generated files"
 	@echo "  make run        - Run Flutter app"
@@ -21,6 +22,10 @@ setup:
 	cd tools/text_gen && uv venv .venv && uv pip install -e ".[dev]"
 	@echo ""
 	@echo "Setup complete. Add your OpenAI API key to tools/text_gen/.env"
+
+# Configure local git hooks
+install-hooks:
+	powershell -ExecutionPolicy Bypass -File scripts/install-hooks.ps1
 
 # Generate content and export to Flutter
 generate:

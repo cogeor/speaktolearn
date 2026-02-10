@@ -4,10 +4,7 @@ import '../../../../app/theme.dart';
 
 /// A GitHub-style activity heatmap showing practice frequency over the past year.
 class ActivityHeatmap extends StatelessWidget {
-  const ActivityHeatmap({
-    super.key,
-    required this.dailyAttempts,
-  });
+  const ActivityHeatmap({super.key, required this.dailyAttempts});
 
   /// Map of date to attempt count.
   final Map<DateTime, int> dailyAttempts;
@@ -114,10 +111,7 @@ class _MonthLabels extends StatelessWidget {
                   left: label.weekIndex * cellWidth,
                   child: Text(
                     label.name,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: AppTheme.subtle,
-                    ),
+                    style: const TextStyle(fontSize: 9, color: AppTheme.subtle),
                   ),
                 );
               }).toList(),
@@ -129,8 +123,21 @@ class _MonthLabels extends StatelessWidget {
   }
 
   String _monthName(int month) {
-    const names = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const names = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return names[month];
   }
 }
@@ -204,7 +211,9 @@ class _Grid extends StatelessWidget {
                 height: cellSize,
                 margin: const EdgeInsets.all(0.5),
                 decoration: BoxDecoration(
-                  color: isFuture ? Colors.transparent : _getColor(attempts, maxAttempts),
+                  color: isFuture
+                      ? Colors.transparent
+                      : _getColor(attempts, maxAttempts),
                   borderRadius: BorderRadius.circular(1),
                 ),
               ),

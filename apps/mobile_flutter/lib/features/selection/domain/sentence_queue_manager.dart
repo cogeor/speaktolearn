@@ -15,8 +15,8 @@ class SentenceQueueManager {
   SentenceQueueManager({
     required TextSequenceRepository textSequenceRepository,
     required ProgressRepository progressRepository,
-  })  : _textSequenceRepository = textSequenceRepository,
-        _progressRepository = progressRepository;
+  }) : _textSequenceRepository = textSequenceRepository,
+       _progressRepository = progressRepository;
 
   final TextSequenceRepository _textSequenceRepository;
   final ProgressRepository _progressRepository;

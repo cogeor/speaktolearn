@@ -250,12 +250,14 @@ class RecordingController extends StateNotifier<RecordingState> {
     await _audioPlayer.load(FileAudioSource(recording.filePath));
 
     // Subscribe to state stream BEFORE calling play to avoid missing events
-    final completionFuture = _audioPlayer.stateStream.firstWhere(
-      (s) => s == PlaybackState.completed || s == PlaybackState.idle,
-    ).timeout(
-      const Duration(seconds: 30),
-      onTimeout: () => PlaybackState.completed,
-    );
+    final completionFuture = _audioPlayer.stateStream
+        .firstWhere(
+          (s) => s == PlaybackState.completed || s == PlaybackState.idle,
+        )
+        .timeout(
+          const Duration(seconds: 30),
+          onTimeout: () => PlaybackState.completed,
+        );
 
     debugPrint('Playing audio');
     await _audioPlayer.play();

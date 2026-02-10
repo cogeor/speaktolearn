@@ -8,9 +8,17 @@ import 'package:speak_to_learn/features/text_sequences/presentation/sequence_lis
 
 void main() {
   const testItems = [
-    SequenceListItem(id: 'test-001', text: '你好', lastRating: SentenceRating.good),
+    SequenceListItem(
+      id: 'test-001',
+      text: '你好',
+      lastRating: SentenceRating.good,
+    ),
     SequenceListItem(id: 'test-002', text: '谢谢', lastRating: null),
-    SequenceListItem(id: 'test-003', text: '再见', lastRating: SentenceRating.almost),
+    SequenceListItem(
+      id: 'test-003',
+      text: '再见',
+      lastRating: SentenceRating.almost,
+    ),
   ];
 
   group('SequenceListTile', () {
@@ -34,7 +42,11 @@ void main() {
     });
 
     testWidgets('shows rating indicator when available', (tester) async {
-      const item = SequenceListItem(id: 'test-001', text: '你好', lastRating: SentenceRating.good);
+      const item = SequenceListItem(
+        id: 'test-001',
+        text: '你好',
+        lastRating: SentenceRating.good,
+      );
 
       await tester.pumpWidget(
         MaterialApp(

@@ -8,13 +8,16 @@ A language learning app focused on pronunciation practice. Users listen to nativ
 # 1. Set up Python tool
 make setup
 
-# 2. Add your OpenAI API key
+# 2. Install repo git hooks (pre-commit formatting)
+make install-hooks
+
+# 3. Add your OpenAI API key
 echo "OPENAI__API_KEY=sk-your-key" > tools/text_gen/.env
 
-# 3. Generate content (text + audio) and export to Flutter
+# 4. Generate content (text + audio) and export to Flutter
 make generate
 
-# 4. Run the app
+# 5. Run the app
 make run
 ```
 
@@ -252,6 +255,16 @@ flutter test
 # Analyze code
 flutter analyze
 ```
+
+### Git Hook Setup
+
+Run once per clone to enable pre-commit checks:
+
+```bash
+make install-hooks
+```
+
+The hook formats staged `apps/mobile_flutter/**/*.dart` files before commit and re-stages them automatically. This prevents CI failures from `dart format --set-exit-if-changed`.
 
 ### Python Development
 
