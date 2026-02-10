@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../progress/domain/progress_repository.dart';
+import '../../progress/domain/rating_attempt.dart';
+import '../../progress/domain/sentence_rating.dart';
 import '../../selection/domain/get_next_by_level.dart';
 import '../../settings/domain/app_settings.dart';
 import '../../text_sequences/domain/text_sequence_repository.dart';
@@ -89,5 +92,20 @@ class HomeController extends StateNotifier<HomeState> {
 
     if (!mounted) return;
     state = state.copyWith(currentProgress: progress);
+  }
+
+  /// Records a self-reported rating for the current sentence and advances to next.
+  Future<void> rateAndNext(SentenceRating rating) async {
+    if (state.current == null) return;
+
+    final attempt = RatingAttempt(
+      id: const Uuid().v4(),
+      textSequenceId: state.current!.id,
+      gradedAt: DateTime.now(),
+      rating: rating,
+    );
+
+    await _progressRepository.saveAttempt(attempt);
+    await next();
   }
 }
