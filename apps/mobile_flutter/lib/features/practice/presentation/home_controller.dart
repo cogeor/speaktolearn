@@ -5,7 +5,9 @@ import '../../progress/domain/progress_repository.dart';
 import '../../progress/domain/rating_attempt.dart';
 import '../../progress/domain/sentence_rating.dart';
 import '../../selection/domain/get_next_by_level.dart';
+import '../../selection/domain/sentence_queue_manager.dart';
 import '../../settings/domain/app_settings.dart';
+import '../../text_sequences/domain/text_sequence.dart';
 import '../../text_sequences/domain/text_sequence_repository.dart';
 import 'home_state.dart';
 
@@ -16,10 +18,12 @@ class HomeController extends StateNotifier<HomeState> {
     required ProgressRepository progressRepository,
     required GetNextByLevel getNextByLevel,
     required AsyncValue<AppSettings> settings,
+    SentenceQueueManager? queueManager,
   }) : _textSequenceRepository = textSequenceRepository,
        _progressRepository = progressRepository,
        _getNextByLevel = getNextByLevel,
        _settings = settings,
+       _queueManager = queueManager,
        super(const HomeState()) {
     _init();
   }
@@ -27,6 +31,7 @@ class HomeController extends StateNotifier<HomeState> {
   final TextSequenceRepository _textSequenceRepository;
   final ProgressRepository _progressRepository;
   final GetNextByLevel _getNextByLevel;
+  final SentenceQueueManager? _queueManager;
   final AsyncValue<AppSettings> _settings;
 
   int get _currentLevel => _settings.valueOrNull?.currentLevel ?? 1;
@@ -35,7 +40,7 @@ class HomeController extends StateNotifier<HomeState> {
     if (!mounted) return;
     state = state.copyWith(isLoading: true);
 
-    final sequence = await _getNextByLevel(level: _currentLevel);
+    final sequence = await _getNextSequence();
 
     if (!mounted) return;
     if (sequence == null) {
@@ -53,12 +58,21 @@ class HomeController extends StateNotifier<HomeState> {
     );
   }
 
-  /// Advances to a random sequence from the current level, excluding the current one.
+  /// Gets the next sequence using the queue manager if available,
+  /// otherwise falls back to random selection.
+  Future<TextSequence?> _getNextSequence({String? excludeId}) async {
+    if (_queueManager != null) {
+      return _queueManager.getNext(level: _currentLevel, excludeId: excludeId);
+    }
+    return _getNextByLevel(level: _currentLevel, currentId: excludeId);
+  }
+
+  /// Advances to the next sequence from the current level, excluding the current one.
+  ///
+  /// Uses queue-based prioritization if a queue manager is provided,
+  /// otherwise falls back to random selection.
   Future<void> next() async {
-    final sequence = await _getNextByLevel(
-      level: _currentLevel,
-      currentId: state.current?.id,
-    );
+    final sequence = await _getNextSequence(excludeId: state.current?.id);
 
     if (!mounted || sequence == null) return;
 
@@ -66,6 +80,14 @@ class HomeController extends StateNotifier<HomeState> {
 
     if (!mounted) return;
     state = state.copyWith(current: sequence, currentProgress: progress);
+  }
+
+  /// Clears the sentence queue (if using queue manager).
+  ///
+  /// Should be called when the user changes levels to force a refill
+  /// with sentences from the new level.
+  void clearQueue() {
+    _queueManager?.clear();
   }
 
   /// Sets the current sequence by its ID.
