@@ -23,3 +23,8 @@ tools/mandarin_grader/uv.lock
 
 # Example/debug numpy files
 tools/mandarin_grader/*.npy
+
+# Log files
+*.log
+build_log*.txt
+logs/
