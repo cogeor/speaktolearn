@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'sentence_rating.dart';
+
 part 'text_sequence_progress.freezed.dart';
 part 'text_sequence_progress.g.dart';
 
@@ -9,11 +11,9 @@ class TextSequenceProgress with _$TextSequenceProgress {
 
   const factory TextSequenceProgress({
     required bool tracked,
-    int? bestScore,
-    String? bestAttemptId,
     DateTime? lastAttemptAt,
     @Default(0) int attemptCount,
-    int? lastScore,
+    SentenceRating? lastRating,
   }) = _TextSequenceProgress;
 
   factory TextSequenceProgress.fromJson(Map<String, dynamic> json) =>

@@ -22,11 +22,9 @@ TextSequenceProgress _$TextSequenceProgressFromJson(Map<String, dynamic> json) {
 /// @nodoc
 mixin _$TextSequenceProgress {
   bool get tracked => throw _privateConstructorUsedError;
-  int? get bestScore => throw _privateConstructorUsedError;
-  String? get bestAttemptId => throw _privateConstructorUsedError;
   DateTime? get lastAttemptAt => throw _privateConstructorUsedError;
   int get attemptCount => throw _privateConstructorUsedError;
-  int? get lastScore => throw _privateConstructorUsedError;
+  SentenceRating? get lastRating => throw _privateConstructorUsedError;
 
   /// Serializes this TextSequenceProgress to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -47,11 +45,9 @@ abstract class $TextSequenceProgressCopyWith<$Res> {
   @useResult
   $Res call({
     bool tracked,
-    int? bestScore,
-    String? bestAttemptId,
     DateTime? lastAttemptAt,
     int attemptCount,
-    int? lastScore,
+    SentenceRating? lastRating,
   });
 }
 
@@ -74,11 +70,9 @@ class _$TextSequenceProgressCopyWithImpl<
   @override
   $Res call({
     Object? tracked = null,
-    Object? bestScore = freezed,
-    Object? bestAttemptId = freezed,
     Object? lastAttemptAt = freezed,
     Object? attemptCount = null,
-    Object? lastScore = freezed,
+    Object? lastRating = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -86,14 +80,6 @@ class _$TextSequenceProgressCopyWithImpl<
                 ? _value.tracked
                 : tracked // ignore: cast_nullable_to_non_nullable
                       as bool,
-            bestScore: freezed == bestScore
-                ? _value.bestScore
-                : bestScore // ignore: cast_nullable_to_non_nullable
-                      as int?,
-            bestAttemptId: freezed == bestAttemptId
-                ? _value.bestAttemptId
-                : bestAttemptId // ignore: cast_nullable_to_non_nullable
-                      as String?,
             lastAttemptAt: freezed == lastAttemptAt
                 ? _value.lastAttemptAt
                 : lastAttemptAt // ignore: cast_nullable_to_non_nullable
@@ -102,10 +88,10 @@ class _$TextSequenceProgressCopyWithImpl<
                 ? _value.attemptCount
                 : attemptCount // ignore: cast_nullable_to_non_nullable
                       as int,
-            lastScore: freezed == lastScore
-                ? _value.lastScore
-                : lastScore // ignore: cast_nullable_to_non_nullable
-                      as int?,
+            lastRating: freezed == lastRating
+                ? _value.lastRating
+                : lastRating // ignore: cast_nullable_to_non_nullable
+                      as SentenceRating?,
           )
           as $Val,
     );
@@ -123,11 +109,9 @@ abstract class _$$TextSequenceProgressImplCopyWith<$Res>
   @useResult
   $Res call({
     bool tracked,
-    int? bestScore,
-    String? bestAttemptId,
     DateTime? lastAttemptAt,
     int attemptCount,
-    int? lastScore,
+    SentenceRating? lastRating,
   });
 }
 
@@ -146,11 +130,9 @@ class __$$TextSequenceProgressImplCopyWithImpl<$Res>
   @override
   $Res call({
     Object? tracked = null,
-    Object? bestScore = freezed,
-    Object? bestAttemptId = freezed,
     Object? lastAttemptAt = freezed,
     Object? attemptCount = null,
-    Object? lastScore = freezed,
+    Object? lastRating = freezed,
   }) {
     return _then(
       _$TextSequenceProgressImpl(
@@ -158,14 +140,6 @@ class __$$TextSequenceProgressImplCopyWithImpl<$Res>
             ? _value.tracked
             : tracked // ignore: cast_nullable_to_non_nullable
                   as bool,
-        bestScore: freezed == bestScore
-            ? _value.bestScore
-            : bestScore // ignore: cast_nullable_to_non_nullable
-                  as int?,
-        bestAttemptId: freezed == bestAttemptId
-            ? _value.bestAttemptId
-            : bestAttemptId // ignore: cast_nullable_to_non_nullable
-                  as String?,
         lastAttemptAt: freezed == lastAttemptAt
             ? _value.lastAttemptAt
             : lastAttemptAt // ignore: cast_nullable_to_non_nullable
@@ -174,10 +148,10 @@ class __$$TextSequenceProgressImplCopyWithImpl<$Res>
             ? _value.attemptCount
             : attemptCount // ignore: cast_nullable_to_non_nullable
                   as int,
-        lastScore: freezed == lastScore
-            ? _value.lastScore
-            : lastScore // ignore: cast_nullable_to_non_nullable
-                  as int?,
+        lastRating: freezed == lastRating
+            ? _value.lastRating
+            : lastRating // ignore: cast_nullable_to_non_nullable
+                  as SentenceRating?,
       ),
     );
   }
@@ -188,11 +162,9 @@ class __$$TextSequenceProgressImplCopyWithImpl<$Res>
 class _$TextSequenceProgressImpl extends _TextSequenceProgress {
   const _$TextSequenceProgressImpl({
     required this.tracked,
-    this.bestScore,
-    this.bestAttemptId,
     this.lastAttemptAt,
     this.attemptCount = 0,
-    this.lastScore,
+    this.lastRating,
   }) : super._();
 
   factory _$TextSequenceProgressImpl.fromJson(Map<String, dynamic> json) =>
@@ -201,20 +173,16 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
   @override
   final bool tracked;
   @override
-  final int? bestScore;
-  @override
-  final String? bestAttemptId;
-  @override
   final DateTime? lastAttemptAt;
   @override
   @JsonKey()
   final int attemptCount;
   @override
-  final int? lastScore;
+  final SentenceRating? lastRating;
 
   @override
   String toString() {
-    return 'TextSequenceProgress(tracked: $tracked, bestScore: $bestScore, bestAttemptId: $bestAttemptId, lastAttemptAt: $lastAttemptAt, attemptCount: $attemptCount, lastScore: $lastScore)';
+    return 'TextSequenceProgress(tracked: $tracked, lastAttemptAt: $lastAttemptAt, attemptCount: $attemptCount, lastRating: $lastRating)';
   }
 
   @override
@@ -223,16 +191,12 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
         (other.runtimeType == runtimeType &&
             other is _$TextSequenceProgressImpl &&
             (identical(other.tracked, tracked) || other.tracked == tracked) &&
-            (identical(other.bestScore, bestScore) ||
-                other.bestScore == bestScore) &&
-            (identical(other.bestAttemptId, bestAttemptId) ||
-                other.bestAttemptId == bestAttemptId) &&
             (identical(other.lastAttemptAt, lastAttemptAt) ||
                 other.lastAttemptAt == lastAttemptAt) &&
             (identical(other.attemptCount, attemptCount) ||
                 other.attemptCount == attemptCount) &&
-            (identical(other.lastScore, lastScore) ||
-                other.lastScore == lastScore));
+            (identical(other.lastRating, lastRating) ||
+                other.lastRating == lastRating));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -240,11 +204,9 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
   int get hashCode => Object.hash(
     runtimeType,
     tracked,
-    bestScore,
-    bestAttemptId,
     lastAttemptAt,
     attemptCount,
-    lastScore,
+    lastRating,
   );
 
   /// Create a copy of TextSequenceProgress
@@ -268,11 +230,9 @@ class _$TextSequenceProgressImpl extends _TextSequenceProgress {
 abstract class _TextSequenceProgress extends TextSequenceProgress {
   const factory _TextSequenceProgress({
     required final bool tracked,
-    final int? bestScore,
-    final String? bestAttemptId,
     final DateTime? lastAttemptAt,
     final int attemptCount,
-    final int? lastScore,
+    final SentenceRating? lastRating,
   }) = _$TextSequenceProgressImpl;
   const _TextSequenceProgress._() : super._();
 
@@ -282,15 +242,11 @@ abstract class _TextSequenceProgress extends TextSequenceProgress {
   @override
   bool get tracked;
   @override
-  int? get bestScore;
-  @override
-  String? get bestAttemptId;
-  @override
   DateTime? get lastAttemptAt;
   @override
   int get attemptCount;
   @override
-  int? get lastScore;
+  SentenceRating? get lastRating;
 
   /// Create a copy of TextSequenceProgress
   /// with the given fields replaced by the non-null parameter values.
