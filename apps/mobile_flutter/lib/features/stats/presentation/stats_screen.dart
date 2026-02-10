@@ -147,24 +147,27 @@ class _StatCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 28),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: valueColor,
-                fontWeight: FontWeight.bold,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: valueColor,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(color: AppTheme.subtle, fontSize: 12),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              Text(
+                label,
+                style: const TextStyle(color: AppTheme.subtle, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
       ),
     );
