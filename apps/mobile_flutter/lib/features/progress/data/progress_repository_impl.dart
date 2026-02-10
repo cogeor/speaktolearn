@@ -4,7 +4,8 @@ import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
 import '../domain/progress_repository.dart';
-import '../domain/score_attempt.dart';
+import '../domain/rating_attempt.dart';
+import '../domain/sentence_rating.dart';
 import '../domain/text_sequence_progress.dart';
 
 /// Hive-based implementation of [ProgressRepository].
@@ -93,7 +94,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
   }
 
   @override
-  Future<void> saveAttempt(ScoreAttempt attempt) async {
+  Future<void> saveAttempt(RatingAttempt attempt) async {
     // Get existing attempts for this sequence
     final key = attempt.textSequenceId;
     final existing = await getAttempts(key);
@@ -107,23 +108,19 @@ class ProgressRepositoryImpl implements ProgressRepository {
     // Save attempts as list of JSON maps
     await _attemptsBox.put(key, updated.map((a) => a.toJson()).toList());
 
-    // Update progress with new best score if better
+    // Update progress with new rating
     final currentProgress = await getProgress(key);
-    final newBest = attempt.score > (currentProgress.bestScore ?? -1);
-
     final updatedProgress = currentProgress.copyWith(
       lastAttemptAt: attempt.gradedAt,
       attemptCount: currentProgress.attemptCount + 1,
-      bestScore: newBest ? attempt.score : currentProgress.bestScore,
-      bestAttemptId: newBest ? attempt.id : currentProgress.bestAttemptId,
-      lastScore: attempt.score,
+      lastRating: attempt.rating,
     );
 
     await _progressBox.put(key, updatedProgress.toJson());
   }
 
   @override
-  Future<List<ScoreAttempt>> getAttempts(
+  Future<List<RatingAttempt>> getAttempts(
     String textSequenceId, {
     int? limit,
   }) async {
@@ -133,7 +130,7 @@ class ProgressRepositoryImpl implements ProgressRepository {
     final list = (data as List)
         .map(
           (item) =>
-              ScoreAttempt.fromJson(Map<String, dynamic>.from(item as Map)),
+              RatingAttempt.fromJson(Map<String, dynamic>.from(item as Map)),
         )
         .toList();
 
@@ -144,15 +141,15 @@ class ProgressRepositoryImpl implements ProgressRepository {
   }
 
   @override
-  Future<List<ScoreAttempt>> getAllAttempts() async {
-    final result = <ScoreAttempt>[];
+  Future<List<RatingAttempt>> getAllAttempts() async {
+    final result = <RatingAttempt>[];
     for (final key in _attemptsBox.keys) {
       final data = _attemptsBox.get(key);
       if (data != null) {
         final attempts = (data as List)
             .map(
               (item) =>
-                  ScoreAttempt.fromJson(Map<String, dynamic>.from(item as Map)),
+                  RatingAttempt.fromJson(Map<String, dynamic>.from(item as Map)),
             )
             .toList();
         result.addAll(attempts);
@@ -186,8 +183,9 @@ class ProgressRepositoryImpl implements ProgressRepository {
         // Pick a random sequence
         final sequenceId = sequenceIds[random.nextInt(sequenceIds.length)];
 
-        // Generate score based on progression (earlier = lower, later = higher)
-        final score = _generateProgressiveScore(dayOffset, days, random);
+        // Generate random rating
+        final rating =
+            SentenceRating.values[random.nextInt(SentenceRating.values.length)];
 
         // Randomize time within the day (8am - 10pm)
         final hour = 8 + random.nextInt(14);
@@ -200,38 +198,16 @@ class ProgressRepositoryImpl implements ProgressRepository {
           minute,
         );
 
-        final attempt = ScoreAttempt(
+        final attempt = RatingAttempt(
           id: uuid.v4(),
           textSequenceId: sequenceId,
           gradedAt: gradedAt,
-          score: score,
-          method: 'asr_similarity',
-          recognizedText: null,
-          details: null,
+          rating: rating,
         );
 
         await saveAttempt(attempt);
       }
     }
-  }
-
-  /// Generates a score based on day progression.
-  /// Earlier days have lower scores, later days have higher scores.
-  int _generateProgressiveScore(int dayOffset, int totalDays, Random random) {
-    // dayOffset is days from now, so higher dayOffset = earlier in the past
-    // progress: 0.0 = earliest day, 1.0 = most recent day
-    final progress = 1 - (dayOffset / totalDays);
-
-    // Base range shifts higher as progress increases
-    final baseMin = 40 + (progress * 30).round(); // 40 -> 70
-    final baseMax = 75 + (progress * 25).round(); // 75 -> 100
-
-    // 5% chance of an outlier (lower score)
-    if (random.nextDouble() < 0.05) {
-      return 40 + random.nextInt(baseMin - 40 + 1);
-    }
-
-    return baseMin + random.nextInt(baseMax - baseMin + 1);
   }
 
   @override
