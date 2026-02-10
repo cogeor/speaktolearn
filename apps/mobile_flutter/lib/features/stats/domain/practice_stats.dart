@@ -8,7 +8,10 @@ class PracticeStats with _$PracticeStats {
   const factory PracticeStats({
     @Default(0) int totalAttempts,
     @Default(0) int sequencesPracticed,
-    double? averageScore,
+    @Default(0) int hardCount,
+    @Default(0) int almostCount,
+    @Default(0) int goodCount,
+    @Default(0) int easyCount,
     @Default(0) int currentStreak,
     @Default(0) int longestStreak,
     DateTime? lastPracticeDate,
@@ -53,7 +56,7 @@ class PracticeStats with _$PracticeStats {
       totalAttempts: totalAttempts,
       sequencesPracticed: (totalAttempts * 0.7)
           .round(), // ~70% unique sequences
-      averageScore: 72.5, // Realistic average score
+      // Rating counts will be updated in Loop 09
       currentStreak: 5,
       longestStreak: 14,
       lastPracticeDate: today,

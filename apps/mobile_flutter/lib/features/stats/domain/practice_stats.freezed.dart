@@ -19,7 +19,10 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$PracticeStats {
   int get totalAttempts => throw _privateConstructorUsedError;
   int get sequencesPracticed => throw _privateConstructorUsedError;
-  double? get averageScore => throw _privateConstructorUsedError;
+  int get hardCount => throw _privateConstructorUsedError;
+  int get almostCount => throw _privateConstructorUsedError;
+  int get goodCount => throw _privateConstructorUsedError;
+  int get easyCount => throw _privateConstructorUsedError;
   int get currentStreak => throw _privateConstructorUsedError;
   int get longestStreak => throw _privateConstructorUsedError;
   DateTime? get lastPracticeDate => throw _privateConstructorUsedError;
@@ -42,7 +45,10 @@ abstract class $PracticeStatsCopyWith<$Res> {
   $Res call({
     int totalAttempts,
     int sequencesPracticed,
-    double? averageScore,
+    int hardCount,
+    int almostCount,
+    int goodCount,
+    int easyCount,
     int currentStreak,
     int longestStreak,
     DateTime? lastPracticeDate,
@@ -67,7 +73,10 @@ class _$PracticeStatsCopyWithImpl<$Res, $Val extends PracticeStats>
   $Res call({
     Object? totalAttempts = null,
     Object? sequencesPracticed = null,
-    Object? averageScore = freezed,
+    Object? hardCount = null,
+    Object? almostCount = null,
+    Object? goodCount = null,
+    Object? easyCount = null,
     Object? currentStreak = null,
     Object? longestStreak = null,
     Object? lastPracticeDate = freezed,
@@ -83,10 +92,22 @@ class _$PracticeStatsCopyWithImpl<$Res, $Val extends PracticeStats>
                 ? _value.sequencesPracticed
                 : sequencesPracticed // ignore: cast_nullable_to_non_nullable
                       as int,
-            averageScore: freezed == averageScore
-                ? _value.averageScore
-                : averageScore // ignore: cast_nullable_to_non_nullable
-                      as double?,
+            hardCount: null == hardCount
+                ? _value.hardCount
+                : hardCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            almostCount: null == almostCount
+                ? _value.almostCount
+                : almostCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            goodCount: null == goodCount
+                ? _value.goodCount
+                : goodCount // ignore: cast_nullable_to_non_nullable
+                      as int,
+            easyCount: null == easyCount
+                ? _value.easyCount
+                : easyCount // ignore: cast_nullable_to_non_nullable
+                      as int,
             currentStreak: null == currentStreak
                 ? _value.currentStreak
                 : currentStreak // ignore: cast_nullable_to_non_nullable
@@ -121,7 +142,10 @@ abstract class _$$PracticeStatsImplCopyWith<$Res>
   $Res call({
     int totalAttempts,
     int sequencesPracticed,
-    double? averageScore,
+    int hardCount,
+    int almostCount,
+    int goodCount,
+    int easyCount,
     int currentStreak,
     int longestStreak,
     DateTime? lastPracticeDate,
@@ -145,7 +169,10 @@ class __$$PracticeStatsImplCopyWithImpl<$Res>
   $Res call({
     Object? totalAttempts = null,
     Object? sequencesPracticed = null,
-    Object? averageScore = freezed,
+    Object? hardCount = null,
+    Object? almostCount = null,
+    Object? goodCount = null,
+    Object? easyCount = null,
     Object? currentStreak = null,
     Object? longestStreak = null,
     Object? lastPracticeDate = freezed,
@@ -161,10 +188,22 @@ class __$$PracticeStatsImplCopyWithImpl<$Res>
             ? _value.sequencesPracticed
             : sequencesPracticed // ignore: cast_nullable_to_non_nullable
                   as int,
-        averageScore: freezed == averageScore
-            ? _value.averageScore
-            : averageScore // ignore: cast_nullable_to_non_nullable
-                  as double?,
+        hardCount: null == hardCount
+            ? _value.hardCount
+            : hardCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        almostCount: null == almostCount
+            ? _value.almostCount
+            : almostCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        goodCount: null == goodCount
+            ? _value.goodCount
+            : goodCount // ignore: cast_nullable_to_non_nullable
+                  as int,
+        easyCount: null == easyCount
+            ? _value.easyCount
+            : easyCount // ignore: cast_nullable_to_non_nullable
+                  as int,
         currentStreak: null == currentStreak
             ? _value.currentStreak
             : currentStreak // ignore: cast_nullable_to_non_nullable
@@ -192,7 +231,10 @@ class _$PracticeStatsImpl implements _PracticeStats {
   const _$PracticeStatsImpl({
     this.totalAttempts = 0,
     this.sequencesPracticed = 0,
-    this.averageScore,
+    this.hardCount = 0,
+    this.almostCount = 0,
+    this.goodCount = 0,
+    this.easyCount = 0,
     this.currentStreak = 0,
     this.longestStreak = 0,
     this.lastPracticeDate,
@@ -206,7 +248,17 @@ class _$PracticeStatsImpl implements _PracticeStats {
   @JsonKey()
   final int sequencesPracticed;
   @override
-  final double? averageScore;
+  @JsonKey()
+  final int hardCount;
+  @override
+  @JsonKey()
+  final int almostCount;
+  @override
+  @JsonKey()
+  final int goodCount;
+  @override
+  @JsonKey()
+  final int easyCount;
   @override
   @JsonKey()
   final int currentStreak;
@@ -226,7 +278,7 @@ class _$PracticeStatsImpl implements _PracticeStats {
 
   @override
   String toString() {
-    return 'PracticeStats(totalAttempts: $totalAttempts, sequencesPracticed: $sequencesPracticed, averageScore: $averageScore, currentStreak: $currentStreak, longestStreak: $longestStreak, lastPracticeDate: $lastPracticeDate, dailyAttempts: $dailyAttempts)';
+    return 'PracticeStats(totalAttempts: $totalAttempts, sequencesPracticed: $sequencesPracticed, hardCount: $hardCount, almostCount: $almostCount, goodCount: $goodCount, easyCount: $easyCount, currentStreak: $currentStreak, longestStreak: $longestStreak, lastPracticeDate: $lastPracticeDate, dailyAttempts: $dailyAttempts)';
   }
 
   @override
@@ -238,8 +290,14 @@ class _$PracticeStatsImpl implements _PracticeStats {
                 other.totalAttempts == totalAttempts) &&
             (identical(other.sequencesPracticed, sequencesPracticed) ||
                 other.sequencesPracticed == sequencesPracticed) &&
-            (identical(other.averageScore, averageScore) ||
-                other.averageScore == averageScore) &&
+            (identical(other.hardCount, hardCount) ||
+                other.hardCount == hardCount) &&
+            (identical(other.almostCount, almostCount) ||
+                other.almostCount == almostCount) &&
+            (identical(other.goodCount, goodCount) ||
+                other.goodCount == goodCount) &&
+            (identical(other.easyCount, easyCount) ||
+                other.easyCount == easyCount) &&
             (identical(other.currentStreak, currentStreak) ||
                 other.currentStreak == currentStreak) &&
             (identical(other.longestStreak, longestStreak) ||
@@ -257,7 +315,10 @@ class _$PracticeStatsImpl implements _PracticeStats {
     runtimeType,
     totalAttempts,
     sequencesPracticed,
-    averageScore,
+    hardCount,
+    almostCount,
+    goodCount,
+    easyCount,
     currentStreak,
     longestStreak,
     lastPracticeDate,
@@ -277,7 +338,10 @@ abstract class _PracticeStats implements PracticeStats {
   const factory _PracticeStats({
     final int totalAttempts,
     final int sequencesPracticed,
-    final double? averageScore,
+    final int hardCount,
+    final int almostCount,
+    final int goodCount,
+    final int easyCount,
     final int currentStreak,
     final int longestStreak,
     final DateTime? lastPracticeDate,
@@ -289,7 +353,13 @@ abstract class _PracticeStats implements PracticeStats {
   @override
   int get sequencesPracticed;
   @override
-  double? get averageScore;
+  int get hardCount;
+  @override
+  int get almostCount;
+  @override
+  int get goodCount;
+  @override
+  int get easyCount;
   @override
   int get currentStreak;
   @override
