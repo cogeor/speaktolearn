@@ -1,0 +1,994 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "zh_cn_v1",
+  "language": "zh-CN",
+  "generated_at": "2026-02-09T15:55:05.752299",
+  "items": [
+    {
+      "id": "ts_000001",
+      "text": "我每天早上六点起床",
+      "romanization": "wǒ měi tiān zǎo shang liù diǎn qǐ chuáng",
+      "gloss": {
+        "en": "I get up at six o'clock every morning"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "daily life",
+        "routine"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000002",
+      "text": "你觉得这本书怎么样",
+      "romanization": "nǐ juéde zhè běn shū zěnme yàng",
+      "gloss": {
+        "en": "What do you think of this book"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "opinions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000003",
+      "text": "我打算明年去中国旅游",
+      "romanization": "wǒ dǎsuàn míngnián qù Zhōngguó lǚyóu",
+      "gloss": {
+        "en": "I plan to travel to China next year"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000004",
+      "text": "这个问题不太容易回答",
+      "romanization": "zhège wèntí bù tài róngyì huídá",
+      "gloss": {
+        "en": "This question is not easy to answer"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "difficulty"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000005",
+      "text": "你能帮我照顾一下我的狗吗",
+      "romanization": "nǐ néng bāng wǒ zhàogù yīxià wǒ de gǒu ma",
+      "gloss": {
+        "en": "Can you help take care of my dog"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "requests",
+        "animals"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000006",
+      "text": "虽然下雨了，我们还是去爬山吧",
+      "romanization": "suīrán xiàyǔ le, wǒmen háishì qù páshān ba",
+      "gloss": {
+        "en": "Even though it's raining, let's still go hiking"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "weather",
+        "activities"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000007",
+      "text": "他从小就对音乐很感兴趣",
+      "romanization": "tā cóng xiǎo jiù duì yīnyuè hěn gǎn xìngqù",
+      "gloss": {
+        "en": "He has been interested in music since childhood"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "interests"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000008",
+      "text": "请把这些文件发到我的邮箱",
+      "romanization": "qǐng bǎ zhèxiē wénjiàn fā dào wǒ de yóuxiāng",
+      "gloss": {
+        "en": "Please send these documents to my email"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "technology"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000009",
+      "text": "我每天都坚持锻炼身体",
+      "romanization": "wǒ měitiān dōu jiānchí duànliàn shēntǐ",
+      "gloss": {
+        "en": "I insist on exercising every day"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "health",
+        "habits"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000010",
+      "text": "在中国，坐火车旅行很方便",
+      "romanization": "zài Zhōngguó, zuò huǒchē lǚxíng hěn fāngbiàn",
+      "gloss": {
+        "en": "Traveling by train in China is very convenient"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "transportation"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000011",
+      "text": "我对中国文化非常感兴趣",
+      "romanization": "wǒ duì Zhōngguó wénhuà fēicháng gǎn xìngqù",
+      "gloss": {
+        "en": "I am very interested in Chinese culture"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "culture",
+        "interests"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000012",
+      "text": "他在会议上提出了一个重要的建议",
+      "romanization": "tā zài huìyì shàng tíchū le yī gè zhòngyào de jiànyì",
+      "gloss": {
+        "en": "He made an important suggestion at the meeting"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "meetings"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000013",
+      "text": "如果你有时间，我们可以一起吃晚饭",
+      "romanization": "rúguǒ nǐ yǒu shíjiān, wǒmen kěyǐ yīqǐ chī wǎnfàn",
+      "gloss": {
+        "en": "If you have time, we can have dinner together"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "invitations"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000014",
+      "text": "老师要求我们每天写日记",
+      "romanization": "lǎoshī yāoqiú wǒmen měitiān xiě rìjì",
+      "gloss": {
+        "en": "The teacher requires us to write a diary every day"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "education",
+        "habits"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000015",
+      "text": "你能帮我看看这个合同吗",
+      "romanization": "nǐ néng bāng wǒ kànkàn zhège hétóng ma",
+      "gloss": {
+        "en": "Can you help me look at this contract"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "requests"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000016",
+      "text": "他花了很多时间准备演讲",
+      "romanization": "tā huā le hěn duō shíjiān zhǔnbèi yǎnjiǎng",
+      "gloss": {
+        "en": "He spent a lot of time preparing for the presentation"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "presentations"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000017",
+      "text": "我们应该尊重每个人的选择",
+      "romanization": "wǒmen yīnggāi zūnzhòng měi gèrén de xuǎnzé",
+      "gloss": {
+        "en": "We should respect everyone's choices"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "ethics"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000018",
+      "text": "这个问题需要进一步讨论",
+      "romanization": "zhège wèntí xūyào jìnyībù tǎolùn",
+      "gloss": {
+        "en": "This issue needs further discussion"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "discussions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000019",
+      "text": "他总是能够找到解决问题的方法",
+      "romanization": "tā zǒngshì nénggòu zhǎodào jiějué wèntí de fāngfǎ",
+      "gloss": {
+        "en": "He always finds a way to solve problems"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "problem-solving"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000020",
+      "text": "我希望能尽快收到你的回复",
+      "romanization": "wǒ xīwàng néng jǐnkuài shōudào nǐ de huífù",
+      "gloss": {
+        "en": "I hope to receive your reply as soon as possible"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "communication"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000021",
+      "text": "请尽快与我联系",
+      "romanization": "qǐng jǐnkuài yǔ wǒ liánxì",
+      "gloss": {
+        "en": "Please contact me as soon as possible"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "requests",
+        "communication"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000022",
+      "text": "他刚刚从国外旅行回来",
+      "romanization": "tā gānggāng cóng guówài lǚxíng huílái",
+      "gloss": {
+        "en": "He just returned from traveling abroad"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000023",
+      "text": "你能帮我推荐一家好的餐厅吗",
+      "romanization": "nǐ néng bāng wǒ tuījiàn yī jiā hǎo de cāntīng ma",
+      "gloss": {
+        "en": "Can you recommend a good restaurant to me"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "food"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000024",
+      "text": "会议从两点开始，大约持续三个小时",
+      "romanization": "huìyì cóng liǎng diǎn kāishǐ, dàyuē chíxù sān gè xiǎoshí",
+      "gloss": {
+        "en": "The meeting starts at two o'clock and lasts about three hours"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "meetings"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000025",
+      "text": "他的新书已经在书店里上架了",
+      "romanization": "tā de xīn shū yǐjīng zài shūdiàn lǐ shàngjià le",
+      "gloss": {
+        "en": "His new book is already on the shelves in the bookstore"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "daily life",
+        "shopping"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000026",
+      "text": "我父母计划明年搬到北京",
+      "romanization": "wǒ fùmǔ jìhuà míngnián bān dào Běijīng",
+      "gloss": {
+        "en": "My parents plan to move to Beijing next year"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "family",
+        "future plans"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000027",
+      "text": "请尽快回复这个邮件",
+      "romanization": "qǐng jǐnkuài huífù zhège yóujiàn",
+      "gloss": {
+        "en": "Please reply to this email as soon as possible"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "communication"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000028",
+      "text": "昨天的聚会非常有趣",
+      "romanization": "zuótiān de jùhuì fēicháng yǒuqù",
+      "gloss": {
+        "en": "Yesterday's party was very interesting"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "past events"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000029",
+      "text": "他最近忙于准备考试",
+      "romanization": "tā zuìjìn máng yú zhǔnbèi kǎoshì",
+      "gloss": {
+        "en": "He has been busy preparing for the exam recently"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "education",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000030",
+      "text": "在机场等了两个小时，我终于登机了",
+      "romanization": "zài jīchǎng děng le liǎng gè xiǎoshí, wǒ zhōngyú dēngjī le",
+      "gloss": {
+        "en": "After waiting for two hours at the airport, I finally boarded the plane"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "transportation"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000031",
+      "text": "如果天气好，我们就去爬山",
+      "romanization": "rúguǒ tiānqì hǎo, wǒmen jiù qù páshān",
+      "gloss": {
+        "en": "If the weather is good, we will go hiking"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "hobbies",
+        "conditional"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000032",
+      "text": "他总是有很多奇怪的想法",
+      "romanization": "tā zǒngshì yǒu hěnduō qíguài de xiǎngfǎ",
+      "gloss": {
+        "en": "He always has many strange ideas"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "personality"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000033",
+      "text": "这家酒店的服务非常周到",
+      "romanization": "zhè jiā jiǔdiàn de fúwù fēicháng zhōudào",
+      "gloss": {
+        "en": "The service at this hotel is very attentive"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "accommodation"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000034",
+      "text": "你觉得这部电影怎么样",
+      "romanization": "nǐ juéde zhè bù diànyǐng zěnmeyàng",
+      "gloss": {
+        "en": "What do you think of this movie"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "entertainment",
+        "opinions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000035",
+      "text": "我每天都坚持锻炼身体",
+      "romanization": "wǒ měitiān dōu jiānchí duànliàn shēntǐ",
+      "gloss": {
+        "en": "I exercise regularly every day"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "health",
+        "daily habits"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000036",
+      "text": "这项工作需要很强的责任心",
+      "romanization": "zhè xiàng gōngzuò xūyào hěn qiáng de zérènxīn",
+      "gloss": {
+        "en": "This job requires a strong sense of responsibility"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "qualities"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000037",
+      "text": "他在公司里是个非常有能力的人",
+      "romanization": "tā zài gōngsī lǐ shì gè fēicháng yǒu nénglì de rén",
+      "gloss": {
+        "en": "He is a very capable person in the company"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "qualifications"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000038",
+      "text": "我一到家就开始做晚饭",
+      "romanization": "wǒ yī dào jiā jiù kāishǐ zuò wǎnfàn",
+      "gloss": {
+        "en": "I start cooking dinner as soon as I get home"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "daily life",
+        "routines"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000039",
+      "text": "上周末我和朋友一起去爬山",
+      "romanization": "shàng zhōumò wǒ hé péngyou yīqǐ qù páshān",
+      "gloss": {
+        "en": "Last weekend I went hiking with friends"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "hobbies",
+        "past events"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000040",
+      "text": "我觉得学习中文非常有趣",
+      "romanization": "wǒ juéde xuéxí zhōngwén fēicháng yǒuqù",
+      "gloss": {
+        "en": "I think learning Chinese is very interesting"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "education",
+        "opinions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000041",
+      "text": "他是我们班上最聪明的学生之一",
+      "romanization": "tā shì wǒmen bān shàng zuì cōngmíng de xuésheng zhī yī",
+      "gloss": {
+        "en": "He is one of the smartest students in our class"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "education",
+        "personality"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000042",
+      "text": "明天的会议几点开始",
+      "romanization": "míngtiān de huìyì jǐ diǎn kāishǐ",
+      "gloss": {
+        "en": "What time does tomorrow's meeting start"
+      },
+      "tokens": [],
+      "tags": [
+        "daily life",
+        "work",
+        "hsk4"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000043",
+      "text": "会议已经开始了",
+      "romanization": "huì yì yǐ jīng kāi shǐ le",
+      "gloss": {
+        "en": "The meeting has already started"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "meetings"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000044",
+      "text": "请把这份文件发给我",
+      "romanization": "qǐng bǎ zhè fèn wén jiàn fā gěi wǒ",
+      "gloss": {
+        "en": "Please send me this document"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "emails"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000045",
+      "text": "我明天下午有一个重要的会议",
+      "romanization": "wǒ míng tiān xià wǔ yǒu yī gè zhòng yào de huì yì",
+      "gloss": {
+        "en": "I have an important meeting tomorrow afternoon"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "meetings"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000046",
+      "text": "这家餐厅的菜非常好吃",
+      "romanization": "zhè jiā cān tīng de cài fēi cháng hǎo chī",
+      "gloss": {
+        "en": "The food at this restaurant is very delicious"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "restaurants"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000047",
+      "text": "他每天早上都跑步锻炼身体",
+      "romanization": "tā měi tiān zǎo shàng dōu pǎo bù duàn liàn shēn tǐ",
+      "gloss": {
+        "en": "He jogs every morning to exercise"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "daily life",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000048",
+      "text": "我们需要尽快完成这个项目",
+      "romanization": "wǒ men xū yào jǐn kuài wán chéng zhè gè xiàng mù",
+      "gloss": {
+        "en": "We need to complete this project as soon as possible"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "projects"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000049",
+      "text": "请问，最近的地铁站在哪里",
+      "romanization": "qǐng wèn, zuì jìn de dì tiě zhàn zài nǎ lǐ",
+      "gloss": {
+        "en": "Excuse me, where is the nearest subway station"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "directions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000050",
+      "text": "这本书对我的研究很有帮助",
+      "romanization": "zhè běn shū duì wǒ de yán jiū hěn yǒu bāng zhù",
+      "gloss": {
+        "en": "This book is very helpful for my research"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "research"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000051",
+      "text": "我对这部电影的印象很深刻",
+      "romanization": "wǒ duì zhè bù diàn yǐng de yìn xiàng hěn shēn kè",
+      "gloss": {
+        "en": "I have a deep impression of this movie"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000052",
+      "text": "请你帮我看看这件衣服合适吗",
+      "romanization": "qǐng nǐ bāng wǒ kàn kàn zhè jiàn yī fú hé shì ma",
+      "gloss": {
+        "en": "Please help me see if this piece of clothing fits"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "daily life",
+        "shopping"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000053",
+      "text": "我打算暑假去北京旅游",
+      "romanization": "wǒ dǎ suàn shǔ jià qù běi jīng lǚ yóu",
+      "gloss": {
+        "en": "I plan to travel to Beijing during the summer vacation"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "travel",
+        "plans"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000054",
+      "text": "这份报告需要再修改一次",
+      "romanization": "zhè fèn bào gào xū yào zài xiū gǎi yī cì",
+      "gloss": {
+        "en": "This report needs to be revised again"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "reports"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000055",
+      "text": "她最近在学习法语",
+      "romanization": "tā zuì jìn zài xué xí fǎ yǔ",
+      "gloss": {
+        "en": "She is learning French recently"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000056",
+      "text": "我已经给你发了电子邮件",
+      "romanization": "wǒ yǐ jīng gěi nǐ fā le diàn zǐ yóu jiàn",
+      "gloss": {
+        "en": "I have already sent you an email"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "emails"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000057",
+      "text": "他对音乐有很大的兴趣",
+      "romanization": "tā duì yīn yuè yǒu hěn dà de xìng qù",
+      "gloss": {
+        "en": "He has a great interest in music"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000058",
+      "text": "请问，这附近有药店吗",
+      "romanization": "qǐng wèn, zhè fù jìn yǒu yào diàn ma",
+      "gloss": {
+        "en": "Excuse me, is there a pharmacy nearby"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "daily life",
+        "directions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000059",
+      "text": "这个问题非常复杂，需要进一步讨论",
+      "romanization": "zhè gè wèn tí fēi cháng fù zá, xū yào jìn yī bù tǎo lùn",
+      "gloss": {
+        "en": "This issue is very complex and needs further discussion"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "meetings"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000060",
+      "text": "我喜欢在周末看书和听音乐",
+      "romanization": "wǒ xǐ huān zài zhōu mò kàn shū hé tīng yīn yuè",
+      "gloss": {
+        "en": "I like to read books and listen to music on weekends"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "social",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000061",
+      "text": "你能帮我推荐一个好医生吗",
+      "romanization": "nǐ néng bāng wǒ tuī jiàn yī gè hǎo yī shēng ma",
+      "gloss": {
+        "en": "Can you recommend a good doctor to me"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "daily life",
+        "help"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000062",
+      "text": "我希望将来能有机会去国外工作",
+      "romanization": "wǒ xī wàng jiāng lái néng yǒu jī huì qù guó wài gōng zuò",
+      "gloss": {
+        "en": "I hope to have the opportunity to work abroad in the future"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk4",
+        "work",
+        "plans"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    }
+  ]
+}

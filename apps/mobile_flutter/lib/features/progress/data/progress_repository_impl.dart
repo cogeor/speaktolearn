@@ -108,9 +108,10 @@ class ProgressRepositoryImpl implements ProgressRepository {
     // Save attempts as list of JSON maps
     await _attemptsBox.put(key, updated.map((a) => a.toJson()).toList());
 
-    // Update progress with new rating
+    // Update progress with new rating (also mark as tracked)
     final currentProgress = await getProgress(key);
     final updatedProgress = currentProgress.copyWith(
+      tracked: true,
       lastAttemptAt: attempt.gradedAt,
       attemptCount: currentProgress.attemptCount + 1,
       lastRating: attempt.rating,

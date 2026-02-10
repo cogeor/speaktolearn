@@ -66,26 +66,175 @@ def parse_pinyin_syllable(pinyin: str) -> tuple[str, str, Tone]:
     return initial, final, tone
 
 
+def split_pinyin_by_count(romanization: str, n_syllables: int) -> list[str]:
+    """Split pinyin string into n_syllables using tone marks as primary guides.
+
+    Each Mandarin syllable has exactly one tone mark (or no mark for neutral tone).
+    We use this to find syllable boundaries, then handle trailing consonants.
+
+    Args:
+        romanization: Pinyin string (may or may not have spaces)
+        n_syllables: Expected number of syllables (typically from len(hanzi))
+
+    Returns:
+        List of pinyin syllables
+    """
+    # If already properly spaced, use that
+    space_split = romanization.strip().split()
+    if len(space_split) == n_syllables:
+        return space_split
+
+    # Remove all spaces for processing
+    pinyin = romanization.replace(" ", "")
+
+    if not pinyin or n_syllables == 0:
+        return []
+
+    if n_syllables == 1:
+        return [pinyin]
+
+    # Strategy: Find tone marks, then find syllable boundaries after each.
+    # A syllable ends after its tone-marked vowel + any trailing vowels + optional n/ng/r
+    tone_chars = set(TONE_MARKS.keys())
+    # Plain vowels only - NOT tone-marked vowels (those start new syllables)
+    plain_vowels = set("aeiouü")
+    all_vowels = plain_vowels | tone_chars  # For fallback checks
+    two_char_initials = {"zh", "ch", "sh"}
+    one_char_initials = set("bpmfdtnlgkhjqxzcsryw")
+
+    # Find positions of all tone marks
+    tone_positions = [i for i, c in enumerate(pinyin) if c in tone_chars]
+
+    # If tone mark count matches syllable count, use tone-based splitting
+    if len(tone_positions) == n_syllables:
+        syllables = []
+        start = 0
+
+        for idx, tone_pos in enumerate(tone_positions):
+            # Find end of this syllable: after tone mark, include trailing PLAIN vowels and n/ng/r
+            # Do NOT include tone-marked vowels (they belong to the next syllable)
+            end = tone_pos + 1
+
+            # Include any trailing PLAIN vowels (diphthongs like "āi", "ōu")
+            # Stop if we hit another tone-marked vowel
+            while end < len(pinyin) and pinyin[end].lower() in plain_vowels:
+                end += 1
+
+            # Include trailing n, ng, or r (but not if followed by vowel = next syllable)
+            rest = pinyin[end:].lower()
+            if rest.startswith("ng"):
+                after_ng = pinyin[end+2:].lower() if end+2 < len(pinyin) else ""
+                # Only include "ng" if not followed by a vowel
+                if not after_ng or (after_ng[0] not in plain_vowels and after_ng[0] not in tone_chars):
+                    end += 2
+            elif rest.startswith("n"):
+                after_n = pinyin[end+1:].lower() if end+1 < len(pinyin) else ""
+                if not after_n or (after_n[0] not in plain_vowels and after_n[0] not in tone_chars):
+                    end += 1
+            elif rest.startswith("r"):
+                after_r = pinyin[end+1:].lower() if end+1 < len(pinyin) else ""
+                if not after_r or (after_r[0] not in plain_vowels and after_r[0] not in tone_chars):
+                    end += 1
+
+            syllables.append(pinyin[start:end])
+            start = end
+
+        # If there's leftover, append to last syllable (shouldn't happen with valid pinyin)
+        if start < len(pinyin) and syllables:
+            syllables[-1] += pinyin[start:]
+
+        return syllables
+
+    # Fallback: Use initial consonants as boundaries
+    initial_positions = [0]
+    i = 0
+    while i < len(pinyin):
+        if i > 0:
+            two_char = pinyin[i:i+2].lower()
+            if two_char in two_char_initials:
+                initial_positions.append(i)
+                i += 2
+                continue
+            if pinyin[i].lower() in one_char_initials:
+                # Only count as new syllable if preceded by vowel or n/ng
+                # (to avoid splitting consonant clusters)
+                prev = pinyin[i-1].lower()
+                if prev in all_vowels or prev in "ng":
+                    initial_positions.append(i)
+        i += 1
+
+    if len(initial_positions) == n_syllables:
+        syllables = []
+        for j in range(len(initial_positions)):
+            start = initial_positions[j]
+            end = initial_positions[j+1] if j+1 < len(initial_positions) else len(pinyin)
+            syllables.append(pinyin[start:end])
+        return syllables
+
+    # Last resort: Combine space-split tokens that need subdivision
+    # Recursively split tokens that map to multiple hanzi
+    if len(space_split) < n_syllables and len(space_split) > 0:
+        # Each token gets proportional syllables based on tone marks
+        result = []
+        remaining = n_syllables
+        for token in space_split:
+            token_tones = sum(1 for c in token if c in tone_chars)
+            # Assign at least 1 syllable per token, more if it has multiple tones
+            token_syls = max(1, min(token_tones, remaining - (len(space_split) - len(result) - 1)))
+            if token_syls == 1:
+                result.append(token)
+            else:
+                result.extend(split_pinyin_by_count(token, token_syls))
+            remaining -= len(result) - sum(1 for r in result)
+
+        if len(result) == n_syllables:
+            return result
+
+    # Ultimate fallback: even division
+    avg_len = max(1, len(pinyin) // n_syllables)
+    syllables = []
+    pos = 0
+    for j in range(n_syllables):
+        if j == n_syllables - 1:
+            syllables.append(pinyin[pos:])
+        else:
+            syllables.append(pinyin[pos:pos + avg_len])
+            pos += avg_len
+    return syllables
+
+
 def parse_romanization(romanization: str, hanzi: str) -> list[TargetSyllable]:
     """Parse romanization string into list of TargetSyllable.
 
+    Uses hanzi character count to determine number of syllables, then splits
+    the romanization accordingly. This handles cases where romanization
+    doesn't have spaces between syllables (e.g., "xièxiè" -> ["xiè", "xiè"]).
+
     Args:
-        romanization: Space-separated pinyin with tone marks (e.g., "nǐ hǎo")
+        romanization: Pinyin with tone marks (e.g., "nǐ hǎo" or "nǐhǎo")
         hanzi: Chinese characters (e.g., "你好")
 
     Returns:
         List of TargetSyllable objects
     """
-    syllables = romanization.strip().split()
-    chars = list(hanzi)
+    # Filter hanzi to only Chinese characters (remove punctuation, spaces, etc.)
+    chinese_chars = [c for c in hanzi if '\u4e00' <= c <= '\u9fff']
+    n_syllables = len(chinese_chars)
 
-    # Handle mismatch in length
-    if len(syllables) != len(chars):
-        # Try to match as best we can
-        chars = chars[:len(syllables)] if len(chars) > len(syllables) else chars + [""] * (len(syllables) - len(chars))
+    if n_syllables == 0:
+        return []
+
+    # Split romanization into the right number of syllables
+    syllables = split_pinyin_by_count(romanization, n_syllables)
+
+    # Pad or truncate if still mismatched
+    if len(syllables) < n_syllables:
+        syllables.extend([""] * (n_syllables - len(syllables)))
+    elif len(syllables) > n_syllables:
+        syllables = syllables[:n_syllables]
 
     result = []
-    for i, (syl, char) in enumerate(zip(syllables, chars)):
+    for i, (syl, char) in enumerate(zip(syllables, chinese_chars)):
         initial, final, tone = parse_pinyin_syllable(syl)
         result.append(TargetSyllable(
             index=i,

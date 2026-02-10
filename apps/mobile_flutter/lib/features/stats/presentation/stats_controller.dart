@@ -30,27 +30,22 @@ class StatsController extends AsyncNotifier<PracticeStats> {
       // Get all tracked sequences
       final trackedProgress = await progressRepo.getTrackedProgress();
 
-      // Get all attempts for accurate average calculation
+      // Get all attempts for rating counts and daily tracking
       final allAttempts = await progressRepo.getAllAttempts();
 
-      // Compute totals
-      int totalAttempts = 0;
+      // Build daily attempts from actual attempt timestamps
       final dailyAttempts = <DateTime, int>{};
-
-      for (final progress in trackedProgress) {
-        totalAttempts += progress.attemptCount;
-
-        // Track daily attempts for heatmap
-        if (progress.lastAttemptAt != null) {
-          final date = DateTime(
-            progress.lastAttemptAt!.year,
-            progress.lastAttemptAt!.month,
-            progress.lastAttemptAt!.day,
-          );
-          dailyAttempts[date] =
-              (dailyAttempts[date] ?? 0) + progress.attemptCount;
-        }
+      for (final attempt in allAttempts) {
+        final date = DateTime(
+          attempt.gradedAt.year,
+          attempt.gradedAt.month,
+          attempt.gradedAt.day,
+        );
+        dailyAttempts[date] = (dailyAttempts[date] ?? 0) + 1;
       }
+
+      // Compute totals
+      final totalAttempts = allAttempts.length;
 
       // Count ratings from all attempts
       int hardCount = 0;
@@ -100,40 +95,45 @@ class StatsController extends AsyncNotifier<PracticeStats> {
   ({int current, int longest}) _calculateStreak(List<DateTime> dates) {
     if (dates.isEmpty) return (current: 0, longest: 0);
 
-    dates.sort((a, b) => b.compareTo(a)); // Most recent first
+    // Sort oldest to newest for easier processing
+    final sortedDates = dates.toList()..sort();
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
 
     int currentStreak = 0;
     int longestStreak = 0;
-    int tempStreak = 0;
-    DateTime? lastDate;
+    int tempStreak = 1;
 
-    for (final date in dates) {
-      if (lastDate == null) {
-        // Check if streak is active (practiced today or yesterday)
-        final diff = todayDate.difference(date).inDays;
-        if (diff <= 1) {
-          currentStreak = 1;
-          tempStreak = 1;
-        }
-      } else {
-        final diff = lastDate.difference(date).inDays;
-        if (diff == 1) {
-          tempStreak++;
-          if (currentStreak > 0) currentStreak++;
-        } else {
-          longestStreak = tempStreak > longestStreak
-              ? tempStreak
-              : longestStreak;
-          tempStreak = 1;
-          currentStreak = 0;
-        }
+    // Calculate all streaks
+    for (int i = 1; i < sortedDates.length; i++) {
+      final diff = sortedDates[i].difference(sortedDates[i - 1]).inDays;
+      if (diff == 1) {
+        tempStreak++;
+      } else if (diff > 1) {
+        longestStreak = tempStreak > longestStreak ? tempStreak : longestStreak;
+        tempStreak = 1;
       }
-      lastDate = date;
+      // diff == 0 means same day, ignore
     }
-
     longestStreak = tempStreak > longestStreak ? tempStreak : longestStreak;
+
+    // Calculate current streak (must include today or yesterday)
+    final mostRecent = sortedDates.last;
+    final daysSinceLast = todayDate.difference(mostRecent).inDays;
+
+    if (daysSinceLast <= 1) {
+      // Count backwards from most recent
+      currentStreak = 1;
+      for (int i = sortedDates.length - 2; i >= 0; i--) {
+        final diff = sortedDates[i + 1].difference(sortedDates[i]).inDays;
+        if (diff == 1) {
+          currentStreak++;
+        } else if (diff > 1) {
+          break;
+        }
+        // diff == 0 means same day, continue checking
+      }
+    }
 
     return (current: currentStreak, longest: longestStreak);
   }

@@ -42,7 +42,7 @@ DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "checkpoints"
 class TrainingConfig:
     """Training configuration."""
     epochs: int = 50
-    batch_size: int = 8
+    batch_size: int = 32  # Increased from 8
     learning_rate: float = 0.001
     val_split: float = 0.2
     checkpoint_every: int = 100  # steps
@@ -236,6 +236,17 @@ def collate_fn(batch: list[dict]) -> dict:
         "tone_lengths": torch.tensor(tone_lengths, dtype=torch.long),
         "ids": [b["id"] for b in batch],
     }
+
+
+def count_parameters(model) -> tuple[int, int]:
+    """Count model parameters.
+
+    Returns:
+        Tuple of (total_params, trainable_params)
+    """
+    total = sum(p.numel() for p in model.parameters())
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    return total, trainable
 
 
 def train_epoch(
@@ -490,7 +501,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Train SyllableToneModel")
     parser.add_argument("--epochs", type=int, default=50, help="Number of epochs")
-    parser.add_argument("--batch-size", type=int, default=8, help="Batch size")
+    parser.add_argument("--batch-size", type=int, default=32, help="Batch size")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--checkpoint-every", type=int, default=100, help="Checkpoint every N steps")
     parser.add_argument("--checkpoint-dir", type=Path, default=DEFAULT_CHECKPOINT_DIR)
@@ -527,7 +538,12 @@ def main():
     model = SyllableToneModel(model_config)
     model = model.to(config.device)
 
+    # Report model architecture and size
+    total_params, trainable_params = count_parameters(model)
     logger.info(f"Model created, device: {config.device}")
+    logger.info(f"Total parameters: {total_params:,}")
+    logger.info(f"Trainable parameters: {trainable_params:,}")
+    logger.info(f"Model size: {total_params * 4 / 1024 / 1024:.2f} MB (float32)")
 
     # Create datasets and loaders
     train_dataset = ToneDataset(train_samples, model_config)
@@ -581,13 +597,15 @@ def main():
             val_loader=val_loader,
         )
 
-        # Epoch evaluation
+        # Epoch evaluation - both train and val
+        train_acc = evaluate(model, train_loader, config.device)
         val_acc = evaluate(model, val_loader, config.device)
-        logger.info(f"Epoch {epoch+1}/{config.epochs} - Loss: {avg_loss:.4f}, Val Acc: {val_acc:.4f}")
+        logger.info(f"Epoch {epoch+1}/{config.epochs} - Loss: {avg_loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
 
         training_history.append({
             "epoch": epoch + 1,
             "loss": avg_loss,
+            "train_accuracy": train_acc,
             "val_accuracy": val_acc,
         })
 
@@ -602,20 +620,57 @@ def main():
             }, best_path)
             logger.info(f"New best model at epoch {epoch+1}! Accuracy: {val_acc:.4f}")
 
-    # Final evaluation
+    # Final evaluation on both train and val
     logger.info("\n" + "="*50)
     logger.info("FINAL EVALUATION")
     logger.info("="*50)
 
-    detailed_results = evaluate_detailed(model, val_loader, config.device)
+    train_detailed = evaluate_detailed(model, train_loader, config.device)
+    val_detailed = evaluate_detailed(model, val_loader, config.device)
 
-    logger.info(f"\nOverall Accuracy: {detailed_results['overall_accuracy']:.4f}")
-    logger.info(f"Total Syllables: {detailed_results['total_samples']}")
-    logger.info("\nPer-Tone Accuracy:")
+    logger.info(f"\n{'='*50}")
+    logger.info("TRAINING SET RESULTS")
+    logger.info(f"{'='*50}")
+    logger.info(f"Overall Accuracy: {train_detailed['overall_accuracy']:.4f}")
+    logger.info(f"Total Syllables: {train_detailed['total_samples']}")
+    logger.info("\nPer-Tone Accuracy (Train):")
     for tone in range(5):
-        acc = detailed_results["per_tone_accuracy"][tone]
-        count = detailed_results["per_tone_counts"][tone]
+        acc = train_detailed["per_tone_accuracy"][tone]
+        count = train_detailed["per_tone_counts"][tone]
         logger.info(f"  Tone {tone}: {acc:.4f} ({count} samples)")
+
+    logger.info(f"\n{'='*50}")
+    logger.info("VALIDATION SET RESULTS")
+    logger.info(f"{'='*50}")
+    logger.info(f"Overall Accuracy: {val_detailed['overall_accuracy']:.4f}")
+    logger.info(f"Total Syllables: {val_detailed['total_samples']}")
+    logger.info("\nPer-Tone Accuracy (Val):")
+    for tone in range(5):
+        acc = val_detailed["per_tone_accuracy"][tone]
+        count = val_detailed["per_tone_counts"][tone]
+        logger.info(f"  Tone {tone}: {acc:.4f} ({count} samples)")
+
+    # Overfitting analysis
+    train_acc = train_detailed['overall_accuracy']
+    val_acc = val_detailed['overall_accuracy']
+    gap = train_acc - val_acc
+
+    logger.info(f"\n{'='*50}")
+    logger.info("ANALYSIS")
+    logger.info(f"{'='*50}")
+    logger.info(f"Train Accuracy: {train_acc:.4f}")
+    logger.info(f"Val Accuracy:   {val_acc:.4f}")
+    logger.info(f"Gap (train-val): {gap:.4f}")
+
+    if train_acc < 0.4:
+        logger.warning("LOW TRAIN ACCURACY - Model is underfitting or pipeline issue")
+    if gap > 0.15:
+        logger.warning("LARGE GAP - Model is overfitting")
+    elif gap < 0.05 and train_acc < 0.5:
+        logger.warning("SMALL GAP + LOW ACC - Model may be predicting noise")
+
+    # Use val_detailed as the main results for backward compatibility
+    detailed_results = val_detailed
 
     # Save final model and report
     final_path = config.checkpoint_dir / "final_model.pt"
@@ -635,8 +690,25 @@ def main():
                 "batch_size": config.batch_size,
                 "learning_rate": config.learning_rate,
             },
+            "model": {
+                "total_parameters": total_params,
+                "trainable_parameters": trainable_params,
+                "size_mb": total_params * 4 / 1024 / 1024,
+                "architecture": {
+                    "cnn_channels": model_config.cnn_channels,
+                    "lstm_hidden": model_config.lstm_hidden,
+                    "lstm_layers": model_config.lstm_layers,
+                    "n_mels": model_config.n_mels,
+                },
+            },
             "history": training_history,
-            "final_results": detailed_results,
+            "train_results": train_detailed,
+            "val_results": val_detailed,
+            "analysis": {
+                "train_accuracy": train_acc,
+                "val_accuracy": val_acc,
+                "gap": gap,
+            },
             "best_val_accuracy": best_val_acc,
         }, f, indent=2)
     logger.info(f"Training report saved to {report_path}")

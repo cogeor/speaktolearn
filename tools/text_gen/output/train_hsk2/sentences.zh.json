@@ -1,0 +1,949 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "zh_cn_v1",
+  "language": "zh-CN",
+  "generated_at": "2026-02-09T15:52:49.618952",
+  "items": [
+    {
+      "id": "ts_000001",
+      "text": "你会说英语吗",
+      "romanization": "nǐ huì shuō yīngyǔ ma",
+      "gloss": {
+        "en": "Can you speak English"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "questions",
+        "language"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000002",
+      "text": "你喜欢什么颜色",
+      "romanization": "nǐ xǐhuān shénme yánsè",
+      "gloss": {
+        "en": "What color do you like?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000003",
+      "text": "我去商店买东西",
+      "romanization": "wǒ qù shāngdiàn mǎi dōngxi",
+      "gloss": {
+        "en": "I am going to the store to buy something."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000004",
+      "text": "今天的天气很好",
+      "romanization": "jīntiān de tiānqì hěn hǎo",
+      "gloss": {
+        "en": "Today's weather is very good."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000005",
+      "text": "你会说汉语吗",
+      "romanization": "nǐ huì shuō hànyǔ ma",
+      "gloss": {
+        "en": "Can you speak Chinese?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000006",
+      "text": "我喜欢吃苹果",
+      "romanization": "wǒ xǐhuān chī píngguǒ",
+      "gloss": {
+        "en": "I like to eat apples."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000007",
+      "text": "请给我一杯茶",
+      "romanization": "qǐng gěi wǒ yī bēi chá",
+      "gloss": {
+        "en": "Please give me a cup of tea."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000008",
+      "text": "我们下午三点见",
+      "romanization": "wǒmen xiàwǔ sān diǎn jiàn",
+      "gloss": {
+        "en": "We will meet at three o'clock in the afternoon."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000009",
+      "text": "你在哪里工作",
+      "romanization": "nǐ zài nǎlǐ gōngzuò",
+      "gloss": {
+        "en": "Where do you work?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000010",
+      "text": "我每天坐地铁上班",
+      "romanization": "wǒ měitiān zuò dìtiě shàngbān",
+      "gloss": {
+        "en": "I take the subway to work every day."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000011",
+      "text": "你喜欢看电影吗",
+      "romanization": "nǐ xǐhuān kàn diànyǐng ma",
+      "gloss": {
+        "en": "Do you like watching movies?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000012",
+      "text": "他是我的朋友",
+      "romanization": "tā shì wǒ de péngyǒu",
+      "gloss": {
+        "en": "He is my friend."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000013",
+      "text": "我们去看书吧",
+      "romanization": "wǒmen qù kàn shū ba",
+      "gloss": {
+        "en": "Let's go read books."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000014",
+      "text": "你家有几口人",
+      "romanization": "nǐ jiā yǒu jǐ kǒu rén",
+      "gloss": {
+        "en": "How many people are in your family?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000015",
+      "text": "我想去旅游",
+      "romanization": "wǒ xiǎng qù lǚyóu",
+      "gloss": {
+        "en": "I want to travel."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000016",
+      "text": "他在看电视",
+      "romanization": "tā zài kàn diànshì",
+      "gloss": {
+        "en": "He is watching TV."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000017",
+      "text": "你喝咖啡吗",
+      "romanization": "nǐ hē kāfēi ma",
+      "gloss": {
+        "en": "Do you drink coffee?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000018",
+      "text": "我明天去北京",
+      "romanization": "wǒ míngtiān qù Běijīng",
+      "gloss": {
+        "en": "I am going to Beijing tomorrow."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000019",
+      "text": "请帮我看一下",
+      "romanization": "qǐng bāng wǒ kàn yīxià",
+      "gloss": {
+        "en": "Please help me take a look."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000020",
+      "text": "他不在学校",
+      "romanization": "tā bù zài xuéxiào",
+      "gloss": {
+        "en": "He is not at school."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000021",
+      "text": "晚上我们去吃饭",
+      "romanization": "wǎnshàng wǒmen qù chīfàn",
+      "gloss": {
+        "en": "We are going to eat dinner tonight."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000022",
+      "text": "我想买这个",
+      "romanization": "wǒ xiǎng mǎi zhè ge",
+      "gloss": {
+        "en": "I want to buy this"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "shopping"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000023",
+      "text": "我喜欢看书",
+      "romanization": "wǒ xǐhuān kàn shū",
+      "gloss": {
+        "en": "I like to read books"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "hobby",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000024",
+      "text": "你住在哪儿",
+      "romanization": "nǐ zhù zài nǎr",
+      "gloss": {
+        "en": "Where do you live"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000025",
+      "text": "今天的天气很好",
+      "romanization": "jīntiān de tiānqì hěn hǎo",
+      "gloss": {
+        "en": "Today's weather is very good"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life",
+        "weather"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000026",
+      "text": "请给我一杯咖啡",
+      "romanization": "qǐng gěi wǒ yī bēi kāfēi",
+      "gloss": {
+        "en": "Please give me a cup of coffee"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life",
+        "restaurants"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000027",
+      "text": "你会开车吗",
+      "romanization": "nǐ huì kāichē ma",
+      "gloss": {
+        "en": "Can you drive"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "travel",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000028",
+      "text": "他正在工作",
+      "romanization": "tā zhèngzài gōngzuò",
+      "gloss": {
+        "en": "He is working"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "work",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000029",
+      "text": "我有两个妹妹",
+      "romanization": "wǒ yǒu liǎng gè mèimei",
+      "gloss": {
+        "en": "I have two younger sisters"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "family",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000030",
+      "text": "我们去看电影吧",
+      "romanization": "wǒmen qù kàn diànyǐng ba",
+      "gloss": {
+        "en": "Let's go watch a movie"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "social",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000031",
+      "text": "这个菜很好吃",
+      "romanization": "zhè gè cài hěn hǎochī",
+      "gloss": {
+        "en": "This dish is delicious"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "food",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000032",
+      "text": "你可以帮我吗",
+      "romanization": "nǐ kěyǐ bāng wǒ ma",
+      "gloss": {
+        "en": "Can you help me"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "social",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000033",
+      "text": "我每天早上六点起床",
+      "romanization": "wǒ měitiān zǎoshang liù diǎn qǐchuáng",
+      "gloss": {
+        "en": "I get up at six every morning"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life",
+        "routine"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000034",
+      "text": "你的手机号码是多少",
+      "romanization": "nǐ de shǒujī hàomǎ shì duōshǎo",
+      "gloss": {
+        "en": "What is your phone number"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "social",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000035",
+      "text": "我想买一件新衣服",
+      "romanization": "wǒ xiǎng mǎi yī jiàn xīn yīfú",
+      "gloss": {
+        "en": "I want to buy new clothes"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "shopping",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000036",
+      "text": "他在学校学习汉语",
+      "romanization": "tā zài xuéxiào xuéxí hànyǔ",
+      "gloss": {
+        "en": "He studies Chinese at school"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "education",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000037",
+      "text": "我爱吃水果",
+      "romanization": "wǒ ài chī shuǐguǒ",
+      "gloss": {
+        "en": "I love eating fruit"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "food",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000038",
+      "text": "你想喝什么",
+      "romanization": "nǐ xiǎng hē shénme",
+      "gloss": {
+        "en": "What do you want to drink"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life",
+        "food"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000039",
+      "text": "我们一起去商店",
+      "romanization": "wǒmen yīqǐ qù shāngdiàn",
+      "gloss": {
+        "en": "Let's go to the store together"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "shopping",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000040",
+      "text": "他的中文说得很好",
+      "romanization": "tā de zhōngwén shuō de hěn hǎo",
+      "gloss": {
+        "en": "He speaks Chinese very well"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "education",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000041",
+      "text": "你昨天做了什么",
+      "romanization": "nǐ zuótiān zuò le shénme",
+      "gloss": {
+        "en": "What did you do yesterday"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000042",
+      "text": "这个地方很漂亮",
+      "romanization": "zhè gè dìfāng hěn piàoliang",
+      "gloss": {
+        "en": "This place is very beautiful"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "travel",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000043",
+      "text": "你在哪里工作",
+      "romanization": "nǐ zài nǎlǐ gōngzuò",
+      "gloss": {
+        "en": "Where do you work?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "work",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000044",
+      "text": "我喜欢看书",
+      "romanization": "wǒ xǐhuān kàn shū",
+      "gloss": {
+        "en": "I like reading books."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000045",
+      "text": "请给我一杯茶",
+      "romanization": "qǐng gěi wǒ yī bēi chá",
+      "gloss": {
+        "en": "Please give me a cup of tea."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000046",
+      "text": "今天下雨吗",
+      "romanization": "jīntiān xià yǔ ma",
+      "gloss": {
+        "en": "Is it going to rain today?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "weather",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000047",
+      "text": "他会说中文",
+      "romanization": "tā huì shuō zhōngwén",
+      "gloss": {
+        "en": "He can speak Chinese."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "languages"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000048",
+      "text": "你有几个兄弟姐妹",
+      "romanization": "nǐ yǒu jǐ gè xiōngdì jiěmèi",
+      "gloss": {
+        "en": "How many siblings do you have?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "family",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000049",
+      "text": "我每天跑步",
+      "romanization": "wǒ měitiān pǎobù",
+      "gloss": {
+        "en": "I run every day."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "exercise",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000050",
+      "text": "我买了一个苹果",
+      "romanization": "wǒ mǎi le yī gè píngguǒ",
+      "gloss": {
+        "en": "I bought an apple."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "shopping"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000051",
+      "text": "你的房间在哪里",
+      "romanization": "nǐ de fángjiān zài nǎlǐ",
+      "gloss": {
+        "en": "Where is your room?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "directions",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000052",
+      "text": "我想吃米饭",
+      "romanization": "wǒ xiǎng chī mǐfàn",
+      "gloss": {
+        "en": "I want to eat rice."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "food"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000053",
+      "text": "你几点上班",
+      "romanization": "nǐ jǐ diǎn shàngbān",
+      "gloss": {
+        "en": "What time do you start work?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "work",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000054",
+      "text": "她在看电视",
+      "romanization": "tā zài kàn diànshì",
+      "gloss": {
+        "en": "She is watching TV."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000055",
+      "text": "我有两只狗",
+      "romanization": "wǒ yǒu liǎng zhī gǒu",
+      "gloss": {
+        "en": "I have two dogs."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "pets"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000056",
+      "text": "这个多少钱",
+      "romanization": "zhège duōshǎo qián",
+      "gloss": {
+        "en": "How much is this?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "shopping",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000057",
+      "text": "我们一起去看电影",
+      "romanization": "wǒmen yīqǐ qù kàn diànyǐng",
+      "gloss": {
+        "en": "Let's go watch a movie together."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "social",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000058",
+      "text": "你喜欢什么颜色",
+      "romanization": "nǐ xǐhuān shénme yánsè",
+      "gloss": {
+        "en": "What color do you like?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "preferences",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000059",
+      "text": "我在学习汉语",
+      "romanization": "wǒ zài xuéxí hànyǔ",
+      "gloss": {
+        "en": "I am studying Chinese."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "languages"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000060",
+      "text": "请问洗手间在哪里",
+      "romanization": "qǐngwèn xǐshǒujiān zài nǎlǐ",
+      "gloss": {
+        "en": "Excuse me, where is the restroom?"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "directions",
+        "questions"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000061",
+      "text": "他在开车",
+      "romanization": "tā zài kāichē",
+      "gloss": {
+        "en": "He is driving."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "transportation"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000062",
+      "text": "我想买一件衣服",
+      "romanization": "wǒ xiǎng mǎi yī jiàn yīfú",
+      "gloss": {
+        "en": "I want to buy a piece of clothing."
+      },
+      "tokens": [],
+      "tags": [
+        "hsk2",
+        "shopping"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    }
+  ]
+}

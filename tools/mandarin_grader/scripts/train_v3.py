@@ -1,0 +1,447 @@
+#!/usr/bin/env python3
+"""Training script for SyllablePredictorV3.
+
+Trains the autoregressive syllable+tone model on synthetic data.
+
+Usage:
+    # Run overfit test first
+    python train_v3.py --overfit-test
+
+    # Full training (logs to checkpoints_v3_run1/train.log)
+    python train_v3.py --epochs 30 --checkpoint-dir checkpoints_v3_run1
+
+    # Resume from checkpoint
+    python train_v3.py --epochs 30 --checkpoint-dir checkpoints_v3_run1 --resume best_model.pt
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import sys
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Default paths
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+SENTENCES_JSON = PROJECT_ROOT / "apps/mobile_flutter/assets/datasets/sentences.zh.json"
+SYLLABLES_DIR = Path(__file__).parent.parent / "data" / "syllables_v2"
+SYNTHETIC_DIR = Path(__file__).parent.parent / "data" / "synthetic_train"
+DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "checkpoints_v3"
+
+
+def setup_logging(checkpoint_dir: Path) -> logging.Logger:
+    """Setup logging to both console and file."""
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    log_file = checkpoint_dir / "train.log"
+
+    logger = logging.getLogger("train_v3")
+    logger.setLevel(logging.INFO)
+    logger.handlers = []  # Clear existing handlers
+
+    # File handler
+    fh = logging.FileHandler(log_file, mode='a')
+    fh.setLevel(logging.INFO)
+    fh.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
+    logger.addHandler(fh)
+
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.INFO)
+    ch.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
+    logger.addHandler(ch)
+
+    return logger
+
+
+@dataclass
+class TrainingConfig:
+    """Training configuration."""
+    epochs: int = 30
+    batch_size: int = 32
+    learning_rate: float = 0.0003
+    weight_decay: float = 0.01
+    log_every_epochs: int = 5
+    checkpoint_dir: Path = DEFAULT_CHECKPOINT_DIR
+    device: str = "cuda"
+
+    # Overfit test
+    overfit_test: bool = False
+    overfit_samples: int = 8
+    overfit_steps: int = 200
+
+
+def load_synthetic_data(synthetic_dir: Path, logger) -> tuple[list, list]:
+    """Load synthetic training data."""
+    from mandarin_grader.data.autoregressive_dataset import load_synthetic_metadata
+
+    logger.info(f"Loading data from {synthetic_dir}")
+    sentences = load_synthetic_metadata(synthetic_dir)
+    logger.info(f"Loaded {len(sentences)} sentences")
+
+    if not sentences:
+        return [], []
+
+    np.random.seed(42)
+    indices = np.random.permutation(len(sentences))
+    split_idx = int(len(sentences) * 0.8)
+
+    train = [sentences[i] for i in indices[:split_idx]]
+    val = [sentences[i] for i in indices[split_idx:]]
+    logger.info(f"Train: {len(train)}, Val: {len(val)}")
+    return train, val
+
+
+def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool):
+    """Create PyTorch DataLoader."""
+    import torch
+    from torch.utils.data import DataLoader
+    from mandarin_grader.data.autoregressive_dataset import AutoregressiveDataset
+    from mandarin_grader.model.syllable_predictor_v3 import (
+        SyllablePredictorConfig, SyllableVocab, extract_mel_spectrogram,
+    )
+
+    config = SyllablePredictorConfig()
+    vocab = SyllableVocab()
+
+    dataset = AutoregressiveDataset(
+        sentences=sentences,
+        sample_rate=config.sample_rate,
+        chunk_duration_s=1.0,
+        margin_s=0.1,
+        augment=augment,
+    )
+
+    def collate_fn(batch):
+        mels, pinyin_ids_list, target_syls, target_tones = [], [], [], []
+        max_pinyin_len = 0
+
+        for sample in batch:
+            mel = extract_mel_spectrogram(sample.audio_chunk, config)
+            mels.append(mel)
+
+            ids = vocab.encode_sequence(sample.pinyin_context, add_bos=True)
+            pinyin_ids_list.append(ids)
+            max_pinyin_len = max(max_pinyin_len, len(ids))
+
+            target_syls.append(vocab.encode(sample.target_syllable))
+            target_tones.append(sample.target_tone)
+
+        # Pad mels
+        max_time = max(m.shape[1] for m in mels)
+        n_mels = mels[0].shape[0]
+        padded_mels = np.zeros((len(mels), n_mels, max_time), dtype=np.float32)
+        audio_masks = np.zeros((len(mels), max_time), dtype=bool)
+        for i, mel in enumerate(mels):
+            padded_mels[i, :, :mel.shape[1]] = mel
+            audio_masks[i, mel.shape[1]:] = True
+
+        # Pad pinyin
+        padded_pinyin = np.zeros((len(batch), max_pinyin_len), dtype=np.int64)
+        pinyin_masks = np.zeros((len(batch), max_pinyin_len), dtype=bool)
+        for i, ids in enumerate(pinyin_ids_list):
+            padded_pinyin[i, :len(ids)] = ids
+            pinyin_masks[i, len(ids):] = True
+
+        return {
+            "mel": torch.tensor(padded_mels, dtype=torch.float32),
+            "pinyin_ids": torch.tensor(padded_pinyin, dtype=torch.long),
+            "audio_mask": torch.tensor(audio_masks, dtype=torch.bool),
+            "pinyin_mask": torch.tensor(pinyin_masks, dtype=torch.bool),
+            "target_syllable": torch.tensor(target_syls, dtype=torch.long),
+            "target_tone": torch.tensor(target_tones, dtype=torch.long),
+        }
+
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
+                      collate_fn=collate_fn, num_workers=0)
+
+
+def evaluate(model, dataloader, device: str) -> tuple[float, float]:
+    """Evaluate model. Returns (syllable_acc, tone_acc)."""
+    import torch
+    model.eval()
+    syl_correct, tone_correct, total = 0, 0, 0
+
+    with torch.no_grad():
+        for batch in dataloader:
+            mel = batch["mel"].to(device)
+            pinyin_ids = batch["pinyin_ids"].to(device)
+            audio_mask = batch["audio_mask"].to(device)
+            pinyin_mask = batch["pinyin_mask"].to(device)
+
+            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+
+            syl_correct += (syl_logits.argmax(-1).cpu() == batch["target_syllable"]).sum().item()
+            tone_correct += (tone_logits.argmax(-1).cpu() == batch["target_tone"]).sum().item()
+            total += mel.shape[0]
+
+    return syl_correct / max(total, 1), tone_correct / max(total, 1)
+
+
+def evaluate_detailed(model, dataloader, device: str) -> dict:
+    """Detailed evaluation with per-tone breakdown."""
+    import torch
+    model.eval()
+
+    per_tone_correct = defaultdict(int)
+    per_tone_total = defaultdict(int)
+    syl_correct, total = 0, 0
+
+    with torch.no_grad():
+        for batch in dataloader:
+            mel = batch["mel"].to(device)
+            pinyin_ids = batch["pinyin_ids"].to(device)
+            audio_mask = batch["audio_mask"].to(device)
+            pinyin_mask = batch["pinyin_mask"].to(device)
+
+            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+            syl_pred = syl_logits.argmax(-1).cpu()
+            tone_pred = tone_logits.argmax(-1).cpu()
+
+            for i in range(mel.shape[0]):
+                tone = batch["target_tone"][i].item()
+                per_tone_total[tone] += 1
+                if tone_pred[i].item() == tone:
+                    per_tone_correct[tone] += 1
+                if syl_pred[i].item() == batch["target_syllable"][i].item():
+                    syl_correct += 1
+                total += 1
+
+    tone_acc = sum(per_tone_correct.values()) / max(total, 1)
+    return {
+        "syllable_accuracy": syl_correct / max(total, 1),
+        "tone_accuracy": tone_acc,
+        "per_tone_accuracy": {t: per_tone_correct[t] / max(per_tone_total[t], 1) for t in range(5)},
+        "per_tone_counts": dict(per_tone_total),
+        "total_samples": total,
+    }
+
+
+def run_overfit_test(model, train_loader, config: TrainingConfig, device: str, logger) -> bool:
+    """Run overfit test on small batch."""
+    import torch
+
+    logger.info("=" * 60)
+    logger.info("OVERFIT TEST")
+    logger.info(f"Samples: {config.overfit_samples}, Steps: {config.overfit_steps}")
+    logger.info("=" * 60)
+
+    batch = next(iter(train_loader))
+    for key in batch:
+        if isinstance(batch[key], torch.Tensor):
+            batch[key] = batch[key][:config.overfit_samples]
+
+    mel = batch["mel"].to(device)
+    pinyin_ids = batch["pinyin_ids"].to(device)
+    audio_mask = batch["audio_mask"].to(device)
+    pinyin_mask = batch["pinyin_mask"].to(device)
+    target_syl = batch["target_syllable"].to(device)
+    target_tone = batch["target_tone"].to(device)
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate * 10)
+    syl_criterion = torch.nn.CrossEntropyLoss()
+    tone_criterion = torch.nn.CrossEntropyLoss()
+
+    model.train()
+    for step in range(config.overfit_steps):
+        optimizer.zero_grad()
+        syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+        loss = syl_criterion(syl_logits, target_syl) + tone_criterion(tone_logits, target_tone)
+        loss.backward()
+        optimizer.step()
+
+        if (step + 1) % 50 == 0:
+            syl_acc = (syl_logits.argmax(-1) == target_syl).float().mean().item()
+            tone_acc = (tone_logits.argmax(-1) == target_tone).float().mean().item()
+            logger.info(f"Step {step+1}: Loss={loss.item():.4f}, Syl={syl_acc:.4f}, Tone={tone_acc:.4f}")
+
+    model.eval()
+    with torch.no_grad():
+        syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+        syl_acc = (syl_logits.argmax(-1) == target_syl).float().mean().item()
+        tone_acc = (tone_logits.argmax(-1) == target_tone).float().mean().item()
+
+    passed = syl_acc > 0.9 and tone_acc > 0.9
+    logger.info(f"Final: Syl={syl_acc:.4f}, Tone={tone_acc:.4f} - {'PASSED' if passed else 'FAILED'}")
+    return passed
+
+
+def train(model, train_loader, val_loader, config: TrainingConfig, logger, start_epoch: int = 0):
+    """Main training loop."""
+    import torch
+
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.epochs * len(train_loader))
+    syl_criterion = torch.nn.CrossEntropyLoss()
+    tone_criterion = torch.nn.CrossEntropyLoss()
+
+    best_val_acc = 0.0
+
+    logger.info(f"Starting training from epoch {start_epoch + 1} to {config.epochs}")
+    logger.info(f"Logging every {config.log_every_epochs} epochs")
+
+    for epoch in range(start_epoch, config.epochs):
+        model.train()
+        total_loss, num_batches = 0, 0
+
+        for batch in train_loader:
+            mel = batch["mel"].to(config.device)
+            pinyin_ids = batch["pinyin_ids"].to(config.device)
+            audio_mask = batch["audio_mask"].to(config.device)
+            pinyin_mask = batch["pinyin_mask"].to(config.device)
+            target_syl = batch["target_syllable"].to(config.device)
+            target_tone = batch["target_tone"].to(config.device)
+
+            optimizer.zero_grad()
+            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+            loss = syl_criterion(syl_logits, target_syl) + tone_criterion(tone_logits, target_tone)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            scheduler.step()
+
+            total_loss += loss.item()
+            num_batches += 1
+
+        avg_loss = total_loss / max(num_batches, 1)
+
+        # Log and checkpoint every N epochs
+        if (epoch + 1) % config.log_every_epochs == 0 or epoch == config.epochs - 1:
+            train_syl, train_tone = evaluate(model, train_loader, config.device)
+            val_syl, val_tone = evaluate(model, val_loader, config.device)
+
+            logger.info(
+                f"Epoch {epoch+1:3d}/{config.epochs} | Loss: {avg_loss:.4f} | "
+                f"Train: {train_syl:.4f}/{train_tone:.4f} | Val: {val_syl:.4f}/{val_tone:.4f}"
+            )
+
+            # Save checkpoint
+            ckpt_path = config.checkpoint_dir / f"checkpoint_epoch{epoch+1}.pt"
+            torch.save({
+                "epoch": epoch + 1,
+                "model_state_dict": model.state_dict(),
+                "optimizer_state_dict": optimizer.state_dict(),
+                "val_syl_accuracy": val_syl,
+                "val_tone_accuracy": val_tone,
+            }, ckpt_path)
+
+            # Save best model
+            val_combined = (val_syl + val_tone) / 2
+            if val_combined > best_val_acc:
+                best_val_acc = val_combined
+                best_path = config.checkpoint_dir / "best_model.pt"
+                torch.save({
+                    "epoch": epoch + 1,
+                    "model_state_dict": model.state_dict(),
+                    "val_syl_accuracy": val_syl,
+                    "val_tone_accuracy": val_tone,
+                }, best_path)
+                logger.info(f"  -> New best model! Combined: {val_combined:.4f}")
+
+    return best_val_acc
+
+
+def main():
+    import torch
+
+    parser = argparse.ArgumentParser(description="Train SyllablePredictorV3")
+    parser.add_argument("--epochs", type=int, default=30)
+    parser.add_argument("--batch-size", type=int, default=32)
+    parser.add_argument("--lr", type=float, default=0.0003)
+    parser.add_argument("--log-every-epochs", type=int, default=5)
+    parser.add_argument("--checkpoint-dir", type=Path, default=DEFAULT_CHECKPOINT_DIR)
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--synthetic-dir", type=Path, default=SYNTHETIC_DIR)
+    parser.add_argument("--resume", type=str, default=None, help="Checkpoint filename to resume from")
+    parser.add_argument("--overfit-test", action="store_true")
+    args = parser.parse_args()
+
+    config = TrainingConfig(
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
+        log_every_epochs=args.log_every_epochs,
+        checkpoint_dir=args.checkpoint_dir,
+        device=args.device,
+        overfit_test=args.overfit_test,
+    )
+
+    logger = setup_logging(config.checkpoint_dir)
+    logger.info("=" * 60)
+    logger.info("SyllablePredictorV3 Training")
+    logger.info("=" * 60)
+
+    # Load data
+    train_sentences, val_sentences = load_synthetic_data(args.synthetic_dir, logger)
+    if not train_sentences:
+        logger.error("No training data!")
+        return
+
+    # Create model
+    from mandarin_grader.model.syllable_predictor_v3 import SyllablePredictorV3, SyllablePredictorConfig
+    model_config = SyllablePredictorConfig()
+    model = SyllablePredictorV3(model_config).to(config.device)
+
+    total_params = sum(p.numel() for p in model.parameters())
+    logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
+    logger.info(f"Device: {config.device}")
+
+    # Create dataloaders
+    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True)
+    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False)
+    logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
+
+    # Overfit test
+    if config.overfit_test:
+        run_overfit_test(model, train_loader, config, config.device, logger)
+        return
+
+    # Resume from checkpoint
+    start_epoch = 0
+    if args.resume:
+        ckpt_path = config.checkpoint_dir / args.resume
+        if ckpt_path.exists():
+            checkpoint = torch.load(ckpt_path, map_location=config.device)
+            model.load_state_dict(checkpoint["model_state_dict"])
+            start_epoch = checkpoint.get("epoch", 0)
+            logger.info(f"Resumed from {ckpt_path} (epoch {start_epoch})")
+
+    # Train
+    best_acc = train(model, train_loader, val_loader, config, logger, start_epoch)
+
+    # Final evaluation
+    logger.info("=" * 60)
+    logger.info("FINAL EVALUATION")
+    logger.info("=" * 60)
+
+    train_results = evaluate_detailed(model, train_loader, config.device)
+    val_results = evaluate_detailed(model, val_loader, config.device)
+
+    logger.info(f"Train - Syl: {train_results['syllable_accuracy']:.4f}, Tone: {train_results['tone_accuracy']:.4f}")
+    logger.info(f"Val   - Syl: {val_results['syllable_accuracy']:.4f}, Tone: {val_results['tone_accuracy']:.4f}")
+
+    for t in range(5):
+        logger.info(f"  Tone {t}: {val_results['per_tone_accuracy'][t]:.4f} ({val_results['per_tone_counts'].get(t, 0)} samples)")
+
+    # Save final report
+    report = {
+        "config": {"epochs": config.epochs, "batch_size": config.batch_size, "lr": config.learning_rate},
+        "model_params": total_params,
+        "train_results": train_results,
+        "val_results": val_results,
+        "best_val_combined": best_acc,
+    }
+    with open(config.checkpoint_dir / "training_report.json", "w") as f:
+        json.dump(report, f, indent=2)
+
+    logger.info(f"Training complete. Best combined accuracy: {best_acc:.4f}")
+
+
+if __name__ == "__main__":
+    main()

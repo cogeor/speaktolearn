@@ -1,0 +1,14 @@
+stat screen bugs out, likely because there are no stats. Fix this: stats should look fine even if they are empty and make up fake stats so I can see it working
+does voice system default really exist, if not remove it
+button on top right does not do anything, remove it
+dont display home text, just the button logo on top left
+remove staring sentences, instead next just selects random from current level
+first page should not be the "no tracked sequences" text. Instead it should display "activity this week" with options to go next with level rolldown option
+keep current_level as a global variable, can change it in home/or sentence page, then next, will select random from that level
+hsk4 sentences have numerical pinyin, because the data was not well generated. Change the prompt so pinying shows properly, and fix the hsk 4 data
+read scoring.md. Refactor and simpify current workflow for scoring. I need you to score AFTER recording, not in parallel, simplify the codebase
+Then, make an implementation plan from scoring.md
+
+
+
+

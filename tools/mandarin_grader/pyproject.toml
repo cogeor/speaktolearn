@@ -23,7 +23,7 @@ classifiers = [
     "Topic :: Multimedia :: Sound/Audio :: Analysis",
 ]
 dependencies = [
-    "numpy>=1.24.0",
+    "numpy<2.4",
     "scipy>=1.10.0",
 ]
 

@@ -39,41 +39,6 @@ class _StatsContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (stats.totalAttempts == 0) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.bar_chart_outlined,
-                size: 80,
-                color: AppTheme.subtle,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'No practice data yet',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Complete some practice sessions to see your statistics here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppTheme.subtle),
-              ),
-              const SizedBox(height: 32),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/'),
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Start Practicing'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -158,7 +123,7 @@ class _StatsContent extends StatelessWidget {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 12),
-        ActivityHeatmap(dailyAttempts: stats.dailyAttempts, weeks: 13),
+        ActivityHeatmap(dailyAttempts: stats.dailyAttempts),
       ],
     );
   }

@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
-import '../../../core/audio/audio_player.dart';
+import '../../../core/audio/audio_player.dart' show AudioPlayer, PlaybackState;
 import '../../../core/audio/audio_source.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../domain/audio_recorder.dart';
@@ -249,19 +249,20 @@ class RecordingController extends StateNotifier<RecordingState> {
     debugPrint('Loading audio from ${recording.filePath}');
     await _audioPlayer.load(FileAudioSource(recording.filePath));
 
-    // Get duration and wait for that time + buffer
-    final duration = _audioPlayer.duration ?? const Duration(seconds: 5);
-    debugPrint('Audio duration: ${duration.inMilliseconds}ms');
+    // Subscribe to state stream BEFORE calling play to avoid missing events
+    final completionFuture = _audioPlayer.stateStream.firstWhere(
+      (s) => s == PlaybackState.completed || s == PlaybackState.idle,
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () => PlaybackState.completed,
+    );
 
-    await _audioPlayer.play();
     debugPrint('Playing audio');
+    await _audioPlayer.play();
 
-    // Wait for the duration of the audio plus a small buffer
-    await Future.delayed(duration + const Duration(milliseconds: 500));
-    debugPrint('Playback complete (duration elapsed)');
-
-    // Stop to ensure cleanup
-    await _audioPlayer.stop();
+    // Wait for playback to complete
+    await completionFuture;
+    debugPrint('Playback complete');
 
     // Mark playback complete - enables rating buttons
     state = state.copyWith(isPlaying: false, hasPlayedBack: true);

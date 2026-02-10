@@ -1,0 +1,12 @@
+inputs: audio same as transformer_v2  + (new) correct pinyin up to (but not counting) the next char
+output: two heads, one for tone, one for syllable (out of 400 or so)
+at inference, run model for each char in the sentence
+that means text needs to be encoded with audio, to make this managable, only do chunks of 1s
+make sure next char is in the right chunk for training, easy to do with synth data
+for inference, we can just compare the full sentences
+model should be no more than 5M params, still transformer.
+concat embeddings for audio + pinyin (size input [bs, N_tokens audio + N_tokens pinyin, N_dim])
+as new data augmentation: during training can start at any point in the sentence, predict next char.
+make an overfit test first.
+this is not a tone prediction model, it is a syl+tone prediction model.
+make completely different training scripts, reuse only what you can, do not modify existing scripts.

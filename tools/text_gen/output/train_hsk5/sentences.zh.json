@@ -1,0 +1,1449 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "zh_cn_v1",
+  "language": "zh-CN",
+  "generated_at": "2026-02-09T15:57:45.714788",
+  "items": [
+    {
+      "id": "ts_000001",
+      "text": "尽管他很忙，他还是抽时间去健身房",
+      "romanization": "jǐnguǎn tā hěn máng, tā háishì chōu shíjiān qù jiànshēnfáng",
+      "gloss": {
+        "en": "Even though he is busy, he still takes time to go to the gym"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000002",
+      "text": "这本书的封面设计得非常吸引人",
+      "romanization": "zhè běn shū de fēngmiàn shèjì de fēicháng xīyǐn rén",
+      "gloss": {
+        "en": "The cover design of this book is very attractive"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000003",
+      "text": "他对音乐的热爱使他成为一名出色的音乐家",
+      "romanization": "tā duì yīnyuè de rè'ài shǐ tā chéngwéi yī míng chūsè de yīnyuè jiā",
+      "gloss": {
+        "en": "His passion for music made him an excellent musician"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000004",
+      "text": "即使在困难的情况下，他也从未放弃",
+      "romanization": "jíshǐ zài kùnnán de qíngkuàng xià, tā yě cóngwèi fàngqì",
+      "gloss": {
+        "en": "Even in difficult situations, he never gave up"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000005",
+      "text": "为了提高自己的中文水平，他每天坚持练习",
+      "romanization": "wèile tígāo zìjǐ de zhōngwén shuǐpíng, tā měitiān jiānchí liànxí",
+      "gloss": {
+        "en": "In order to improve his Chinese level, he practices every day"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000006",
+      "text": "随着科技的发展，生活变得越来越便利",
+      "romanization": "suízhe kējì de fāzhǎn, shēnghuó biàn de yuè lái yuè biànlì",
+      "gloss": {
+        "en": "With the development of technology, life is becoming more convenient"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000007",
+      "text": "他在会议上提出了一个重要的建议",
+      "romanization": "tā zài huìyì shàng tíchū le yī gè zhòngyào de jiànyì",
+      "gloss": {
+        "en": "He made an important suggestion at the meeting"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000008",
+      "text": "请尽快回复我的邮件，谢谢",
+      "romanization": "qǐng jǐnkuài huífù wǒ de yóujiàn, xièxiè",
+      "gloss": {
+        "en": "Please reply to my email as soon as possible, thank you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000009",
+      "text": "他决定在周末去远足，享受大自然的美景",
+      "romanization": "tā juédìng zài zhōumò qù yuǎnzú, xiǎngshòu dàzìrán de měijǐng",
+      "gloss": {
+        "en": "He decided to go hiking on the weekend to enjoy the beauty of nature"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social",
+        "hobbies"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000010",
+      "text": "为了顺利完成这个项目，我们需要通力合作",
+      "romanization": "wèile shùnlì wánchéng zhège xiàngmù, wǒmen xūyào tōnglì hézuò",
+      "gloss": {
+        "en": "To successfully complete this project, we need to work closely together"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000011",
+      "text": "他在国外留学期间结识了很多朋友",
+      "romanization": "tā zài guówài liúxué qījiān jiéshí le hěn duō péngyǒu",
+      "gloss": {
+        "en": "During his studies abroad, he made many friends"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social",
+        "travel"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000012",
+      "text": "无论遇到什么困难，他总是保持积极的态度",
+      "romanization": "wúlùn yùdào shénme kùnnán, tā zǒng shì bǎochí jījí de tàidù",
+      "gloss": {
+        "en": "No matter what difficulties he encounters, he always maintains a positive attitude"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000013",
+      "text": "他对这份工作的责任感非常强",
+      "romanization": "tā duì zhè fèn gōngzuò de zérèngǎn fēicháng qiáng",
+      "gloss": {
+        "en": "He has a very strong sense of responsibility for this job"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000014",
+      "text": "在他的帮助下，我们的团队取得了显著的进步",
+      "romanization": "zài tā de bāngzhù xià, wǒmen de tuánduì qǔdé le xiǎnzhù de jìnbù",
+      "gloss": {
+        "en": "With his help, our team made significant progress"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000015",
+      "text": "他希望有一天能环游世界，探索不同的文化",
+      "romanization": "tā xīwàng yǒu yītiān néng huányóu shìjiè, tànsuǒ bùtóng de wénhuà",
+      "gloss": {
+        "en": "He hopes to travel around the world one day and explore different cultures"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "travel",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000016",
+      "text": "由于天气恶劣，航班被迫取消",
+      "romanization": "yóuyú tiānqì èliè, hángbān bèi pò qǔxiāo",
+      "gloss": {
+        "en": "Due to bad weather, the flight was canceled"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "travel"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000017",
+      "text": "他总是乐于助人，给大家带来温暖",
+      "romanization": "tā zǒng shì lèyú zhùrén, gěi dàjiā dài lái wēnnuǎn",
+      "gloss": {
+        "en": "He is always willing to help others and brings warmth to everyone"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000018",
+      "text": "每个季节都有其独特的美丽",
+      "romanization": "měi gè jìjié dōu yǒu qí dútè de měilì",
+      "gloss": {
+        "en": "Every season has its own unique beauty"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000019",
+      "text": "他用自己的实际行动证明了他的决心",
+      "romanization": "tā yòng zìjǐ de shíjì xíngdòng zhèngmíng le tā de juéxīn",
+      "gloss": {
+        "en": "He proved his determination with his actions"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000020",
+      "text": "在繁忙的都市生活中，偶尔需要寻找宁静",
+      "romanization": "zài fánmáng de dūshì shēnghuó zhōng, ǒu'ěr xūyào xúnzhǎo níngjìng",
+      "gloss": {
+        "en": "In the busy city life, it's sometimes necessary to find tranquility"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000021",
+      "text": "虽然他很忙，但他总是抽时间锻炼",
+      "romanization": "Suīrán tā hěn máng, dàn tā zǒng shì chōu shíjiān duànliàn",
+      "gloss": {
+        "en": "Although he is very busy, he always makes time to exercise"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000022",
+      "text": "如果你有任何问题，请随时联系我",
+      "romanization": "Rúguǒ nǐ yǒu rènhé wèntí, qǐng suíshí liánxì wǒ",
+      "gloss": {
+        "en": "If you have any questions, please feel free to contact me"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000023",
+      "text": "他在公司里担任经理的职位",
+      "romanization": "Tā zài gōngsī lǐ dānrèn jīnglǐ de zhíwèi",
+      "gloss": {
+        "en": "He holds the position of manager in the company"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000024",
+      "text": "这本书主要讨论了环境保护的问题",
+      "romanization": "Zhè běn shū zhǔyào tǎolùnle huánjìng bǎohù de wèntí",
+      "gloss": {
+        "en": "This book mainly discusses issues of environmental protection"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000025",
+      "text": "请在截止日期之前提交申请",
+      "romanization": "Qǐng zài jiézhǐ rìqí zhīqián tíjiāo shēnqǐng",
+      "gloss": {
+        "en": "Please submit the application before the deadline"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000026",
+      "text": "无论天气如何，我们都要出发",
+      "romanization": "Wúlùn tiānqì rúhé, wǒmen dōu yào chūfā",
+      "gloss": {
+        "en": "No matter the weather, we will set off"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000027",
+      "text": "你觉得这个计划可行吗",
+      "romanization": "Nǐ juéde zhège jìhuà kěxíng ma",
+      "gloss": {
+        "en": "Do you think this plan is feasible"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000028",
+      "text": "他对音乐有很深的理解",
+      "romanization": "Tā duì yīnyuè yǒu hěn shēn de lǐjiě",
+      "gloss": {
+        "en": "He has a deep understanding of music"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000029",
+      "text": "这个地方的风景非常优美",
+      "romanization": "Zhège dìfāng de fēngjǐng fēicháng yōuměi",
+      "gloss": {
+        "en": "The scenery in this place is very beautiful"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000030",
+      "text": "我们需要制定一个详细的计划",
+      "romanization": "Wǒmen xūyào zhìdìng yīgè xiángxì de jìhuà",
+      "gloss": {
+        "en": "We need to formulate a detailed plan"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000031",
+      "text": "他在努力提高自己的中文水平",
+      "romanization": "Tā zài nǔlì tígāo zìjǐ de Zhōngwén shuǐpíng",
+      "gloss": {
+        "en": "He is working hard to improve his Chinese level"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000032",
+      "text": "我对这个结果感到非常满意",
+      "romanization": "Wǒ duì zhège jiéguǒ gǎndào fēicháng mǎnyì",
+      "gloss": {
+        "en": "I am very satisfied with this result"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000033",
+      "text": "他们正在讨论如何解决这个问题",
+      "romanization": "Tāmen zhèngzài tǎolùn rúhé jiějué zhège wèntí",
+      "gloss": {
+        "en": "They are discussing how to solve this problem"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000034",
+      "text": "这次旅行让我增长了很多见识",
+      "romanization": "Zhè cì lǚxíng ràng wǒ zēngzhǎngle hěn duō jiànshi",
+      "gloss": {
+        "en": "This trip broadened my horizons greatly"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000035",
+      "text": "他总是乐于助人，因此大家都很喜欢他",
+      "romanization": "Tā zǒng shì lèyú zhùrén, yīncǐ dàjiā dōu hěn xǐhuān tā",
+      "gloss": {
+        "en": "He is always willing to help others, so everyone likes him"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000036",
+      "text": "尽管任务很艰巨，他们还是顺利完成了",
+      "romanization": "Jǐnguǎn rènwù hěn jiānjù, tāmen háishì shùnlì wánchéngle",
+      "gloss": {
+        "en": "Despite the difficult task, they completed it successfully"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000037",
+      "text": "学习一门外语需要坚持不懈的努力",
+      "romanization": "Xuéxí yīmén wàiyǔ xūyào jiānchí bùxiè de nǔlì",
+      "gloss": {
+        "en": "Learning a foreign language requires persistent effort"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000038",
+      "text": "他对艺术有着浓厚的兴趣",
+      "romanization": "Tā duì yìshù yǒuzhe nónghòu de xìngqù",
+      "gloss": {
+        "en": "He has a strong interest in art"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000039",
+      "text": "我们应该尽量减少浪费资源",
+      "romanization": "Wǒmen yīnggāi jǐnliàng jiǎnshǎo làngfèi zīyuán",
+      "gloss": {
+        "en": "We should try to minimize resource waste"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000040",
+      "text": "在现代社会，科技发展非常迅速",
+      "romanization": "Zài xiàndài shèhuì, kējì fāzhǎn fēicháng xùnsù",
+      "gloss": {
+        "en": "In modern society, technological development is very rapid"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000041",
+      "text": "尽管天气很冷，他还是坚持每天早晨跑步",
+      "romanization": "jǐnguǎn tiānqì hěn lěng, tā háishì jiānchí měitiān zǎochén pǎobù",
+      "gloss": {
+        "en": "Even though the weather is cold, he still insists on jogging every morning"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000042",
+      "text": "我们公司正在招聘有经验的市场营销专业人才",
+      "romanization": "wǒmen gōngsī zhèngzài zhāopìn yǒu jīngyàn de shìchǎng yíngxiāo zhuānyè réncái",
+      "gloss": {
+        "en": "Our company is recruiting experienced marketing professionals"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000043",
+      "text": "如果你有任何问题，请随时联系我",
+      "romanization": "rúguǒ nǐ yǒu rènhé wèntí, qǐng suíshí liánxì wǒ",
+      "gloss": {
+        "en": "If you have any questions, please contact me at any time"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000044",
+      "text": "在这次会议上，我们将讨论未来的发展计划",
+      "romanization": "zài zhè cì huìyì shàng, wǒmen jiāng tǎolùn wèilái de fāzhǎn jìhuà",
+      "gloss": {
+        "en": "In this meeting, we will discuss future development plans"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000045",
+      "text": "他对中国文化产生了浓厚的兴趣",
+      "romanization": "tā duì zhōngguó wénhuà chǎnshēngle nónghòu de xìngqù",
+      "gloss": {
+        "en": "He developed a strong interest in Chinese culture"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000046",
+      "text": "为了提高汉语水平，他每天都坚持听中文播客",
+      "romanization": "wèile tígāo hànyǔ shuǐpíng, tā měitiān dōu jiānchí tīng zhōngwén bōkè",
+      "gloss": {
+        "en": "To improve his Chinese level, he insists on listening to Chinese podcasts every day"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000047",
+      "text": "即使遇到困难，她也从不轻言放弃",
+      "romanization": "jíshǐ yùdào kùnnán, tā yě cóng bù qīng yán fàngqì",
+      "gloss": {
+        "en": "Even when faced with difficulties, she never easily gives up"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000048",
+      "text": "他的新书即将出版，受到了广泛关注",
+      "romanization": "tā de xīn shū jíjiāng chūbǎn, shòudào le guǎngfàn guānzhù",
+      "gloss": {
+        "en": "His new book is about to be published and has received widespread attention"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000049",
+      "text": "请尽快回复我的邮件，以便我们安排下一步的工作",
+      "romanization": "qǐng jǐnkuài huífù wǒ de yóujiàn, yǐbiàn wǒmen ānpái xià yī bù de gōngzuò",
+      "gloss": {
+        "en": "Please reply to my email as soon as possible so that we can arrange the next steps of the work"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000050",
+      "text": "他总是乐于帮助他人，因此他有很多朋友",
+      "romanization": "tā zǒng shì lèyú bāngzhù tārén, yīncǐ tā yǒu hěn duō péngyǒu",
+      "gloss": {
+        "en": "He is always willing to help others, so he has many friends"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000051",
+      "text": "我对这部电影的评价是，它的剧情非常感人",
+      "romanization": "wǒ duì zhè bù diànyǐng de píngjià shì, tā de jùqíng fēicháng gǎnrén",
+      "gloss": {
+        "en": "My evaluation of this movie is that its plot is very touching"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000052",
+      "text": "经过多次尝试，他终于成功地完成了这个项目",
+      "romanization": "jīngguò duōcì chángshì, tā zhōngyú chénggōng de wánchéngle zhège xiàngmù",
+      "gloss": {
+        "en": "After many attempts, he finally completed the project successfully"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000053",
+      "text": "为了保护环境，我们应该减少使用塑料制品",
+      "romanization": "wèile bǎohù huánjìng, wǒmen yīnggāi jiǎnshǎo shǐyòng sùliào zhìpǐn",
+      "gloss": {
+        "en": "To protect the environment, we should reduce the use of plastic products"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000054",
+      "text": "无论天气如何变化，我们都要坚持露营计划",
+      "romanization": "wúlùn tiānqì rúhé biànhuà, wǒmen dōu yào jiānchí lùyíng jìhuà",
+      "gloss": {
+        "en": "No matter how the weather changes, we must stick to the camping plan"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000055",
+      "text": "她在家里种了很多植物，整个房间充满了生机",
+      "romanization": "tā zài jiālǐ zhòngle hěn duō zhíwù, zhěnggè fángjiān chōngmǎnle shēngjī",
+      "gloss": {
+        "en": "She has planted many plants at home, and the whole room is full of vitality"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000056",
+      "text": "我喜欢在空闲时间阅读各种类型的书籍",
+      "romanization": "wǒ xǐhuān zài kòngxián shíjiān yuèdú gè zhǒng lèixíng de shūjí",
+      "gloss": {
+        "en": "I like to read various types of books in my spare time"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "daily life",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000057",
+      "text": "她的梦想是成为一名成功的律师",
+      "romanization": "tā de mèngxiǎng shì chéngwéi yī míng chénggōng de lǜshī",
+      "gloss": {
+        "en": "Her dream is to become a successful lawyer"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000058",
+      "text": "在这个项目中，团队合作显得尤为重要",
+      "romanization": "zài zhège xiàngmù zhōng, tuánduì hézuò xiǎndé yóuwéi zhòngyào",
+      "gloss": {
+        "en": "In this project, teamwork is particularly important"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000059",
+      "text": "他正在准备一个关于环境保护的演讲",
+      "romanization": "tā zhèngzài zhǔnbèi yī gè guānyú huánjìng bǎohù de yǎnjiǎng",
+      "gloss": {
+        "en": "He is preparing a speech about environmental protection"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5",
+        "work",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000060",
+      "text": "尽管天气不好，他还是坚持去跑步",
+      "romanization": "jǐnguǎn tiānqì bù hǎo, tā háishì jiānchí qù pǎobù",
+      "gloss": {
+        "en": "Despite the bad weather, he still insisted on going for a run"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000061",
+      "text": "他在公司里担任一个重要的职位",
+      "romanization": "tā zài gōngsī lǐ dānrèn yí gè zhòngyào de zhíwèi",
+      "gloss": {
+        "en": "He holds an important position in the company"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000062",
+      "text": "为了提高汉语水平，他每天都坚持练习",
+      "romanization": "wèile tígāo Hànyǔ shuǐpíng, tā měitiān dōu jiānchí liànxí",
+      "gloss": {
+        "en": "In order to improve his Chinese level, he practices every day"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000063",
+      "text": "这家餐厅的菜非常可口，难怪这么多人排队",
+      "romanization": "zhè jiā cāntīng de cài fēicháng kěkǒu, nánguài zhème duō rén páiduì",
+      "gloss": {
+        "en": "The dishes at this restaurant are very tasty, no wonder so many people are in line"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000064",
+      "text": "你能帮我看看这个文件有什么问题吗",
+      "romanization": "nǐ néng bāng wǒ kàn kàn zhège wénjiàn yǒu shénme wèntí ma",
+      "gloss": {
+        "en": "Can you help me check if there's any problem with this document"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000065",
+      "text": "虽然他很努力，但结果并不如意",
+      "romanization": "suīrán tā hěn nǔlì, dàn jiéguǒ bìng bù rúyì",
+      "gloss": {
+        "en": "Although he worked hard, the results were not satisfactory"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000066",
+      "text": "这篇文章的主题是什么，你能概括一下吗",
+      "romanization": "zhè piān wénzhāng de zhǔtí shì shénme, nǐ néng gàikuò yíxià ma",
+      "gloss": {
+        "en": "What is the theme of this article, can you summarize it"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000067",
+      "text": "对不起，我的手机没电了，不能及时回复你",
+      "romanization": "duìbuqǐ, wǒ de shǒujī méi diàn le, bùnéng jíshí huífù nǐ",
+      "gloss": {
+        "en": "Sorry, my phone ran out of battery and I couldn't reply to you promptly"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000068",
+      "text": "他对艺术有着浓厚的兴趣，经常参观博物馆",
+      "romanization": "tā duì yìshù yǒuzhe nónghòu de xìngqù, jīngcháng cānguān bówùguǎn",
+      "gloss": {
+        "en": "He has a strong interest in art and often visits museums"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000069",
+      "text": "我最近读了一本非常有趣的小说，推荐给你",
+      "romanization": "wǒ zuìjìn dú le yì běn fēicháng yǒuqù de xiǎoshuō, tuījiàn gěi nǐ",
+      "gloss": {
+        "en": "I recently read a very interesting novel and recommend it to you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000070",
+      "text": "他从不轻易放弃，总是坚持到最后一刻",
+      "romanization": "tā cóng bù qīngyì fàngqì, zǒngshì jiānchí dào zuìhòu yí kè",
+      "gloss": {
+        "en": "He never gives up easily and always persists until the last moment"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000071",
+      "text": "这次的会议议题非常广泛，需要充分准备",
+      "romanization": "zhè cì de huìyì yìtí fēicháng guǎngfàn, xūyào chōngfèn zhǔnbèi",
+      "gloss": {
+        "en": "The topics of this meeting are very broad and require thorough preparation"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000072",
+      "text": "无论遇到什么困难，我们都要乐观面对",
+      "romanization": "wúlùn yùdào shénme kùnnán, wǒmen dōu yào lèguān miànduì",
+      "gloss": {
+        "en": "No matter what difficulties we encounter, we must face them optimistically"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000073",
+      "text": "为了改善环境，政府推出了一系列新政策",
+      "romanization": "wèile gǎishàn huánjìng, zhèngfǔ tuīchū le yí xìliè xīn zhèngcè",
+      "gloss": {
+        "en": "To improve the environment, the government has introduced a series of new policies"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000074",
+      "text": "每个人都有自己的优点和缺点，要学会接纳自己",
+      "romanization": "měi gè rén dōu yǒu zìjǐ de yōudiǎn hé quēdiǎn, yào xuéhuì jiēnà zìjǐ",
+      "gloss": {
+        "en": "Everyone has their own strengths and weaknesses, and needs to learn to accept themselves"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000075",
+      "text": "我对这个项目充满信心，相信我们会成功",
+      "romanization": "wǒ duì zhège xiàngmù chōngmǎn xìnxīn, xiāngxìn wǒmen huì chénggōng",
+      "gloss": {
+        "en": "I am full of confidence in this project and believe we will succeed"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000076",
+      "text": "在现代社会，科技发展迅速，改变了我们的生活方式",
+      "romanization": "zài xiàndài shèhuì, kējì fāzhǎn xùnsù, gǎibiàn le wǒmen de shēnghuó fāngshì",
+      "gloss": {
+        "en": "In modern society, rapid technological development has changed our way of life"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000077",
+      "text": "他对自己的未来有明确的规划，目标非常清晰",
+      "romanization": "tā duì zìjǐ de wèilái yǒu míngquè de guīhuà, mùbiāo fēicháng qīngxī",
+      "gloss": {
+        "en": "He has a clear plan for his future and very clear objectives"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000078",
+      "text": "经过长期的努力，他终于实现了自己的梦想",
+      "romanization": "jīngguò chángqī de nǔlì, tā zhōngyú shíxiàn le zìjǐ de mèngxiǎng",
+      "gloss": {
+        "en": "After long-term effort, he finally realized his dream"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000079",
+      "text": "为了健康，他每天早上都去公园锻炼身体",
+      "romanization": "wèile jiànkāng, tā měitiān zǎoshang dōu qù gōngyuán duànliàn shēntǐ",
+      "gloss": {
+        "en": "For health, he goes to the park to exercise every morning"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000080",
+      "text": "他为了实现梦想，放弃了稳定的工作",
+      "romanization": "tā wèi le shíxiàn mèngxiǎng, fàngqì le wěndìng de gōngzuò",
+      "gloss": {
+        "en": "He gave up a stable job to realize his dream"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000081",
+      "text": "无论天气多么恶劣，他都坚持每天跑步",
+      "romanization": "wúlùn tiānqì duōme èliè, tā dōu jiānchí měitiān pǎobù",
+      "gloss": {
+        "en": "No matter how bad the weather is, he insists on running every day"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000082",
+      "text": "我对这次的演讲有很高的期待",
+      "romanization": "wǒ duì zhè cì de yǎnjiǎng yǒu hěn gāo de qīdài",
+      "gloss": {
+        "en": "I have high expectations for this speech"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000083",
+      "text": "即便遇到困难，我们也不能轻言放弃",
+      "romanization": "jíbiàn yùdào kùnnán, wǒmen yě bùnéng qīngyán fàngqì",
+      "gloss": {
+        "en": "Even when faced with difficulties, we should not easily give up"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000084",
+      "text": "这家餐厅的环境非常优雅，适合约会",
+      "romanization": "zhè jiā cāntīng de huánjìng fēicháng yōuyǎ, shìhé yuēhuì",
+      "gloss": {
+        "en": "The environment of this restaurant is very elegant, suitable for a date"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000085",
+      "text": "他在公司里是个不可或缺的员工",
+      "romanization": "tā zài gōngsī lǐ shì gè bù kě huò quē de yuángōng",
+      "gloss": {
+        "en": "He is an indispensable employee in the company"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000086",
+      "text": "我们应该珍惜每一个与家人共度的时光",
+      "romanization": "wǒmen yīnggāi zhēnxī měi yí gè yǔ jiārén gòngdù de shíguāng",
+      "gloss": {
+        "en": "We should cherish every moment spent with family"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000087",
+      "text": "这本书的内容非常丰富，值得一读",
+      "romanization": "zhè běn shū de nèiróng fēicháng fēngfù, zhídé yī dú",
+      "gloss": {
+        "en": "The content of this book is very rich and worth reading"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000088",
+      "text": "尽管如此，他依然选择相信自己的判断",
+      "romanization": "jǐnguǎn rúcǐ, tā yīrán xuǎnzé xiāngxìn zìjǐ de pànduàn",
+      "gloss": {
+        "en": "Despite this, he still chooses to trust his own judgment"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000089",
+      "text": "为了完成这个项目，他们加班到深夜",
+      "romanization": "wèi le wánchéng zhège xiàngmù, tāmen jiābān dào shēnyè",
+      "gloss": {
+        "en": "To complete this project, they worked overtime until late at night"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000090",
+      "text": "你对这个问题的看法是什么",
+      "romanization": "nǐ duì zhège wèntí de kànfǎ shì shénme",
+      "gloss": {
+        "en": "What is your opinion on this issue"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000091",
+      "text": "他对音乐的热爱深深地影响了我",
+      "romanization": "tā duì yīnyuè de rè'ài shēnshēn de yǐngxiǎng le wǒ",
+      "gloss": {
+        "en": "His love for music deeply influenced me"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000092",
+      "text": "这次比赛的结果让人意外",
+      "romanization": "zhè cì bǐsài de jiéguǒ ràng rén yìwài",
+      "gloss": {
+        "en": "The result of this competition was unexpected"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000093",
+      "text": "请注意，这个问题可能会影响到计划的执行",
+      "romanization": "qǐng zhùyì, zhège wèntí kěnéng huì yǐngxiǎng dào jìhuà de zhíxíng",
+      "gloss": {
+        "en": "Please note that this issue might affect the execution of the plan"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000094",
+      "text": "在学习过程中，我们应该善于总结经验",
+      "romanization": "zài xuéxí guòchéng zhōng, wǒmen yīnggāi shànyú zǒngjié jīngyàn",
+      "gloss": {
+        "en": "During the learning process, we should be good at summarizing experiences"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000095",
+      "text": "为了满足客户的需求，我们不断创新",
+      "romanization": "wèi le mǎnzú kèhù de xūqiú, wǒmen bùduàn chuàngxīn",
+      "gloss": {
+        "en": "To meet the needs of customers, we continually innovate"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000096",
+      "text": "他的成功源于长期的努力和坚持",
+      "romanization": "tā de chénggōng yuányú chángqī de nǔlì hé jiānchí",
+      "gloss": {
+        "en": "His success is due to long-term effort and perseverance"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000097",
+      "text": "在这个项目中，我负责协调各个部门的工作",
+      "romanization": "zài zhège xiàngmù zhōng, wǒ fùzé xiétiáo gège bùmén de gōngzuò",
+      "gloss": {
+        "en": "In this project, I am responsible for coordinating the work of various departments"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000098",
+      "text": "他对未来充满信心，希望能实现自己的目标",
+      "romanization": "tā duì wèilái chōngmǎn xìnxīn, xīwàng néng shíxiàn zìjǐ de mùbiāo",
+      "gloss": {
+        "en": "He is full of confidence about the future and hopes to achieve his goals"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000099",
+      "text": "为了不影响其他乘客，请保持安静",
+      "romanization": "wèi le bù yǐngxiǎng qítā chéngkè, qǐng bǎochí ānjìng",
+      "gloss": {
+        "en": "To avoid disturbing other passengers, please keep quiet"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk5"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    }
+  ]
+}

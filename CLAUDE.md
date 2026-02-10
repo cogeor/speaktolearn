@@ -1,4 +1,17 @@
-# AGENTS.md
+# CLAUDE.md
+
+## Python Environment
+
+This project uses `uv` with a `.venv` virtual environment. Run Python commands with:
+```bash
+uv run python <script>
+```
+
+Or activate the venv directly:
+```bash
+source .venv/bin/activate  # Linux/Mac
+.venv\Scripts\activate     # Windows
+```
 
 ## Delegate
 

@@ -11,7 +11,14 @@ class RatingNavButtons extends StatefulWidget {
   /// Callback when a rating is selected.
   final void Function(SentenceRating rating) onRate;
 
-  const RatingNavButtons({super.key, required this.onRate});
+  /// Whether the buttons are enabled (full opacity) or disabled (dimmed).
+  final bool enabled;
+
+  const RatingNavButtons({
+    super.key,
+    required this.onRate,
+    this.enabled = true,
+  });
 
   @override
   State<RatingNavButtons> createState() => _RatingNavButtonsState();
@@ -71,7 +78,7 @@ class _RatingNavButtonsState extends State<RatingNavButtons>
   }
 
   void _onTap(int index) {
-    if (_controller.isAnimating) return;
+    if (!widget.enabled || _controller.isAnimating) return;
     setState(() => _tappedIndex = index);
     _controller.forward();
   }
@@ -92,6 +99,12 @@ class _RatingNavButtonsState extends State<RatingNavButtons>
               // The static row of buttons
               Row(
                 children: List.generate(4, (index) {
+                  final color = widget.enabled
+                      ? _buttonColors[index]
+                      : _buttonColors[index].withValues(alpha: 0.3);
+                  final textColor = widget.enabled
+                      ? Colors.black
+                      : Colors.black.withValues(alpha: 0.4);
                   return Padding(
                     padding: EdgeInsets.only(right: index < 3 ? spacing : 0),
                     child: SizedBox(
@@ -99,16 +112,17 @@ class _RatingNavButtonsState extends State<RatingNavButtons>
                       height: buttonHeight,
                       child: TextButton(
                         style: TextButton.styleFrom(
-                          backgroundColor: _buttonColors[index],
-                          foregroundColor: Colors.black,
+                          backgroundColor: color,
+                          foregroundColor: textColor,
                           shape: const RoundedRectangleBorder(),
                         ),
-                        onPressed: () => _onTap(index),
+                        onPressed: widget.enabled ? () => _onTap(index) : null,
                         child: Text(
                           _buttonLabels[index],
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
+                            color: textColor,
                           ),
                         ),
                       ),

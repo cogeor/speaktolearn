@@ -1,0 +1,1448 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "zh_cn_v1",
+  "language": "zh-CN",
+  "generated_at": "2026-02-09T15:51:57.775344",
+  "items": [
+    {
+      "id": "ts_000001",
+      "text": "你好",
+      "romanization": "nǐ hǎo",
+      "gloss": {
+        "en": "Hello"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000002",
+      "text": "谢谢",
+      "romanization": "xièxiè",
+      "gloss": {
+        "en": "Thank you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000003",
+      "text": "我爱你",
+      "romanization": "wǒ ài nǐ",
+      "gloss": {
+        "en": "I love you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000004",
+      "text": "请坐",
+      "romanization": "qǐng zuò",
+      "gloss": {
+        "en": "Please sit"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000005",
+      "text": "我很高兴",
+      "romanization": "wǒ hěn gāoxìng",
+      "gloss": {
+        "en": "I am very happy"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000006",
+      "text": "再见",
+      "romanization": "zàijiàn",
+      "gloss": {
+        "en": "Goodbye"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000007",
+      "text": "你好吗",
+      "romanization": "nǐ hǎo ma",
+      "gloss": {
+        "en": "How are you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000008",
+      "text": "我叫李华",
+      "romanization": "wǒ jiào lǐ huá",
+      "gloss": {
+        "en": "My name is Li Hua"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000009",
+      "text": "你会说英语吗",
+      "romanization": "nǐ huì shuō yīngyǔ ma",
+      "gloss": {
+        "en": "Can you speak English"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000010",
+      "text": "我喜欢喝茶",
+      "romanization": "wǒ xǐhuān hē chá",
+      "gloss": {
+        "en": "I like drinking tea"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000011",
+      "text": "今天是星期几",
+      "romanization": "jīntiān shì xīngqī jǐ",
+      "gloss": {
+        "en": "What day is it today"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000012",
+      "text": "我有一只猫",
+      "romanization": "wǒ yǒu yī zhī māo",
+      "gloss": {
+        "en": "I have a cat"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000013",
+      "text": "他是我的朋友",
+      "romanization": "tā shì wǒ de péngyǒu",
+      "gloss": {
+        "en": "He is my friend"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000014",
+      "text": "你喜欢什么颜色",
+      "romanization": "nǐ xǐhuān shénme yánsè",
+      "gloss": {
+        "en": "What color do you like"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000015",
+      "text": "我想吃苹果",
+      "romanization": "wǒ xiǎng chī píngguǒ",
+      "gloss": {
+        "en": "I want to eat an apple"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000016",
+      "text": "现在几点",
+      "romanization": "xiànzài jǐ diǎn",
+      "gloss": {
+        "en": "What time is it now"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000017",
+      "text": "她是老师",
+      "romanization": "tā shì lǎoshī",
+      "gloss": {
+        "en": "She is a teacher"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000018",
+      "text": "我不懂",
+      "romanization": "wǒ bù dǒng",
+      "gloss": {
+        "en": "I don't understand"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000019",
+      "text": "你在哪里",
+      "romanization": "nǐ zài nǎlǐ",
+      "gloss": {
+        "en": "Where are you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000020",
+      "text": "我们去吃饭吧",
+      "romanization": "wǒmen qù chīfàn ba",
+      "gloss": {
+        "en": "Let's go eat"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000021",
+      "text": "你好",
+      "romanization": "nǐ hǎo",
+      "gloss": {
+        "en": "Hello"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "greeting"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000022",
+      "text": "谢谢",
+      "romanization": "xièxiè",
+      "gloss": {
+        "en": "Thank you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "politeness"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000023",
+      "text": "再见",
+      "romanization": "zàijiàn",
+      "gloss": {
+        "en": "Goodbye"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "farewell"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000024",
+      "text": "我爱你",
+      "romanization": "wǒ ài nǐ",
+      "gloss": {
+        "en": "I love you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000025",
+      "text": "早上好",
+      "romanization": "zǎoshang hǎo",
+      "gloss": {
+        "en": "Good morning"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "greeting"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000026",
+      "text": "晚上好",
+      "romanization": "wǎnshàng hǎo",
+      "gloss": {
+        "en": "Good evening"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "greeting"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000027",
+      "text": "对不起",
+      "romanization": "duìbuqǐ",
+      "gloss": {
+        "en": "Sorry"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "politeness"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000028",
+      "text": "没关系",
+      "romanization": "méi guānxi",
+      "gloss": {
+        "en": "It's okay"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "politeness"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000029",
+      "text": "我很好",
+      "romanization": "wǒ hěn hǎo",
+      "gloss": {
+        "en": "I am fine"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000030",
+      "text": "你呢",
+      "romanization": "nǐ ne",
+      "gloss": {
+        "en": "How about you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000031",
+      "text": "我饿了",
+      "romanization": "wǒ è le",
+      "gloss": {
+        "en": "I am hungry"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000032",
+      "text": "我渴了",
+      "romanization": "wǒ kě le",
+      "gloss": {
+        "en": "I am thirsty"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000033",
+      "text": "请坐",
+      "romanization": "qǐng zuò",
+      "gloss": {
+        "en": "Please sit"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "politeness"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000034",
+      "text": "请喝茶",
+      "romanization": "qǐng hē chá",
+      "gloss": {
+        "en": "Please drink tea"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "hospitality"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000035",
+      "text": "你叫什么",
+      "romanization": "nǐ jiào shénme",
+      "gloss": {
+        "en": "What is your name"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "introduction"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000036",
+      "text": "我叫李明",
+      "romanization": "wǒ jiào Lǐ Míng",
+      "gloss": {
+        "en": "My name is Li Ming"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "introduction"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000037",
+      "text": "这是我的家",
+      "romanization": "zhè shì wǒ de jiā",
+      "gloss": {
+        "en": "This is my home"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000038",
+      "text": "我有一个弟弟",
+      "romanization": "wǒ yǒu yí gè dìdi",
+      "gloss": {
+        "en": "I have a younger brother"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "family"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000039",
+      "text": "你会说中文吗",
+      "romanization": "nǐ huì shuō Zhōngwén ma",
+      "gloss": {
+        "en": "Can you speak Chinese"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "language"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000040",
+      "text": "我喜欢喝咖啡",
+      "romanization": "wǒ xǐhuān hē kāfēi",
+      "gloss": {
+        "en": "I like to drink coffee"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000041",
+      "text": "你好",
+      "romanization": "nǐ hǎo",
+      "gloss": {
+        "en": "Hello"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "greeting"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000042",
+      "text": "谢谢",
+      "romanization": "xiè xiè",
+      "gloss": {
+        "en": "Thank you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "polite"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000043",
+      "text": "我爱你",
+      "romanization": "wǒ ài nǐ",
+      "gloss": {
+        "en": "I love you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000044",
+      "text": "再见",
+      "romanization": "zài jiàn",
+      "gloss": {
+        "en": "Goodbye"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "farewell"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000045",
+      "text": "你好吗",
+      "romanization": "nǐ hǎo ma",
+      "gloss": {
+        "en": "How are you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "greeting"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000046",
+      "text": "我很好",
+      "romanization": "wǒ hěn hǎo",
+      "gloss": {
+        "en": "I am very good"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "response"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000047",
+      "text": "请坐",
+      "romanization": "qǐng zuò",
+      "gloss": {
+        "en": "Please sit"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "polite"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000048",
+      "text": "我饿了",
+      "romanization": "wǒ è le",
+      "gloss": {
+        "en": "I am hungry"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "daily life"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000049",
+      "text": "今天很冷",
+      "romanization": "jīn tiān hěn lěng",
+      "gloss": {
+        "en": "Today is very cold"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "weather"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000050",
+      "text": "这是我的书",
+      "romanization": "zhè shì wǒ de shū",
+      "gloss": {
+        "en": "This is my book"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "possession"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000051",
+      "text": "你喜欢喝茶吗",
+      "romanization": "nǐ xǐ huān hē chá ma",
+      "gloss": {
+        "en": "Do you like drinking tea"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "preference"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000052",
+      "text": "我有一个苹果",
+      "romanization": "wǒ yǒu yí gè píng guǒ",
+      "gloss": {
+        "en": "I have an apple"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "possession"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000053",
+      "text": "你叫什么名字",
+      "romanization": "nǐ jiào shén me míng zì",
+      "gloss": {
+        "en": "What is your name"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "introduction"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000054",
+      "text": "我住在北京",
+      "romanization": "wǒ zhù zài běi jīng",
+      "gloss": {
+        "en": "I live in Beijing"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "location"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000055",
+      "text": "她是我的朋友",
+      "romanization": "tā shì wǒ de péng yǒu",
+      "gloss": {
+        "en": "She is my friend"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "social"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000056",
+      "text": "你会说汉语吗",
+      "romanization": "nǐ huì shuō hàn yǔ ma",
+      "gloss": {
+        "en": "Can you speak Chinese"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "language"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000057",
+      "text": "他是老师",
+      "romanization": "tā shì lǎo shī",
+      "gloss": {
+        "en": "He is a teacher"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "occupation"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000058",
+      "text": "我喜欢猫",
+      "romanization": "wǒ xǐ huān māo",
+      "gloss": {
+        "en": "I like cats"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "preference"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000059",
+      "text": "你在哪里",
+      "romanization": "nǐ zài nǎ lǐ",
+      "gloss": {
+        "en": "Where are you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "location"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000060",
+      "text": "现在几点",
+      "romanization": "xiàn zài jǐ diǎn",
+      "gloss": {
+        "en": "What time is it now"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1",
+        "time"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000061",
+      "text": "你好",
+      "romanization": "nǐ hǎo",
+      "gloss": {
+        "en": "Hello"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000062",
+      "text": "谢谢",
+      "romanization": "xiè xiè",
+      "gloss": {
+        "en": "Thank you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000063",
+      "text": "请坐",
+      "romanization": "qǐng zuò",
+      "gloss": {
+        "en": "Please sit"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000064",
+      "text": "再见",
+      "romanization": "zài jiàn",
+      "gloss": {
+        "en": "Goodbye"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000065",
+      "text": "我爱你",
+      "romanization": "wǒ ài nǐ",
+      "gloss": {
+        "en": "I love you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000066",
+      "text": "你好吗",
+      "romanization": "nǐ hǎo ma",
+      "gloss": {
+        "en": "How are you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000067",
+      "text": "我很好",
+      "romanization": "wǒ hěn hǎo",
+      "gloss": {
+        "en": "I am good"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000068",
+      "text": "早上好",
+      "romanization": "zǎo shàng hǎo",
+      "gloss": {
+        "en": "Good morning"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000069",
+      "text": "晚上好",
+      "romanization": "wǎn shàng hǎo",
+      "gloss": {
+        "en": "Good evening"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000070",
+      "text": "请问",
+      "romanization": "qǐng wèn",
+      "gloss": {
+        "en": "Excuse me"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000071",
+      "text": "你叫什么名字",
+      "romanization": "nǐ jiào shén me míng zì",
+      "gloss": {
+        "en": "What is your name"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000072",
+      "text": "我叫李华",
+      "romanization": "wǒ jiào Lǐ Huá",
+      "gloss": {
+        "en": "My name is Li Hua"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000073",
+      "text": "这是我的书",
+      "romanization": "zhè shì wǒ de shū",
+      "gloss": {
+        "en": "This is my book"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000074",
+      "text": "你要去哪儿",
+      "romanization": "nǐ yào qù nǎr",
+      "gloss": {
+        "en": "Where are you going"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000075",
+      "text": "我在家",
+      "romanization": "wǒ zài jiā",
+      "gloss": {
+        "en": "I am at home"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000076",
+      "text": "他是老师",
+      "romanization": "tā shì lǎo shī",
+      "gloss": {
+        "en": "He is a teacher"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000077",
+      "text": "我们去吃饭",
+      "romanization": "wǒ men qù chī fàn",
+      "gloss": {
+        "en": "We are going to eat"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000078",
+      "text": "你有水吗",
+      "romanization": "nǐ yǒu shuǐ ma",
+      "gloss": {
+        "en": "Do you have water"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000079",
+      "text": "我喜欢喝茶",
+      "romanization": "wǒ xǐ huān hē chá",
+      "gloss": {
+        "en": "I like to drink tea"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000080",
+      "text": "天气很好",
+      "romanization": "tiān qì hěn hǎo",
+      "gloss": {
+        "en": "The weather is nice"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000081",
+      "text": "你好",
+      "romanization": "nǐ hǎo",
+      "gloss": {
+        "en": "Hello"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000082",
+      "text": "谢谢",
+      "romanization": "xièxiè",
+      "gloss": {
+        "en": "Thank you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000083",
+      "text": "再见",
+      "romanization": "zàijiàn",
+      "gloss": {
+        "en": "Goodbye"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000084",
+      "text": "请坐",
+      "romanization": "qǐng zuò",
+      "gloss": {
+        "en": "Please sit"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000085",
+      "text": "你叫什么名字",
+      "romanization": "nǐ jiào shénme míngzì",
+      "gloss": {
+        "en": "What is your name"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000086",
+      "text": "我爱你",
+      "romanization": "wǒ ài nǐ",
+      "gloss": {
+        "en": "I love you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000087",
+      "text": "他是老师",
+      "romanization": "tā shì lǎoshī",
+      "gloss": {
+        "en": "He is a teacher"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000088",
+      "text": "这是我的书",
+      "romanization": "zhè shì wǒ de shū",
+      "gloss": {
+        "en": "This is my book"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000089",
+      "text": "你会说英语吗",
+      "romanization": "nǐ huì shuō yīngyǔ ma",
+      "gloss": {
+        "en": "Can you speak English"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000090",
+      "text": "我喜欢喝茶",
+      "romanization": "wǒ xǐhuan hē chá",
+      "gloss": {
+        "en": "I like to drink tea"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000091",
+      "text": "今天是星期几",
+      "romanization": "jīntiān shì xīngqī jǐ",
+      "gloss": {
+        "en": "What day is it today"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000092",
+      "text": "我有一个妹妹",
+      "romanization": "wǒ yǒu yī gè mèimei",
+      "gloss": {
+        "en": "I have a younger sister"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000093",
+      "text": "你在哪儿",
+      "romanization": "nǐ zài nǎr",
+      "gloss": {
+        "en": "Where are you"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000094",
+      "text": "这个苹果很好吃",
+      "romanization": "zhège píngguǒ hěn hǎo chī",
+      "gloss": {
+        "en": "This apple is delicious"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000095",
+      "text": "我想买这个",
+      "romanization": "wǒ xiǎng mǎi zhège",
+      "gloss": {
+        "en": "I want to buy this"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000096",
+      "text": "你今天忙吗",
+      "romanization": "nǐ jīntiān máng ma",
+      "gloss": {
+        "en": "Are you busy today"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000097",
+      "text": "请给我菜单",
+      "romanization": "qǐng gěi wǒ càidān",
+      "gloss": {
+        "en": "Please give me the menu"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000098",
+      "text": "我不懂",
+      "romanization": "wǒ bù dǒng",
+      "gloss": {
+        "en": "I don't understand"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000099",
+      "text": "他在哪里工作",
+      "romanization": "tā zài nǎlǐ gōngzuò",
+      "gloss": {
+        "en": "Where does he work"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    },
+    {
+      "id": "ts_000100",
+      "text": "我们去吃饭吧",
+      "romanization": "wǒmen qù chīfàn ba",
+      "gloss": {
+        "en": "Let's go eat"
+      },
+      "tokens": [],
+      "tags": [
+        "hsk1"
+      ],
+      "difficulty": 1,
+      "example_audio": null
+    }
+  ]
+}
