@@ -29,10 +29,12 @@ class HomeController extends StateNotifier<HomeState> {
   int get _currentLevel => _settings.valueOrNull?.currentLevel ?? 1;
 
   Future<void> _init() async {
+    if (!mounted) return;
     state = state.copyWith(isLoading: true);
 
     final sequence = await _getNextByLevel(level: _currentLevel);
 
+    if (!mounted) return;
     if (sequence == null) {
       state = state.copyWith(isLoading: false);
       return;
@@ -40,6 +42,7 @@ class HomeController extends StateNotifier<HomeState> {
 
     final progress = await _progressRepository.getProgress(sequence.id);
 
+    if (!mounted) return;
     state = state.copyWith(
       current: sequence,
       currentProgress: progress,
@@ -54,12 +57,11 @@ class HomeController extends StateNotifier<HomeState> {
       currentId: state.current?.id,
     );
 
-    if (sequence == null) {
-      return;
-    }
+    if (!mounted || sequence == null) return;
 
     final progress = await _progressRepository.getProgress(sequence.id);
 
+    if (!mounted) return;
     state = state.copyWith(current: sequence, currentProgress: progress);
   }
 
@@ -69,12 +71,11 @@ class HomeController extends StateNotifier<HomeState> {
   Future<void> setCurrentSequence(String id) async {
     final sequence = await _textSequenceRepository.getById(id);
 
-    if (sequence == null) {
-      return;
-    }
+    if (!mounted || sequence == null) return;
 
     final progress = await _progressRepository.getProgress(sequence.id);
 
+    if (!mounted) return;
     state = state.copyWith(current: sequence, currentProgress: progress);
   }
 
@@ -82,12 +83,11 @@ class HomeController extends StateNotifier<HomeState> {
   ///
   /// Used after scoring to update the best score display.
   Future<void> refreshProgress() async {
-    if (state.current == null) {
-      return;
-    }
+    if (!mounted || state.current == null) return;
 
     final progress = await _progressRepository.getProgress(state.current!.id);
 
+    if (!mounted) return;
     state = state.copyWith(currentProgress: progress);
   }
 }
