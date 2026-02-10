@@ -23,58 +23,64 @@ class StatsController extends AsyncNotifier<PracticeStats> {
       }
     }
 
-    final progressRepo = ref.watch(progressRepositoryProvider);
+    try {
+      final progressRepo = ref.watch(progressRepositoryProvider);
 
-    // Get all tracked sequences
-    final trackedProgress = await progressRepo.getTrackedProgress();
+      // Get all tracked sequences
+      final trackedProgress = await progressRepo.getTrackedProgress();
 
-    // Get all attempts for accurate average calculation
-    final allAttempts = await progressRepo.getAllAttempts();
+      // Get all attempts for accurate average calculation
+      final allAttempts = await progressRepo.getAllAttempts();
 
-    // Compute totals
-    int totalAttempts = 0;
-    final dailyAttempts = <DateTime, int>{};
+      // Compute totals
+      int totalAttempts = 0;
+      final dailyAttempts = <DateTime, int>{};
 
-    for (final progress in trackedProgress) {
-      totalAttempts += progress.attemptCount;
+      for (final progress in trackedProgress) {
+        totalAttempts += progress.attemptCount;
 
-      // Track daily attempts for heatmap
-      if (progress.lastAttemptAt != null) {
-        final date = DateTime(
-          progress.lastAttemptAt!.year,
-          progress.lastAttemptAt!.month,
-          progress.lastAttemptAt!.day,
-        );
-        dailyAttempts[date] =
-            (dailyAttempts[date] ?? 0) + progress.attemptCount;
+        // Track daily attempts for heatmap
+        if (progress.lastAttemptAt != null) {
+          final date = DateTime(
+            progress.lastAttemptAt!.year,
+            progress.lastAttemptAt!.month,
+            progress.lastAttemptAt!.day,
+          );
+          dailyAttempts[date] =
+              (dailyAttempts[date] ?? 0) + progress.attemptCount;
+        }
       }
+
+      // Calculate average from all actual attempts (not just best scores)
+      final double? averageScore;
+      if (allAttempts.isNotEmpty) {
+        final totalScore = allAttempts.fold<int>(0, (sum, a) => sum + a.score);
+        averageScore = totalScore / allAttempts.length;
+      } else {
+        averageScore = null;
+      }
+
+      // Calculate streak (simplified - counts consecutive days with attempts)
+      final streak = _calculateStreak(dailyAttempts.keys.toList());
+
+      return PracticeStats(
+        totalAttempts: totalAttempts,
+        sequencesPracticed: trackedProgress
+            .where((p) => p.attemptCount > 0)
+            .length,
+        averageScore: averageScore,
+        currentStreak: streak.current,
+        longestStreak: streak.longest,
+        lastPracticeDate: dailyAttempts.keys.isNotEmpty
+            ? dailyAttempts.keys.reduce((a, b) => a.isAfter(b) ? a : b)
+            : null,
+        dailyAttempts: dailyAttempts,
+      );
+    } catch (e, stackTrace) {
+      // Log error for debugging, return empty stats to prevent crash
+      debugPrint('StatsController.build() error: $e\n$stackTrace');
+      return PracticeStats.empty;
     }
-
-    // Calculate average from all actual attempts (not just best scores)
-    final double? averageScore;
-    if (allAttempts.isNotEmpty) {
-      final totalScore = allAttempts.fold<int>(0, (sum, a) => sum + a.score);
-      averageScore = totalScore / allAttempts.length;
-    } else {
-      averageScore = null;
-    }
-
-    // Calculate streak (simplified - counts consecutive days with attempts)
-    final streak = _calculateStreak(dailyAttempts.keys.toList());
-
-    return PracticeStats(
-      totalAttempts: totalAttempts,
-      sequencesPracticed: trackedProgress
-          .where((p) => p.attemptCount > 0)
-          .length,
-      averageScore: averageScore,
-      currentStreak: streak.current,
-      longestStreak: streak.longest,
-      lastPracticeDate: dailyAttempts.keys.isNotEmpty
-          ? dailyAttempts.keys.reduce((a, b) => a.isAfter(b) ? a : b)
-          : null,
-      dailyAttempts: dailyAttempts,
-    );
   }
 
   ({int current, int longest}) _calculateStreak(List<DateTime> dates) {
