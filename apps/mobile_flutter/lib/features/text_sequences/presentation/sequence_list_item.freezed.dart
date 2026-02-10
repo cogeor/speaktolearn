@@ -19,7 +19,7 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$SequenceListItem {
   String get id => throw _privateConstructorUsedError;
   String get text => throw _privateConstructorUsedError;
-  int? get bestScore => throw _privateConstructorUsedError;
+  SentenceRating? get lastRating => throw _privateConstructorUsedError;
   int? get hskLevel => throw _privateConstructorUsedError;
 
   /// Create a copy of SequenceListItem
@@ -36,7 +36,12 @@ abstract class $SequenceListItemCopyWith<$Res> {
     $Res Function(SequenceListItem) then,
   ) = _$SequenceListItemCopyWithImpl<$Res, SequenceListItem>;
   @useResult
-  $Res call({String id, String text, int? bestScore, int? hskLevel});
+  $Res call({
+    String id,
+    String text,
+    SentenceRating? lastRating,
+    int? hskLevel,
+  });
 }
 
 /// @nodoc
@@ -56,7 +61,7 @@ class _$SequenceListItemCopyWithImpl<$Res, $Val extends SequenceListItem>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? bestScore = freezed,
+    Object? lastRating = freezed,
     Object? hskLevel = freezed,
   }) {
     return _then(
@@ -69,10 +74,10 @@ class _$SequenceListItemCopyWithImpl<$Res, $Val extends SequenceListItem>
                 ? _value.text
                 : text // ignore: cast_nullable_to_non_nullable
                       as String,
-            bestScore: freezed == bestScore
-                ? _value.bestScore
-                : bestScore // ignore: cast_nullable_to_non_nullable
-                      as int?,
+            lastRating: freezed == lastRating
+                ? _value.lastRating
+                : lastRating // ignore: cast_nullable_to_non_nullable
+                      as SentenceRating?,
             hskLevel: freezed == hskLevel
                 ? _value.hskLevel
                 : hskLevel // ignore: cast_nullable_to_non_nullable
@@ -92,7 +97,12 @@ abstract class _$$SequenceListItemImplCopyWith<$Res>
   ) = __$$SequenceListItemImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({String id, String text, int? bestScore, int? hskLevel});
+  $Res call({
+    String id,
+    String text,
+    SentenceRating? lastRating,
+    int? hskLevel,
+  });
 }
 
 /// @nodoc
@@ -111,7 +121,7 @@ class __$$SequenceListItemImplCopyWithImpl<$Res>
   $Res call({
     Object? id = null,
     Object? text = null,
-    Object? bestScore = freezed,
+    Object? lastRating = freezed,
     Object? hskLevel = freezed,
   }) {
     return _then(
@@ -124,10 +134,10 @@ class __$$SequenceListItemImplCopyWithImpl<$Res>
             ? _value.text
             : text // ignore: cast_nullable_to_non_nullable
                   as String,
-        bestScore: freezed == bestScore
-            ? _value.bestScore
-            : bestScore // ignore: cast_nullable_to_non_nullable
-                  as int?,
+        lastRating: freezed == lastRating
+            ? _value.lastRating
+            : lastRating // ignore: cast_nullable_to_non_nullable
+                  as SentenceRating?,
         hskLevel: freezed == hskLevel
             ? _value.hskLevel
             : hskLevel // ignore: cast_nullable_to_non_nullable
@@ -143,7 +153,7 @@ class _$SequenceListItemImpl implements _SequenceListItem {
   const _$SequenceListItemImpl({
     required this.id,
     required this.text,
-    this.bestScore,
+    this.lastRating,
     this.hskLevel,
   });
 
@@ -152,13 +162,13 @@ class _$SequenceListItemImpl implements _SequenceListItem {
   @override
   final String text;
   @override
-  final int? bestScore;
+  final SentenceRating? lastRating;
   @override
   final int? hskLevel;
 
   @override
   String toString() {
-    return 'SequenceListItem(id: $id, text: $text, bestScore: $bestScore, hskLevel: $hskLevel)';
+    return 'SequenceListItem(id: $id, text: $text, lastRating: $lastRating, hskLevel: $hskLevel)';
   }
 
   @override
@@ -168,14 +178,14 @@ class _$SequenceListItemImpl implements _SequenceListItem {
             other is _$SequenceListItemImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.text, text) || other.text == text) &&
-            (identical(other.bestScore, bestScore) ||
-                other.bestScore == bestScore) &&
+            (identical(other.lastRating, lastRating) ||
+                other.lastRating == lastRating) &&
             (identical(other.hskLevel, hskLevel) ||
                 other.hskLevel == hskLevel));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, text, bestScore, hskLevel);
+  int get hashCode => Object.hash(runtimeType, id, text, lastRating, hskLevel);
 
   /// Create a copy of SequenceListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -193,7 +203,7 @@ abstract class _SequenceListItem implements SequenceListItem {
   const factory _SequenceListItem({
     required final String id,
     required final String text,
-    final int? bestScore,
+    final SentenceRating? lastRating,
     final int? hskLevel,
   }) = _$SequenceListItemImpl;
 
@@ -202,7 +212,7 @@ abstract class _SequenceListItem implements SequenceListItem {
   @override
   String get text;
   @override
-  int? get bestScore;
+  SentenceRating? get lastRating;
   @override
   int? get hskLevel;
 

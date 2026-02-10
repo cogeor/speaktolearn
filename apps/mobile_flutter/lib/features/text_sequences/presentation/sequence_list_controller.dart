@@ -40,7 +40,7 @@ class SequenceListController
       return SequenceListItem(
         id: sequence.id,
         text: sequence.text,
-        bestScore: progress?.bestScore,
+        lastRating: progress?.lastRating,
         hskLevel: sequence.hskLevel,
       );
     }).toList();
