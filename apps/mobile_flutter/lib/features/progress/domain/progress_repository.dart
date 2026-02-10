@@ -1,7 +1,7 @@
-import 'score_attempt.dart';
+import 'rating_attempt.dart';
 import 'text_sequence_progress.dart';
 
-/// Repository interface for managing text sequence progress and score attempts.
+/// Repository interface for managing text sequence progress and rating attempts.
 abstract class ProgressRepository {
   // Progress methods
 
@@ -27,14 +27,14 @@ abstract class ProgressRepository {
 
   // Attempt methods
 
-  /// Saves a score attempt and updates the associated progress.
-  Future<void> saveAttempt(ScoreAttempt attempt);
+  /// Saves a rating attempt and updates the associated progress.
+  Future<void> saveAttempt(RatingAttempt attempt);
 
-  /// Returns attempts for a text sequence, optionally limited.
-  Future<List<ScoreAttempt>> getAttempts(String textSequenceId, {int? limit});
+  /// Returns rating attempts for a text sequence, optionally limited.
+  Future<List<RatingAttempt>> getAttempts(String textSequenceId, {int? limit});
 
-  /// Returns all attempts across all sequences.
-  Future<List<ScoreAttempt>> getAllAttempts();
+  /// Returns all rating attempts across all sequences.
+  Future<List<RatingAttempt>> getAllAttempts();
 
   // Debug methods
 
