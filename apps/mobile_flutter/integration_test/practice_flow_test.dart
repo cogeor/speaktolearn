@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import 'mocks/mock_speech_recognizer.dart';
 import 'test_helpers.dart';
 
 void main() {
@@ -59,224 +58,13 @@ void main() {
     });
   });
 
-  group('Practice Flow - Scoring', () {
-    testWidgets('shows progress indicator while scoring', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
+  // Scoring tests removed - system now uses self-reported ratings instead of
+  // automated speech recognition scoring
 
-      // Act - start and stop recording
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(IntegrationFinders.recordFab);
-      await tester.pump();
-
-      // Assert - progress indicator shown during scoring
-      expect(IntegrationFinders.progressIndicator, findsOneWidget);
-
-      // Wait for scoring to complete
-      await tester.waitForScoring();
-    });
-
-    testWidgets('displays score after scoring completes with perfect match', (
-      tester,
-    ) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      recognizer.setupPerfectMatch(
-        '\u4f60\u597d',
-      ); // Perfect match with test sequence
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // Act
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Assert - high score displayed (100 for perfect match)
-      // The score should be visible somewhere on screen
-      expect(find.textContaining('100'), findsWidgets);
-    });
-
-    testWidgets('displays lower score for partial match', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      recognizer.setupPartialMatch('\u4f60'); // Partial match
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // Act
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Assert - score displayed (lower than 100)
-      // Best score label should appear after scoring
-      expect(find.textContaining('Best:'), findsOneWidget);
-    });
-
-    testWidgets('displays zero score for no match', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer(mode: RecognizerMode.empty);
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // Act
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Assert - zero score displayed
-      expect(find.textContaining('0'), findsWidgets);
-    });
-
-    testWidgets('shows error state when recognition fails', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer(mode: RecognizerMode.failure);
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // Act
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Assert - error handling (FAB returns to idle state)
-      expect(IntegrationFinders.micIcon, findsOneWidget);
-    });
-  });
-
-  group('Practice Flow - Progress Persistence', () {
-    testWidgets('score persists and shows on home screen after scoring', (
-      tester,
-    ) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      recognizer.setupPerfectMatch('\u4f60\u597d');
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // Act - record and score
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Assert - best score is shown on home screen
-      expect(find.textContaining('Best:'), findsOneWidget);
-    });
-
-    testWidgets('can navigate to next sequence after scoring', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      recognizer.setupPerfectMatch('\u4f60\u597d');
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001', 'test-002'},
-        speechRecognizer: recognizer,
-      );
-
-      // Act - score current sequence
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Tap Next
-      await tester.tap(IntegrationFinders.nextButton);
-      await tester.pumpAndSettle();
-
-      // Assert - different sequence is shown
-      expect(IntegrationFinders.sequenceText('\u8c22\u8c22'), findsOneWidget);
-    });
-
-    testWidgets('best score updates after better attempt', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // First attempt - partial match
-      recognizer.setupPartialMatch('\u4f60');
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Second attempt - perfect match
-      recognizer.setupPerfectMatch('\u4f60\u597d');
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
-
-      // Assert - best score is the higher one (100)
-      expect(find.textContaining('100'), findsWidgets);
-    });
-
-    testWidgets('attempt count increases after each scoring', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      recognizer.setupPerfectMatch('\u4f60\u597d');
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // Make multiple attempts
-      for (var i = 0; i < 3; i++) {
-        await tester.tapRecordButton();
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.tapStopAndScore();
-        await tester.waitForScoring();
-      }
-
-      // Assert - recognizer was called 3 times
-      expect(recognizer.recognizeCallCount, equals(3));
-    });
-  });
+  // Progress persistence tests removed - system now uses self-reported ratings
+  // instead of automated speech recognition scoring
 
   group('Practice Flow - UI States', () {
-    testWidgets('FAB is disabled during scoring', (tester) async {
-      // Arrange
-      final recognizer = MockSpeechRecognizer();
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
-
-      // Start and stop to trigger scoring
-      await tester.tapRecordButton();
-      await tester.pump(const Duration(milliseconds: 100));
-      await tester.tap(IntegrationFinders.recordFab);
-      await tester.pump();
-
-      // Assert - FAB shows progress indicator (disabled state)
-      expect(IntegrationFinders.progressIndicator, findsOneWidget);
-
-      // Clean up
-      await tester.waitForScoring();
-    });
-
     testWidgets(
       'example audio buttons are visible on home screen with voices',
       (tester) async {
@@ -342,20 +130,14 @@ void main() {
       tester,
     ) async {
       // Arrange
-      final recognizer = MockSpeechRecognizer();
-      recognizer.setupPerfectMatch('\u4f60\u597d');
-      await tester.pumpIntegrationApp(
-        trackedIds: {'test-001'},
-        speechRecognizer: recognizer,
-      );
+      await tester.pumpIntegrationApp(trackedIds: {'test-001'});
       await tester.openPracticeSheet();
 
-      // Act - record and score
+      // Act - record and stop
       await tester.tap(IntegrationFinders.recordFab);
       await tester.pump(const Duration(milliseconds: 100));
       await tester.tap(IntegrationFinders.recordFab);
       await tester.pumpAndSettle();
-      await tester.waitForScoring();
 
       // Assert - replay button is visible
       expect(IntegrationFinders.replayButton, findsOneWidget);
@@ -402,32 +184,28 @@ void main() {
       tester,
     ) async {
       // Arrange
-      final recognizer = MockSpeechRecognizer();
-      recognizer.setupPerfectMatch('\u4f60\u597d');
       await tester.pumpIntegrationApp(
         trackedIds: {'test-001', 'test-002', 'test-003'},
-        speechRecognizer: recognizer,
       );
 
-      // Practice first sequence
+      // Practice first sequence - record and stop
       await tester.tapRecordButton();
       await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
+      await tester.tapRecordButton();
+      await tester.pumpAndSettle();
 
       // Navigate to next
       await tester.tap(IntegrationFinders.nextButton);
       await tester.pumpAndSettle();
 
-      // Practice second sequence
-      recognizer.setupPerfectMatch('\u8c22\u8c22');
+      // Practice second sequence - record and stop
       await tester.tapRecordButton();
       await tester.pump(const Duration(milliseconds: 100));
-      await tester.tapStopAndScore();
-      await tester.waitForScoring();
+      await tester.tapRecordButton();
+      await tester.pumpAndSettle();
 
-      // Assert - both were scored (2 calls total)
-      expect(recognizer.recognizeCallCount, equals(2));
+      // Assert - FAB is still functional
+      expect(IntegrationFinders.recordFab, findsOneWidget);
     });
   });
 }

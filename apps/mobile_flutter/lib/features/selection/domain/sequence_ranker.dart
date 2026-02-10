@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../progress/domain/sentence_rating.dart';
 import '../../progress/domain/text_sequence_progress.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import 'ranked_sequence.dart';
@@ -82,8 +83,9 @@ class DefaultSequenceRanker implements SequenceRanker {
       return 100.0;
     }
 
-    // Need: how much practice is needed (inverse of best score)
-    final need = 100.0 - (progress.bestScore ?? 0);
+    // Need: how much practice is needed (based on last rating)
+    // hard=100, almost=75, good=50, easy=25, none=100
+    final need = _ratingToNeed(progress.lastRating);
 
     // Recency penalty: recent practice reduces priority
     if (progress.lastAttemptAt == null) {
@@ -100,5 +102,19 @@ class DefaultSequenceRanker implements SequenceRanker {
         : (50.0 / daysSincePractice);
 
     return need - recencyPenalty;
+  }
+
+  double _ratingToNeed(SentenceRating? rating) {
+    if (rating == null) return 100.0;
+    switch (rating) {
+      case SentenceRating.hard:
+        return 100.0;
+      case SentenceRating.almost:
+        return 75.0;
+      case SentenceRating.good:
+        return 50.0;
+      case SentenceRating.easy:
+        return 25.0;
+    }
   }
 }

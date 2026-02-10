@@ -9,7 +9,6 @@ import 'package:speak_to_learn/features/practice/presentation/practice_sheet.dar
 import 'package:speak_to_learn/features/text_sequences/domain/text_sequence.dart';
 
 import 'mocks/mock_integration_repositories.dart';
-import 'mocks/mock_speech_recognizer.dart';
 
 /// Test data for integration tests.
 class TestData {
@@ -112,7 +111,6 @@ class IntegrationFinders {
 /// Uses in-memory mock implementations that don't require Hive.
 List<Override> createIntegrationTestOverrides({
   List<TextSequence>? sequences,
-  MockSpeechRecognizer? speechRecognizer,
   Set<String>? trackedIds,
 }) {
   final mockTextSequenceRepo = MockIntegrationTextSequenceRepository(
@@ -124,7 +122,6 @@ List<Override> createIntegrationTestOverrides({
   final mockRecordingRepo = MockIntegrationRecordingRepository();
   final mockExampleAudioRepo = MockIntegrationExampleAudioRepository();
   final mockSettingsRepo = MockIntegrationSettingsRepository();
-  final mockRecognizer = speechRecognizer ?? MockSpeechRecognizer();
   final mockRecorder = MockIntegrationAudioRecorder();
   final mockPlayer = MockIntegrationAudioPlayer();
 
@@ -134,7 +131,6 @@ List<Override> createIntegrationTestOverrides({
     recordingRepositoryProvider.overrideWithValue(mockRecordingRepo),
     exampleAudioRepositoryProvider.overrideWithValue(mockExampleAudioRepo),
     settingsRepositoryProvider.overrideWithValue(mockSettingsRepo),
-    speechRecognizerProvider.overrideWithValue(mockRecognizer),
     audioRecorderProvider.overrideWithValue(mockRecorder),
     audioPlayerProvider.overrideWithValue(mockPlayer),
   ];
@@ -161,14 +157,12 @@ extension IntegrationTestHelpers on WidgetTester {
   /// Pumps the integration test app with overrides and settles.
   Future<void> pumpIntegrationApp({
     List<TextSequence>? sequences,
-    MockSpeechRecognizer? speechRecognizer,
     Set<String>? trackedIds,
   }) async {
     await pumpWidget(
       ProviderScope(
         overrides: createIntegrationTestOverrides(
           sequences: sequences,
-          speechRecognizer: speechRecognizer,
           trackedIds: trackedIds,
         ),
         child: const IntegrationTestApp(),
