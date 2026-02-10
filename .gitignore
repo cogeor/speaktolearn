@@ -11,4 +11,12 @@ models/rvc/
 
 # Training outputs
 tools/mandarin_grader/checkpoints/
+tools/mandarin_grader/checkpoints_*/
 tools/mandarin_grader/logs/
+
+# Build artifacts
+tools/mandarin_grader/mandarin_grader.egg-info/
+tools/mandarin_grader/uv.lock
+
+# Example/debug numpy files
+tools/mandarin_grader/*.npy
