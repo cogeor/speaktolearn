@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/di.dart';
+import '../../progress/domain/sentence_rating.dart';
 import '../domain/practice_stats.dart';
 
 /// Provider to toggle demo mode for stats (debug builds only).
@@ -51,13 +52,23 @@ class StatsController extends AsyncNotifier<PracticeStats> {
         }
       }
 
-      // Calculate average from all actual attempts (not just best scores)
-      final double? averageScore;
-      if (allAttempts.isNotEmpty) {
-        final totalScore = allAttempts.fold<int>(0, (sum, a) => sum + a.score);
-        averageScore = totalScore / allAttempts.length;
-      } else {
-        averageScore = null;
+      // Count ratings from all attempts
+      int hardCount = 0;
+      int almostCount = 0;
+      int goodCount = 0;
+      int easyCount = 0;
+
+      for (final attempt in allAttempts) {
+        switch (attempt.rating) {
+          case SentenceRating.hard:
+            hardCount++;
+          case SentenceRating.almost:
+            almostCount++;
+          case SentenceRating.good:
+            goodCount++;
+          case SentenceRating.easy:
+            easyCount++;
+        }
       }
 
       // Calculate streak (simplified - counts consecutive days with attempts)
@@ -68,7 +79,10 @@ class StatsController extends AsyncNotifier<PracticeStats> {
         sequencesPracticed: trackedProgress
             .where((p) => p.attemptCount > 0)
             .length,
-        averageScore: averageScore,
+        hardCount: hardCount,
+        almostCount: almostCount,
+        goodCount: goodCount,
+        easyCount: easyCount,
         currentStreak: streak.current,
         longestStreak: streak.longest,
         lastPracticeDate: dailyAttempts.keys.isNotEmpty
