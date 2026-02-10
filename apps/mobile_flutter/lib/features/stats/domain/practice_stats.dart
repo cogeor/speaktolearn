@@ -52,11 +52,20 @@ class PracticeStats with _$PracticeStats {
     // Calculate totals from the generated data
     final totalAttempts = dailyAttempts.values.fold<int>(0, (a, b) => a + b);
 
+    // Generate realistic rating distribution
+    // Most ratings are good/easy, fewer hard/almost (shows improvement)
+    final hardCount = (totalAttempts * 0.1).round();
+    final almostCount = (totalAttempts * 0.2).round();
+    final goodCount = (totalAttempts * 0.4).round();
+    final easyCount = totalAttempts - hardCount - almostCount - goodCount;
+
     return PracticeStats(
       totalAttempts: totalAttempts,
-      sequencesPracticed: (totalAttempts * 0.7)
-          .round(), // ~70% unique sequences
-      // Rating counts will be updated in Loop 09
+      sequencesPracticed: (totalAttempts * 0.7).round(),
+      hardCount: hardCount,
+      almostCount: almostCount,
+      goodCount: goodCount,
+      easyCount: easyCount,
       currentStreak: 5,
       longestStreak: 14,
       lastPracticeDate: today,
