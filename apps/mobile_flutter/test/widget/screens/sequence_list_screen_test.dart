@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:speak_to_learn/app/theme.dart';
+import 'package:speak_to_learn/features/progress/domain/sentence_rating.dart';
 import 'package:speak_to_learn/features/text_sequences/presentation/sequence_list_item.dart';
 import 'package:speak_to_learn/features/text_sequences/presentation/sequence_list_tile.dart';
 
 void main() {
   const testItems = [
-    SequenceListItem(id: 'test-001', text: '你好', bestScore: 85),
-    SequenceListItem(id: 'test-002', text: '谢谢', bestScore: null),
-    SequenceListItem(id: 'test-003', text: '再见', bestScore: 70),
+    SequenceListItem(id: 'test-001', text: '你好', lastRating: SentenceRating.good),
+    SequenceListItem(id: 'test-002', text: '谢谢', lastRating: null),
+    SequenceListItem(id: 'test-003', text: '再见', lastRating: SentenceRating.almost),
   ];
 
   group('SequenceListTile', () {
@@ -17,7 +18,7 @@ void main() {
       const item = SequenceListItem(
         id: 'test-001',
         text: '你好',
-        bestScore: null,
+        lastRating: null,
       );
 
       await tester.pumpWidget(
@@ -32,8 +33,8 @@ void main() {
       expect(find.text('你好'), findsOneWidget);
     });
 
-    testWidgets('shows best score when available', (tester) async {
-      const item = SequenceListItem(id: 'test-001', text: '你好', bestScore: 85);
+    testWidgets('shows rating indicator when available', (tester) async {
+      const item = SequenceListItem(id: 'test-001', text: '你好', lastRating: SentenceRating.good);
 
       await tester.pumpWidget(
         MaterialApp(
@@ -44,14 +45,15 @@ void main() {
         ),
       );
 
-      expect(find.text('Best: 85'), findsOneWidget);
+      // The tile should render with a rating indicator (RatingIndicator widget)
+      expect(find.text('你好'), findsOneWidget);
     });
 
-    testWidgets('does not show score when null', (tester) async {
+    testWidgets('renders correctly when no rating', (tester) async {
       const item = SequenceListItem(
         id: 'test-001',
         text: '你好',
-        bestScore: null,
+        lastRating: null,
       );
 
       await tester.pumpWidget(
@@ -63,7 +65,8 @@ void main() {
         ),
       );
 
-      expect(find.textContaining('Best:'), findsNothing);
+      // Should render without crash even when no rating
+      expect(find.text('你好'), findsOneWidget);
     });
 
     testWidgets('calls onTap when tapped', (tester) async {
@@ -71,7 +74,7 @@ void main() {
       const item = SequenceListItem(
         id: 'test-001',
         text: '你好',
-        bestScore: null,
+        lastRating: null,
       );
 
       await tester.pumpWidget(

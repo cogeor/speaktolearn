@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:speak_to_learn/core/audio/audio_source.dart';
 import 'package:speak_to_learn/features/example_audio/domain/example_audio_repository.dart';
 import 'package:speak_to_learn/features/progress/domain/progress_repository.dart';
-import 'package:speak_to_learn/features/progress/domain/score_attempt.dart';
+import 'package:speak_to_learn/features/progress/domain/rating_attempt.dart';
 import 'package:speak_to_learn/features/progress/domain/text_sequence_progress.dart';
 import 'package:speak_to_learn/features/recording/domain/recording.dart';
 import 'package:speak_to_learn/features/recording/domain/recording_repository.dart';
@@ -53,7 +53,7 @@ class MockTextSequenceRepository implements TextSequenceRepository {
 /// Mock implementation of [ProgressRepository] for testing.
 class MockProgressRepository implements ProgressRepository {
   final Map<String, TextSequenceProgress> _progress = {};
-  final Map<String, List<ScoreAttempt>> _attempts = {};
+  final Map<String, List<RatingAttempt>> _attempts = {};
 
   @override
   Future<TextSequenceProgress> getProgress(String textSequenceId) async {
@@ -97,26 +97,22 @@ class MockProgressRepository implements ProgressRepository {
   }
 
   @override
-  Future<void> saveAttempt(ScoreAttempt attempt) async {
+  Future<void> saveAttempt(RatingAttempt attempt) async {
     final attempts = _attempts[attempt.textSequenceId] ?? [];
     attempts.add(attempt);
     _attempts[attempt.textSequenceId] = attempts;
 
     final current =
         _progress[attempt.textSequenceId] ?? TextSequenceProgress.initial();
-    final isBest =
-        current.bestScore == null || attempt.score > current.bestScore!;
     _progress[attempt.textSequenceId] = current.copyWith(
       attemptCount: current.attemptCount + 1,
       lastAttemptAt: attempt.gradedAt,
-      bestScore: isBest ? attempt.score : current.bestScore,
-      bestAttemptId: isBest ? attempt.id : current.bestAttemptId,
-      lastScore: attempt.score,
+      lastRating: attempt.rating,
     );
   }
 
   @override
-  Future<List<ScoreAttempt>> getAttempts(
+  Future<List<RatingAttempt>> getAttempts(
     String textSequenceId, {
     int? limit,
   }) async {
@@ -128,8 +124,8 @@ class MockProgressRepository implements ProgressRepository {
   }
 
   @override
-  Future<List<ScoreAttempt>> getAllAttempts() async {
-    final result = <ScoreAttempt>[];
+  Future<List<RatingAttempt>> getAllAttempts() async {
+    final result = <RatingAttempt>[];
     for (final attempts in _attempts.values) {
       result.addAll(attempts);
     }

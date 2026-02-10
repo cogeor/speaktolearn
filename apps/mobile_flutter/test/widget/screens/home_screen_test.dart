@@ -6,6 +6,7 @@ import 'package:speak_to_learn/app/theme.dart';
 import 'package:speak_to_learn/features/practice/presentation/home_controller.dart';
 import 'package:speak_to_learn/features/practice/presentation/home_screen.dart';
 import 'package:speak_to_learn/features/practice/presentation/home_state.dart';
+import 'package:speak_to_learn/features/progress/domain/sentence_rating.dart';
 import 'package:speak_to_learn/features/progress/domain/text_sequence_progress.dart';
 import 'package:speak_to_learn/features/text_sequences/domain/text_sequence.dart';
 
@@ -20,6 +21,7 @@ class FakeHomeController extends StateNotifier<HomeState>
 
   bool nextCalled = false;
   String? setCurrentSequenceId;
+  SentenceRating? lastRating;
 
   @override
   Future<void> next() async {
@@ -34,6 +36,15 @@ class FakeHomeController extends StateNotifier<HomeState>
   @override
   Future<void> refreshProgress() async {}
 
+  @override
+  void clearQueue() {}
+
+  @override
+  Future<void> rateAndNext(SentenceRating rating) async {
+    lastRating = rating;
+    nextCalled = true;
+  }
+
   void updateState(HomeState newState) {
     state = newState;
   }
@@ -42,7 +53,7 @@ class FakeHomeController extends StateNotifier<HomeState>
 void main() {
   const testSequence = TextSequence(id: 'test-001', text: '你好', language: 'zh');
 
-  const testProgress = TextSequenceProgress(tracked: true, bestScore: 85);
+  const testProgress = TextSequenceProgress(tracked: true, lastRating: SentenceRating.good);
 
   Widget buildTestWidget({
     required HomeState initialState,
@@ -96,7 +107,7 @@ void main() {
       expect(find.text('你好'), findsOneWidget);
     });
 
-    testWidgets('shows best score when available', (tester) async {
+    testWidgets('renders with progress data', (tester) async {
       await tester.pumpWidget(
         buildTestWidget(
           initialState: const HomeState(
@@ -107,10 +118,11 @@ void main() {
         ),
       );
 
-      expect(find.text('Best: 85'), findsOneWidget);
+      // The main sequence text should be visible
+      expect(find.text('你好'), findsOneWidget);
     });
 
-    testWidgets('shows Next button', (tester) async {
+    testWidgets('shows record button', (tester) async {
       await tester.pumpWidget(
         buildTestWidget(
           initialState: const HomeState(
@@ -120,28 +132,8 @@ void main() {
         ),
       );
 
-      expect(find.text('Next'), findsOneWidget);
-    });
-
-    testWidgets('next button calls controller.next', (tester) async {
-      final controller = FakeHomeController(
-        const HomeState(isLoading: false, current: testSequence),
-      );
-
-      await tester.pumpWidget(
-        buildTestWidget(
-          initialState: const HomeState(
-            isLoading: false,
-            current: testSequence,
-          ),
-          controller: controller,
-        ),
-      );
-
-      await tester.tap(find.text('Next'));
-      await tester.pump();
-
-      expect(controller.nextCalled, isTrue);
+      // Record button (mic icon) should be visible
+      expect(find.byIcon(Icons.mic), findsOneWidget);
     });
   });
 

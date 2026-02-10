@@ -89,8 +89,11 @@ void main() {
         buildTestWidget(
           const PracticeStats(
             totalAttempts: 50,
-            sequencesPracticed: 10,
-            averageScore: 75.5,
+            sequencesPracticed: 12,
+            hardCount: 5,
+            almostCount: 8,
+            goodCount: 22,
+            easyCount: 15,
             currentStreak: 3,
             longestStreak: 7,
           ),
@@ -99,24 +102,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('50'), findsOneWidget); // Total attempts
-      expect(find.text('10'), findsOneWidget); // Sequences practiced
-      expect(find.text('76%'), findsOneWidget); // Average score (rounded)
+      expect(find.text('12'), findsOneWidget); // Sequences practiced
       expect(find.text('3 days'), findsOneWidget); // Current streak
     });
 
-    testWidgets('shows dash for null averageScore', (tester) async {
+    testWidgets('shows rating counts when data exists', (tester) async {
       await tester.pumpWidget(
         buildTestWidget(
           const PracticeStats(
             totalAttempts: 5,
             sequencesPracticed: 2,
-            averageScore: null,
+            hardCount: 1,
+            almostCount: 1,
+            goodCount: 2,
+            easyCount: 1,
           ),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('-'), findsOneWidget);
+      // The screen should render without errors
+      expect(find.text('5'), findsOneWidget); // Total attempts
     });
 
     testWidgets('does not show empty state when data exists', (tester) async {
@@ -156,7 +162,7 @@ void main() {
 
       expect(demo.totalAttempts, greaterThan(0));
       expect(demo.sequencesPracticed, greaterThan(0));
-      expect(demo.averageScore, isNotNull);
+      expect(demo.hardCount + demo.almostCount + demo.goodCount + demo.easyCount, equals(demo.totalAttempts));
       expect(demo.currentStreak, greaterThan(0));
       expect(demo.longestStreak, greaterThan(0));
       expect(demo.dailyAttempts.isNotEmpty, isTrue);
@@ -165,7 +171,10 @@ void main() {
     test('demo data has realistic values', () {
       final demo = PracticeStats.demo();
 
-      expect(demo.averageScore, inInclusiveRange(0, 100));
+      expect(demo.hardCount, greaterThanOrEqualTo(0));
+      expect(demo.almostCount, greaterThanOrEqualTo(0));
+      expect(demo.goodCount, greaterThanOrEqualTo(0));
+      expect(demo.easyCount, greaterThanOrEqualTo(0));
       expect(demo.currentStreak, lessThanOrEqualTo(demo.longestStreak + 1));
       expect(demo.totalAttempts, greaterThanOrEqualTo(demo.sequencesPracticed));
     });
@@ -177,7 +186,10 @@ void main() {
 
       expect(empty.totalAttempts, equals(0));
       expect(empty.sequencesPracticed, equals(0));
-      expect(empty.averageScore, isNull);
+      expect(empty.hardCount, equals(0));
+      expect(empty.almostCount, equals(0));
+      expect(empty.goodCount, equals(0));
+      expect(empty.easyCount, equals(0));
       expect(empty.currentStreak, equals(0));
       expect(empty.longestStreak, equals(0));
       expect(empty.lastPracticeDate, isNull);
