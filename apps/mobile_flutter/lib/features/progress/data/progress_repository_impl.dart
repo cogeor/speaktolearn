@@ -167,6 +167,9 @@ class ProgressRepositoryImpl implements ProgressRepository {
   }) async {
     if (sequenceIds.isEmpty) return;
 
+    // Clear existing data to avoid enum decode errors from stale data
+    await clearAllStats();
+
     final random = Random(42); // Fixed seed for reproducibility
     final uuid = const Uuid();
     final now = DateTime.now();
@@ -180,7 +183,10 @@ class ProgressRepositoryImpl implements ProgressRepository {
 
       final dayDate = now.subtract(Duration(days: dayOffset));
 
-      for (var i = 0; i < attemptsPerDay; i++) {
+      // Variable attempts per day (5-15) to make history more realistic
+      final dailyAttempts = 5 + random.nextInt(11);
+
+      for (var i = 0; i < dailyAttempts; i++) {
         // Pick a random sequence
         final sequenceId = sequenceIds[random.nextInt(sequenceIds.length)];
 
