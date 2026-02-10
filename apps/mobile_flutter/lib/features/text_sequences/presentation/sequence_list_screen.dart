@@ -43,7 +43,7 @@ class SequenceListScreen extends ConsumerWidget {
               data: (items) => Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  '${items.length} sequence${items.length == 1 ? '' : 's'}',
+                  '${items.length} sentence${items.length == 1 ? '' : 's'}',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.secondary,
                     fontSize: 12,
@@ -60,7 +60,7 @@ class SequenceListScreen extends ConsumerWidget {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(child: Text(error.toString())),
               data: (items) => items.isEmpty
-                  ? const Center(child: Text('No sequences match the filter'))
+                  ? const Center(child: Text('No sentences match the filter'))
                   : ListView.separated(
                       itemCount: items.length,
                       separatorBuilder: (context, index) => const Divider(),
