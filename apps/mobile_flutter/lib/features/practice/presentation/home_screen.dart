@@ -16,6 +16,7 @@ import 'home_state.dart';
 import 'practice_sheet.dart';
 import 'widgets/activity_summary.dart';
 import 'widgets/level_picker.dart';
+import 'widgets/rating_nav_buttons.dart';
 
 /// Provider for the home screen controller.
 final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
@@ -238,7 +239,7 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 48),
                     // Audio controls row: Play, Record, Replay
                     _AudioControlsRow(
                       sequence: sequence,
@@ -252,42 +253,28 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Rating indicator will be shown here after Loop 17-18
-              // Score display removed in favor of self-report ratings
-              Center(
-                child: SizedBox(
-                  width: 180,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      await ref
-                          .read(exampleAudioControllerProvider.notifier)
-                          .stop();
-                      await widget.controller.next();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text('Next', style: TextStyle(fontSize: 18)),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward, size: 22),
-                      ],
-                    ),
-                  ),
+        // Show rating buttons only after user has played back their recording
+        Builder(
+          builder: (context) {
+            final recordingState = ref.watch(recordingControllerProvider);
+            if (recordingState.hasPlayedBack) {
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                child: RatingNavButtons(
+                  onRate: (rating) async {
+                    await ref
+                        .read(exampleAudioControllerProvider.notifier)
+                        .stop();
+                    await widget.controller.rateAndNext(rating);
+                    // Reset playback state for next sentence
+                    ref.read(recordingControllerProvider.notifier).resetPlaybackState();
+                  },
                 ),
-              ),
-            ],
-          ),
+              );
+            }
+            // Empty space when rating buttons are not visible
+            return const SizedBox(height: 24);
+          },
         ),
       ],
     );

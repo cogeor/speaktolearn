@@ -267,6 +267,14 @@ class RecordingController extends StateNotifier<RecordingState> {
     state = state.copyWith(isPlaying: false, hasPlayedBack: true);
   }
 
+  /// Resets playback state for the next sentence.
+  ///
+  /// Called after rating a sentence to reset the state for the next one.
+  /// Sets [hasPlayedBack] and [hasLatestRecording] to false.
+  void resetPlaybackState() {
+    state = state.copyWith(hasPlayedBack: false, hasLatestRecording: false);
+  }
+
   /// Cancels any active recording or playback.
   ///
   /// Stops the recorder if recording is in progress.
