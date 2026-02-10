@@ -21,10 +21,11 @@ mixin _$RecordingState {
   RecordingPhase get phase => throw _privateConstructorUsedError;
   bool get isPlaying => throw _privateConstructorUsedError;
   bool get hasLatestRecording => throw _privateConstructorUsedError;
-  String? get error => throw _privateConstructorUsedError;
 
-  /// The latest grade from the most recent scoring attempt.
-  Grade? get latestGrade => throw _privateConstructorUsedError;
+  /// Whether the user has played back their recording at least once.
+  /// Used to determine if rating buttons should be visible.
+  bool get hasPlayedBack => throw _privateConstructorUsedError;
+  String? get error => throw _privateConstructorUsedError;
 
   /// Remaining seconds in the auto-stop countdown. Null when not recording.
   int? get remainingSeconds => throw _privateConstructorUsedError;
@@ -50,13 +51,11 @@ abstract class $RecordingStateCopyWith<$Res> {
     RecordingPhase phase,
     bool isPlaying,
     bool hasLatestRecording,
+    bool hasPlayedBack,
     String? error,
-    Grade? latestGrade,
     int? remainingSeconds,
     int? totalDurationSeconds,
   });
-
-  $GradeCopyWith<$Res>? get latestGrade;
 }
 
 /// @nodoc
@@ -77,8 +76,8 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
     Object? phase = null,
     Object? isPlaying = null,
     Object? hasLatestRecording = null,
+    Object? hasPlayedBack = null,
     Object? error = freezed,
-    Object? latestGrade = freezed,
     Object? remainingSeconds = freezed,
     Object? totalDurationSeconds = freezed,
   }) {
@@ -96,14 +95,14 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
                 ? _value.hasLatestRecording
                 : hasLatestRecording // ignore: cast_nullable_to_non_nullable
                       as bool,
+            hasPlayedBack: null == hasPlayedBack
+                ? _value.hasPlayedBack
+                : hasPlayedBack // ignore: cast_nullable_to_non_nullable
+                      as bool,
             error: freezed == error
                 ? _value.error
                 : error // ignore: cast_nullable_to_non_nullable
                       as String?,
-            latestGrade: freezed == latestGrade
-                ? _value.latestGrade
-                : latestGrade // ignore: cast_nullable_to_non_nullable
-                      as Grade?,
             remainingSeconds: freezed == remainingSeconds
                 ? _value.remainingSeconds
                 : remainingSeconds // ignore: cast_nullable_to_non_nullable
@@ -115,20 +114,6 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
           )
           as $Val,
     );
-  }
-
-  /// Create a copy of RecordingState
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @pragma('vm:prefer-inline')
-  $GradeCopyWith<$Res>? get latestGrade {
-    if (_value.latestGrade == null) {
-      return null;
-    }
-
-    return $GradeCopyWith<$Res>(_value.latestGrade!, (value) {
-      return _then(_value.copyWith(latestGrade: value) as $Val);
-    });
   }
 }
 
@@ -145,14 +130,11 @@ abstract class _$$RecordingStateImplCopyWith<$Res>
     RecordingPhase phase,
     bool isPlaying,
     bool hasLatestRecording,
+    bool hasPlayedBack,
     String? error,
-    Grade? latestGrade,
     int? remainingSeconds,
     int? totalDurationSeconds,
   });
-
-  @override
-  $GradeCopyWith<$Res>? get latestGrade;
 }
 
 /// @nodoc
@@ -172,8 +154,8 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
     Object? phase = null,
     Object? isPlaying = null,
     Object? hasLatestRecording = null,
+    Object? hasPlayedBack = null,
     Object? error = freezed,
-    Object? latestGrade = freezed,
     Object? remainingSeconds = freezed,
     Object? totalDurationSeconds = freezed,
   }) {
@@ -191,14 +173,14 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
             ? _value.hasLatestRecording
             : hasLatestRecording // ignore: cast_nullable_to_non_nullable
                   as bool,
+        hasPlayedBack: null == hasPlayedBack
+            ? _value.hasPlayedBack
+            : hasPlayedBack // ignore: cast_nullable_to_non_nullable
+                  as bool,
         error: freezed == error
             ? _value.error
             : error // ignore: cast_nullable_to_non_nullable
                   as String?,
-        latestGrade: freezed == latestGrade
-            ? _value.latestGrade
-            : latestGrade // ignore: cast_nullable_to_non_nullable
-                  as Grade?,
         remainingSeconds: freezed == remainingSeconds
             ? _value.remainingSeconds
             : remainingSeconds // ignore: cast_nullable_to_non_nullable
@@ -219,8 +201,8 @@ class _$RecordingStateImpl extends _RecordingState {
     this.phase = RecordingPhase.idle,
     this.isPlaying = false,
     this.hasLatestRecording = false,
+    this.hasPlayedBack = false,
     this.error,
-    this.latestGrade,
     this.remainingSeconds,
     this.totalDurationSeconds,
   }) : super._();
@@ -235,12 +217,14 @@ class _$RecordingStateImpl extends _RecordingState {
   @override
   @JsonKey()
   final bool hasLatestRecording;
+
+  /// Whether the user has played back their recording at least once.
+  /// Used to determine if rating buttons should be visible.
+  @override
+  @JsonKey()
+  final bool hasPlayedBack;
   @override
   final String? error;
-
-  /// The latest grade from the most recent scoring attempt.
-  @override
-  final Grade? latestGrade;
 
   /// Remaining seconds in the auto-stop countdown. Null when not recording.
   @override
@@ -252,7 +236,7 @@ class _$RecordingStateImpl extends _RecordingState {
 
   @override
   String toString() {
-    return 'RecordingState(phase: $phase, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, error: $error, latestGrade: $latestGrade, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds)';
+    return 'RecordingState(phase: $phase, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, hasPlayedBack: $hasPlayedBack, error: $error, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds)';
   }
 
   @override
@@ -265,9 +249,9 @@ class _$RecordingStateImpl extends _RecordingState {
                 other.isPlaying == isPlaying) &&
             (identical(other.hasLatestRecording, hasLatestRecording) ||
                 other.hasLatestRecording == hasLatestRecording) &&
+            (identical(other.hasPlayedBack, hasPlayedBack) ||
+                other.hasPlayedBack == hasPlayedBack) &&
             (identical(other.error, error) || other.error == error) &&
-            (identical(other.latestGrade, latestGrade) ||
-                other.latestGrade == latestGrade) &&
             (identical(other.remainingSeconds, remainingSeconds) ||
                 other.remainingSeconds == remainingSeconds) &&
             (identical(other.totalDurationSeconds, totalDurationSeconds) ||
@@ -280,8 +264,8 @@ class _$RecordingStateImpl extends _RecordingState {
     phase,
     isPlaying,
     hasLatestRecording,
+    hasPlayedBack,
     error,
-    latestGrade,
     remainingSeconds,
     totalDurationSeconds,
   );
@@ -303,8 +287,8 @@ abstract class _RecordingState extends RecordingState {
     final RecordingPhase phase,
     final bool isPlaying,
     final bool hasLatestRecording,
+    final bool hasPlayedBack,
     final String? error,
-    final Grade? latestGrade,
     final int? remainingSeconds,
     final int? totalDurationSeconds,
   }) = _$RecordingStateImpl;
@@ -317,12 +301,13 @@ abstract class _RecordingState extends RecordingState {
   bool get isPlaying;
   @override
   bool get hasLatestRecording;
+
+  /// Whether the user has played back their recording at least once.
+  /// Used to determine if rating buttons should be visible.
+  @override
+  bool get hasPlayedBack;
   @override
   String? get error;
-
-  /// The latest grade from the most recent scoring attempt.
-  @override
-  Grade? get latestGrade;
 
   /// Remaining seconds in the auto-stop countdown. Null when not recording.
   @override

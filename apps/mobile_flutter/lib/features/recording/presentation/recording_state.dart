@@ -1,12 +1,10 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-import '../../scoring/domain/grade.dart';
-
 part 'recording_state.freezed.dart';
 
 /// Explicit phases for the recording state machine.
 ///
-/// State flow: idle -> recording -> saving -> scoring -> complete
+/// State flow: idle -> recording -> saving -> complete
 /// Error at any phase transitions to error, which can be dismissed back to idle.
 enum RecordingPhase {
   /// Ready to record
@@ -18,10 +16,7 @@ enum RecordingPhase {
   /// Recording stopped, saving file
   saving,
 
-  /// File saved, scoring pronunciation
-  scoring,
-
-  /// Scoring complete, showing results
+  /// File saved, ready for playback
   complete,
 
   /// An error occurred
@@ -37,10 +32,11 @@ class RecordingState with _$RecordingState {
     @Default(RecordingPhase.idle) RecordingPhase phase,
     @Default(false) bool isPlaying,
     @Default(false) bool hasLatestRecording,
-    String? error,
 
-    /// The latest grade from the most recent scoring attempt.
-    Grade? latestGrade,
+    /// Whether the user has played back their recording at least once.
+    /// Used to determine if rating buttons should be visible.
+    @Default(false) bool hasPlayedBack,
+    String? error,
 
     /// Remaining seconds in the auto-stop countdown. Null when not recording.
     int? remainingSeconds,
@@ -52,9 +48,4 @@ class RecordingState with _$RecordingState {
   /// Whether the recorder is actively recording audio.
   /// Derived from [phase] for backward compatibility.
   bool get isRecording => phase == RecordingPhase.recording;
-
-  /// Whether scoring is in progress (saving or scoring phases).
-  /// Derived from [phase] for backward compatibility.
-  bool get isScoring =>
-      phase == RecordingPhase.saving || phase == RecordingPhase.scoring;
 }
