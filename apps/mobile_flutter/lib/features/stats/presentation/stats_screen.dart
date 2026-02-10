@@ -88,21 +88,13 @@ class _StatsContent extends StatelessWidget {
           children: [
             _StatCard(
               icon: Icons.mic,
-              label: 'Total Attempts',
+              label: 'Total Spoken',
               value: stats.totalAttempts.toString(),
             ),
             _StatCard(
               icon: Icons.library_books,
-              label: 'Sequences Practiced',
+              label: 'Sentences Practiced',
               value: stats.sequencesPracticed.toString(),
-            ),
-            _StatCard(
-              icon: Icons.grade,
-              label: 'Average Score',
-              value: stats.averageScore != null
-                  ? '${stats.averageScore!.toStringAsFixed(0)}%'
-                  : '-',
-              valueColor: stats.averageScore?.round().scoreColor,
             ),
             _StatCard(
               icon: Icons.local_fire_department,
@@ -110,21 +102,55 @@ class _StatsContent extends StatelessWidget {
               value: '${stats.currentStreak} days',
               valueColor: stats.currentStreak > 0 ? AppTheme.warning : null,
             ),
+            _StatCard(
+              icon: Icons.emoji_events,
+              label: 'Longest Streak',
+              value: '${stats.longestStreak} days',
+              valueColor: stats.longestStreak > 0 ? AppTheme.warning : null,
+            ),
           ],
         ),
-        const SizedBox(height: 24),
-        // Streak info
-        if (stats.longestStreak > 0)
-          Card(
-            child: ListTile(
-              leading: const Icon(Icons.emoji_events, color: AppTheme.warning),
-              title: const Text('Longest Streak'),
-              trailing: Text(
-                '${stats.longestStreak} days',
-                style: Theme.of(context).textTheme.titleMedium,
+        // Rating breakdown
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Rating Breakdown',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
-            ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  _RatingCountCard(
+                    color: AppTheme.ratingHard,
+                    label: 'Hard',
+                    count: stats.hardCount,
+                  ),
+                  const SizedBox(width: 8),
+                  _RatingCountCard(
+                    color: AppTheme.ratingAlmost,
+                    label: 'Almost',
+                    count: stats.almostCount,
+                  ),
+                  const SizedBox(width: 8),
+                  _RatingCountCard(
+                    color: AppTheme.ratingGood,
+                    label: 'Good',
+                    count: stats.goodCount,
+                  ),
+                  const SizedBox(width: 8),
+                  _RatingCountCard(
+                    color: AppTheme.ratingEasy,
+                    label: 'Easy',
+                    count: stats.easyCount,
+                  ),
+                ],
+              ),
+            ],
           ),
+        ),
         // Activity heatmap
         const SizedBox(height: 24),
         const Text(
@@ -173,6 +199,45 @@ class _StatCard extends StatelessWidget {
               style: const TextStyle(color: AppTheme.subtle, fontSize: 12),
               textAlign: TextAlign.center,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RatingCountCard extends StatelessWidget {
+  const _RatingCountCard({
+    required this.color,
+    required this.label,
+    required this.count,
+  });
+
+  final Color color;
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color, width: 2),
+        ),
+        child: Column(
+          children: [
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            Text(label, style: const TextStyle(fontSize: 12)),
           ],
         ),
       ),
