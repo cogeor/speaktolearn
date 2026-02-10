@@ -16,7 +16,6 @@ import 'home_state.dart';
 import 'practice_sheet.dart';
 import 'widgets/activity_summary.dart';
 import 'widgets/level_picker.dart';
-import 'widgets/score_bar.dart';
 
 /// Provider for the home screen controller.
 final homeControllerProvider = StateNotifierProvider<HomeController, HomeState>(
@@ -258,27 +257,8 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (widget.state.currentProgress?.bestScore != null) ...[
-                Row(
-                  children: [
-                    Text(
-                      'Best: ${widget.state.currentProgress!.bestScore}',
-                      style: TextStyle(
-                        color:
-                            widget.state.currentProgress!.bestScore!.scoreColor,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ScoreBar(
-                        score: widget.state.currentProgress!.bestScore,
-                        height: 8,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
+              // Rating indicator will be shown here after Loop 17-18
+              // Score display removed in favor of self-report ratings
               Center(
                 child: SizedBox(
                   width: 180,
@@ -378,10 +358,9 @@ class _AudioControlsRow extends ConsumerWidget {
               debugPrint('🎤 Record button pressed. isRecording=$isRecording');
               try {
                 if (isRecording) {
-                  debugPrint('🎤 Stopping and scoring...');
-                  await controller.stopAndScore(sequence);
-                  ref.read(homeControllerProvider.notifier).refreshProgress();
-                  debugPrint('🎤 Scoring complete');
+                  debugPrint('Stopping and saving...');
+                  await controller.stopAndSave(sequence);
+                  debugPrint('Save complete');
                 } else {
                   debugPrint('🎤 Starting recording...');
                   await controller.startRecording(sequence);

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/di.dart';
 import '../../../app/theme.dart';
 import '../../text_sequences/domain/text_sequence.dart';
+import '../../progress/domain/sentence_rating.dart';
 import '../../progress/domain/text_sequence_progress.dart';
 import '../../example_audio/presentation/example_audio_controller.dart';
 import '../../recording/presentation/widgets/recording_waveform.dart';
@@ -135,7 +136,7 @@ class _RecordButton extends ConsumerWidget {
     final controller = ref.read(recordingControllerProvider.notifier);
 
     Widget child;
-    if (state.isScoring) {
+    if (state.isSaving) {
       child = const SizedBox(
         width: 24,
         height: 24,
@@ -148,11 +149,11 @@ class _RecordButton extends ConsumerWidget {
     }
 
     return FloatingActionButton(
-      onPressed: state.isScoring
+      onPressed: state.isSaving
           ? null
           : () {
               if (state.isRecording) {
-                controller.stopAndScore(sequence);
+                controller.stopAndSave(sequence);
               } else {
                 controller.startRecording(sequence);
               }
@@ -186,139 +187,43 @@ class _ReplayButton extends ConsumerWidget {
   }
 }
 
-/// Displays latest and best scores with detailed breakdown.
-class _ScoreDisplay extends ConsumerWidget {
+/// Displays attempt count and last rating.
+/// Note: Detailed breakdown removed as scoring moved to self-report.
+class _ScoreDisplay extends StatelessWidget {
   const _ScoreDisplay({required this.progress, required this.sequence});
 
   final TextSequenceProgress? progress;
   final TextSequence sequence;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recordingState = ref.watch(recordingControllerProvider);
-    final latestGrade = recordingState.latestGrade;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Main score row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _ScoreLabel(label: 'Latest', score: progress?.lastScore),
-            const SizedBox(width: 24),
-            _ScoreLabel(label: 'Best', score: progress?.bestScore),
-          ],
-        ),
-        // Detailed breakdown (if available from latest grade)
-        if (latestGrade != null &&
-            (latestGrade.accuracy != null ||
-                latestGrade.completeness != null)) ...[
-          const SizedBox(height: 16),
-          _DetailedScoreRow(
-            accuracy: latestGrade.accuracy,
-            completeness: latestGrade.completeness,
-          ),
-        ],
-        // Recognized text comparison
-        if (latestGrade?.recognizedText != null) ...[
-          const SizedBox(height: 16),
-          _RecognizedTextComparison(
-            expected: sequence.text,
-            recognized: latestGrade!.recognizedText!,
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// Row showing accuracy and completeness scores.
-class _DetailedScoreRow extends StatelessWidget {
-  const _DetailedScoreRow({this.accuracy, this.completeness});
-
-  final int? accuracy;
-  final int? completeness;
-
-  @override
   Widget build(BuildContext context) {
-    if (accuracy == null && completeness == null) {
-      return const SizedBox.shrink();
-    }
+    final lastRating = progress?.lastRating;
+    final ratingText = lastRating?.label ?? '-';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (accuracy != null) ...[
-          _MiniScoreLabel(label: 'Accuracy', score: accuracy!),
-          const SizedBox(width: 16),
-        ],
-        if (completeness != null)
-          _MiniScoreLabel(label: 'Completeness', score: completeness!),
-      ],
-    );
-  }
-}
-
-/// Small score label for secondary metrics.
-class _MiniScoreLabel extends StatelessWidget {
-  const _MiniScoreLabel({required this.label, required this.score});
-
-  final String label;
-  final int score;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
-        Text(
-          '$score%',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: score.scoreColor,
+        _ScoreLabel(label: 'Attempts', score: progress?.attemptCount),
+        const SizedBox(width: 24),
+        SizedBox(
+          width: 80,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Latest', style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 4),
+              Text(
+                ratingText,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: lastRating?.color ?? AppTheme.subtle,
+                ),
+              ),
+            ],
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Displays expected vs recognized text for comparison.
-class _RecognizedTextComparison extends StatelessWidget {
-  const _RecognizedTextComparison({
-    required this.expected,
-    required this.recognized,
-  });
-
-  final String expected;
-  final String recognized;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('You said:', style: Theme.of(context).textTheme.labelSmall),
-          const SizedBox(height: 4),
-          Text(
-            recognized.isNotEmpty ? recognized : '(nothing detected)',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontStyle: recognized.isEmpty
-                  ? FontStyle.italic
-                  : FontStyle.normal,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

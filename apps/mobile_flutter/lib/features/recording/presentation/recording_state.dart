@@ -48,4 +48,8 @@ class RecordingState with _$RecordingState {
   /// Whether the recorder is actively recording audio.
   /// Derived from [phase] for backward compatibility.
   bool get isRecording => phase == RecordingPhase.recording;
+
+  /// Whether the recording is being saved.
+  /// Derived from [phase] for convenience.
+  bool get isSaving => phase == RecordingPhase.saving;
 }

@@ -110,8 +110,6 @@ final recordingControllerProvider =
       return RecordingController(
         recorder: ref.watch(audioRecorderProvider),
         repository: ref.watch(recordingRepositoryProvider),
-        scorer: ref.watch(pronunciationScorerProvider),
-        progressRepository: ref.watch(progressRepositoryProvider),
         audioPlayer: ref.watch(audioPlayerProvider),
       );
     });

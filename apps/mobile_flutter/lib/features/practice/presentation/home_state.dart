@@ -17,7 +17,7 @@ enum RecordingStatus {
 /// Extension to derive [RecordingStatus] from [RecordingState].
 extension RecordingStatusExtension on RecordingState {
   RecordingStatus get recordingStatus {
-    if (isScoring) return RecordingStatus.processing;
+    if (isSaving) return RecordingStatus.processing;
     if (isRecording) return RecordingStatus.recording;
     return RecordingStatus.idle;
   }
