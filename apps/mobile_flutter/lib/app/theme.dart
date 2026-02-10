@@ -22,6 +22,19 @@ class AppTheme {
   /// Error/incorrect color.
   static const Color error = Color(0xFFF44336);
 
+  // Rating colors for self-reported difficulty
+  /// Rating color for "hard" - Red.
+  static const Color ratingHard = Color.fromARGB(255, 255, 40, 40);
+
+  /// Rating color for "almost" - Yellow.
+  static const Color ratingAlmost = Color.fromARGB(255, 255, 202, 56);
+
+  /// Rating color for "good" - Green.
+  static const Color ratingGood = Color.fromARGB(255, 74, 210, 0);
+
+  /// Rating color for "easy" - Blue.
+  static const Color ratingEasy = Color.fromARGB(255, 83, 100, 255);
+
   /// The dark theme data.
   static ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
