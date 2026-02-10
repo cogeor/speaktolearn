@@ -9,6 +9,9 @@ tools/mandarin_grader/data/
 # RVC voice models (large binary files)
 models/rvc/
 
+# ONNX model files (large binaries)
+*.onnx
+
 # Training outputs
 tools/mandarin_grader/checkpoints/
 tools/mandarin_grader/checkpoints_*/
