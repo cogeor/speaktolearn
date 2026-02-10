@@ -17,7 +17,7 @@ class SequenceListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: RatingIndicator(rating: item.lastRating, size: 20),
+      trailing: RatingIndicator(rating: item.lastRating, size: 20),
       title: Text(item.text),
       onTap: onTap,
     );
