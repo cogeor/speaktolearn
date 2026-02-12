@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 """Training script for SyllablePredictorV3.
 
-Trains the autoregressive syllable+tone model on synthetic data.
+Trains the autoregressive syllable+tone model on various data sources.
 
 Usage:
     # Run overfit test first
     python train_v3.py --overfit-test
 
-    # Full training (logs to checkpoints_v3_run1/train.log)
+    # Full training with synthetic data (default)
     python train_v3.py --epochs 30 --checkpoint-dir checkpoints_v3_run1
+
+    # Train with AISHELL-3 data
+    python train_v3.py --data-source aishell3 --data-dir datasets/aishell3
+
+    # Train with mixed data sources
+    python train_v3.py --data-source synthetic,aishell3 \\
+        --data-dir data/synthetic_train,datasets/aishell3
 
     # Resume from checkpoint
     python train_v3.py --epochs 30 --checkpoint-dir checkpoints_v3_run1 --resume best_model.pt
+
+    # List available data sources
+    python train_v3.py --list-sources
 """
 
 from __future__ import annotations
@@ -78,28 +88,104 @@ class TrainingConfig:
 
 
 def load_synthetic_data(synthetic_dir: Path, logger) -> tuple[list, list]:
-    """Load synthetic training data."""
-    from mandarin_grader.data.autoregressive_dataset import load_synthetic_metadata
+    """Load synthetic training data (legacy function for backwards compatibility)."""
+    return load_training_data(["synthetic"], [synthetic_dir], logger)
 
-    logger.info(f"Loading data from {synthetic_dir}")
-    sentences = load_synthetic_metadata(synthetic_dir)
-    logger.info(f"Loaded {len(sentences)} sentences")
 
-    if not sentences:
+def load_training_data(
+    sources: list[str],
+    data_dirs: list[Path],
+    logger,
+    train_split: float = 0.8,
+    max_sentences_per_source: int | None = None,
+) -> tuple[list, list]:
+    """Load training data from multiple sources.
+
+    Args:
+        sources: List of data source names (e.g., ["synthetic", "aishell3"])
+        data_dirs: List of directories corresponding to each source
+        logger: Logger instance
+        train_split: Fraction for training (rest is validation)
+        max_sentences_per_source: Optional limit per source
+
+    Returns:
+        (train_sentences, val_sentences) lists
+    """
+    from mandarin_grader.data.data_source import DataSourceRegistry, SentenceInfo
+    from mandarin_grader.data.autoregressive_dataset import SyntheticSentenceInfo
+
+    all_sentences = []
+
+    for source_name, data_dir in zip(sources, data_dirs):
+        logger.info(f"Loading data source: {source_name} from {data_dir}")
+
+        try:
+            source = DataSourceRegistry.get(source_name)
+            if not source.is_available(data_dir):
+                logger.warning(f"  Source not available at {data_dir}")
+                continue
+
+            kwargs = {}
+            if max_sentences_per_source:
+                kwargs["max_sentences"] = max_sentences_per_source
+
+            sentences = source.load(data_dir, **kwargs)
+            logger.info(f"  Loaded {len(sentences)} sentences from {source_name}")
+
+            # Convert SentenceInfo to SyntheticSentenceInfo for compatibility
+            for s in sentences:
+                all_sentences.append(SyntheticSentenceInfo(
+                    id=s.id,
+                    audio_path=s.audio_path,
+                    text=s.text,
+                    syllables=s.syllables,
+                    syllable_boundaries=s.syllable_boundaries,
+                    sample_rate=s.sample_rate,
+                ))
+
+        except Exception as e:
+            logger.error(f"  Error loading {source_name}: {e}")
+            continue
+
+    logger.info(f"Total sentences: {len(all_sentences)}")
+
+    if not all_sentences:
         return [], []
 
+    # Shuffle and split
     np.random.seed(42)
-    indices = np.random.permutation(len(sentences))
-    split_idx = int(len(sentences) * 0.8)
+    indices = np.random.permutation(len(all_sentences))
+    split_idx = int(len(all_sentences) * train_split)
 
-    train = [sentences[i] for i in indices[:split_idx]]
-    val = [sentences[i] for i in indices[split_idx:]]
+    train = [all_sentences[i] for i in indices[:split_idx]]
+    val = [all_sentences[i] for i in indices[split_idx:]]
     logger.info(f"Train: {len(train)}, Val: {len(val)}")
     return train, val
 
 
-def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool):
-    """Create PyTorch DataLoader."""
+def list_available_sources():
+    """Print available data sources and exit."""
+    from mandarin_grader.data.data_source import DataSourceRegistry
+
+    print("Available data sources:")
+    print()
+    for name in DataSourceRegistry.list_sources():
+        source = DataSourceRegistry.get(name)
+        print(f"  {name}")
+        print(f"    {source.description}")
+        print()
+
+
+def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin"):
+    """Create PyTorch DataLoader.
+
+    Args:
+        sentences: List of sentence info
+        batch_size: Batch size
+        shuffle: Whether to shuffle
+        augment: Whether to augment audio
+        context_mode: "pinyin" = actual syllables, "position" = only syllable index
+    """
     import torch
     from torch.utils.data import DataLoader
     from mandarin_grader.data.autoregressive_dataset import AutoregressiveDataset
@@ -126,7 +212,15 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
             mel = extract_mel_spectrogram(sample.audio_chunk, config)
             mels.append(mel)
 
-            ids = vocab.encode_sequence(sample.pinyin_context, add_bos=True)
+            if context_mode == "pinyin":
+                # Original: encode actual syllables
+                ids = vocab.encode_sequence(sample.pinyin_context, add_bos=True)
+            else:
+                # Position-only: encode [BOS, position_index]
+                # Position token = 2 + syllable_idx (0=PAD, 1=BOS, 2+=positions)
+                position_token = 2 + sample.syllable_idx
+                ids = [vocab.bos_token, position_token]
+
             pinyin_ids_list.append(ids)
             max_pinyin_len = max(max_pinyin_len, len(ids))
 
@@ -350,17 +444,57 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
 def main():
     import torch
 
-    parser = argparse.ArgumentParser(description="Train SyllablePredictorV3")
+    parser = argparse.ArgumentParser(
+        description="Train SyllablePredictorV3",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--epochs", type=int, default=30)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=0.0003)
     parser.add_argument("--log-every-epochs", type=int, default=5)
     parser.add_argument("--checkpoint-dir", type=Path, default=DEFAULT_CHECKPOINT_DIR)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
-    parser.add_argument("--synthetic-dir", type=Path, default=SYNTHETIC_DIR)
+
+    # Data source arguments
+    parser.add_argument(
+        "--data-source", type=str, default="synthetic",
+        help="Data source(s) to use, comma-separated (e.g., 'synthetic,aishell3')"
+    )
+    parser.add_argument(
+        "--data-dir", type=str, default=None,
+        help="Data directory(ies), comma-separated. If not provided, uses defaults."
+    )
+    parser.add_argument(
+        "--max-sentences", type=int, default=None,
+        help="Maximum sentences per data source (useful for quick tests)"
+    )
+
+    # Legacy argument for backwards compatibility
+    parser.add_argument("--synthetic-dir", type=Path, default=SYNTHETIC_DIR,
+                        help="(Deprecated) Use --data-source and --data-dir instead")
+
     parser.add_argument("--resume", type=str, default=None, help="Checkpoint filename to resume from")
     parser.add_argument("--overfit-test", action="store_true")
+    parser.add_argument("--list-sources", action="store_true", help="List available data sources and exit")
+
+    # Model architecture arguments
+    parser.add_argument("--d-model", type=int, default=192, help="Model dimension (default: 192)")
+    parser.add_argument("--n-layers", type=int, default=4, help="Number of transformer layers (default: 4)")
+    parser.add_argument("--n-heads", type=int, default=6, help="Number of attention heads (default: 6)")
+    parser.add_argument("--dim-feedforward", type=int, default=384, help="FFN hidden dimension (default: 384)")
+
+    # Context mode
+    parser.add_argument(
+        "--context-mode", type=str, default="pinyin", choices=["pinyin", "position"],
+        help="Context mode: 'pinyin' = actual syllables (default), 'position' = only syllable count/index"
+    )
+
     args = parser.parse_args()
+
+    # Handle --list-sources
+    if args.list_sources:
+        list_available_sources()
+        return
 
     config = TrainingConfig(
         epochs=args.epochs,
@@ -377,15 +511,49 @@ def main():
     logger.info("SyllablePredictorV3 Training")
     logger.info("=" * 60)
 
+    # Parse data sources
+    sources = [s.strip() for s in args.data_source.split(",")]
+
+    # Parse data directories
+    if args.data_dir:
+        data_dirs = [Path(d.strip()) for d in args.data_dir.split(",")]
+    else:
+        # Use defaults based on source names
+        data_dirs = []
+        for source in sources:
+            if source == "synthetic":
+                data_dirs.append(args.synthetic_dir)
+            elif source == "aishell3":
+                data_dirs.append(Path(__file__).parent.parent / "datasets" / "aishell3" / "data_aishell3")
+            else:
+                data_dirs.append(Path(__file__).parent.parent / "datasets" / source)
+
+    # Ensure same number of sources and directories
+    if len(sources) != len(data_dirs):
+        logger.error(f"Mismatch: {len(sources)} sources but {len(data_dirs)} directories")
+        return
+
+    logger.info(f"Data sources: {sources}")
+    for src, dir in zip(sources, data_dirs):
+        logger.info(f"  {src}: {dir}")
+
     # Load data
-    train_sentences, val_sentences = load_synthetic_data(args.synthetic_dir, logger)
+    train_sentences, val_sentences = load_training_data(
+        sources, data_dirs, logger,
+        max_sentences_per_source=args.max_sentences,
+    )
     if not train_sentences:
         logger.error("No training data!")
         return
 
     # Create model
     from mandarin_grader.model.syllable_predictor_v3 import SyllablePredictorV3, SyllablePredictorConfig
-    model_config = SyllablePredictorConfig()
+    model_config = SyllablePredictorConfig(
+        d_model=args.d_model,
+        n_layers=args.n_layers,
+        n_heads=args.n_heads,
+        dim_feedforward=args.dim_feedforward,
+    )
     model = SyllablePredictorV3(model_config).to(config.device)
 
     total_params = sum(p.numel() for p in model.parameters())
@@ -393,8 +561,9 @@ def main():
     logger.info(f"Device: {config.device}")
 
     # Create dataloaders
-    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True)
-    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False)
+    logger.info(f"Context mode: {args.context_mode}")
+    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode)
+    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode)
     logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
     # Overfit test
