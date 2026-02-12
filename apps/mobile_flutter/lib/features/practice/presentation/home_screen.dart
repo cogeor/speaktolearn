@@ -121,19 +121,68 @@ class _HomeContent extends ConsumerStatefulWidget {
   ConsumerState<_HomeContent> createState() => _HomeContentState();
 }
 
+/// Display state for the auxiliary text area (pinyin/translation).
+enum _AuxDisplayState { hidden, pinyin, translation }
+
 class _HomeContentState extends ConsumerState<_HomeContent> {
-  // Local override for pinyin visibility (null = use settings, true/false = user override)
-  bool? _pinyinOverride;
+  // Current auxiliary display state
+  _AuxDisplayState _auxDisplayState = _AuxDisplayState.hidden;
   String? _lastSequenceId;
 
   @override
   void didUpdateWidget(covariant _HomeContent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reset local override when sequence changes
+    // Reset display state when sequence changes
     if (widget.state.current?.id != _lastSequenceId) {
-      _pinyinOverride = null;
+      _auxDisplayState = _AuxDisplayState.hidden;
       _lastSequenceId = widget.state.current?.id;
     }
+  }
+
+  /// Cycles through: hidden → pinyin → translation → hidden
+  void _cycleAuxDisplay() {
+    setState(() {
+      _auxDisplayState = switch (_auxDisplayState) {
+        _AuxDisplayState.hidden => _AuxDisplayState.pinyin,
+        _AuxDisplayState.pinyin => _AuxDisplayState.translation,
+        _AuxDisplayState.translation => _AuxDisplayState.hidden,
+      };
+    });
+  }
+
+  /// Builds the auxiliary text widget based on current display state.
+  Widget _buildAuxText(
+    BuildContext context,
+    String? romanization,
+    String? translation,
+  ) {
+    final String text;
+    final Color color;
+    final FontStyle fontStyle;
+
+    switch (_auxDisplayState) {
+      case _AuxDisplayState.hidden:
+        text = 'tap for pinyin / translation';
+        color = AppTheme.subtle;
+        fontStyle = FontStyle.italic;
+      case _AuxDisplayState.pinyin:
+        text = romanization ?? '(no pinyin)';
+        color = Theme.of(context).colorScheme.secondary;
+        fontStyle = FontStyle.normal;
+      case _AuxDisplayState.translation:
+        text = translation ?? '(no translation)';
+        color = Theme.of(context).colorScheme.tertiary;
+        fontStyle = FontStyle.normal;
+    }
+
+    return Text(
+      text,
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: color,
+            fontStyle: fontStyle,
+          ),
+      textAlign: TextAlign.center,
+    );
   }
 
   void _showPracticeSheet(
@@ -184,14 +233,10 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     final sequence = widget.state.current!;
     final hasPinyin =
         sequence.romanization != null && sequence.romanization!.isNotEmpty;
+    final englishTranslation = sequence.gloss?['en'];
+    final hasTranslation = englishTranslation != null && englishTranslation.isNotEmpty;
     final hasAudio = sequence.voices != null && sequence.voices!.isNotEmpty;
     final audioState = ref.watch(exampleAudioControllerProvider);
-
-    // Watch settings for reactive pinyin visibility
-    final settingsAsync = ref.watch(settingsControllerProvider);
-    final showRomanizationSetting =
-        settingsAsync.valueOrNull?.showRomanization ?? true;
-    final showPinyin = _pinyinOverride ?? showRomanizationSetting;
 
     final recordingState = ref.watch(recordingControllerProvider);
     final canRate = recordingState.hasPlayedBack;
@@ -228,26 +273,15 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      // Pinyin
-                      if (hasPinyin) ...[
+                      // Auxiliary text (pinyin / translation)
+                      if (hasPinyin || hasTranslation) ...[
                         const SizedBox(height: 12),
                         GestureDetector(
-                          onTap: () =>
-                              setState(() => _pinyinOverride = !showPinyin),
-                          child: Text(
-                            showPinyin
-                                ? sequence.romanization!
-                                : '(tap to show pinyin)',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: showPinyin
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : AppTheme.subtle,
-                                  fontStyle: showPinyin
-                                      ? FontStyle.normal
-                                      : FontStyle.italic,
-                                ),
-                            textAlign: TextAlign.center,
+                          onTap: _cycleAuxDisplay,
+                          child: _buildAuxText(
+                            context,
+                            sequence.romanization,
+                            englishTranslation,
                           ),
                         ),
                       ],
