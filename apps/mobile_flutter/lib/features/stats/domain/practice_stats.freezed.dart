@@ -28,6 +28,11 @@ mixin _$PracticeStats {
   DateTime? get lastPracticeDate => throw _privateConstructorUsedError;
   Map<DateTime, int> get dailyAttempts => throw _privateConstructorUsedError;
 
+  /// Cumulative mastered sentences over time by HSK level.
+  /// Each data point contains counts per HSK level and total.
+  List<CumulativeDataPoint> get cumulativeProgress =>
+      throw _privateConstructorUsedError;
+
   /// Create a copy of PracticeStats
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -53,6 +58,7 @@ abstract class $PracticeStatsCopyWith<$Res> {
     int longestStreak,
     DateTime? lastPracticeDate,
     Map<DateTime, int> dailyAttempts,
+    List<CumulativeDataPoint> cumulativeProgress,
   });
 }
 
@@ -81,6 +87,7 @@ class _$PracticeStatsCopyWithImpl<$Res, $Val extends PracticeStats>
     Object? longestStreak = null,
     Object? lastPracticeDate = freezed,
     Object? dailyAttempts = null,
+    Object? cumulativeProgress = null,
   }) {
     return _then(
       _value.copyWith(
@@ -124,6 +131,10 @@ class _$PracticeStatsCopyWithImpl<$Res, $Val extends PracticeStats>
                 ? _value.dailyAttempts
                 : dailyAttempts // ignore: cast_nullable_to_non_nullable
                       as Map<DateTime, int>,
+            cumulativeProgress: null == cumulativeProgress
+                ? _value.cumulativeProgress
+                : cumulativeProgress // ignore: cast_nullable_to_non_nullable
+                      as List<CumulativeDataPoint>,
           )
           as $Val,
     );
@@ -150,6 +161,7 @@ abstract class _$$PracticeStatsImplCopyWith<$Res>
     int longestStreak,
     DateTime? lastPracticeDate,
     Map<DateTime, int> dailyAttempts,
+    List<CumulativeDataPoint> cumulativeProgress,
   });
 }
 
@@ -177,6 +189,7 @@ class __$$PracticeStatsImplCopyWithImpl<$Res>
     Object? longestStreak = null,
     Object? lastPracticeDate = freezed,
     Object? dailyAttempts = null,
+    Object? cumulativeProgress = null,
   }) {
     return _then(
       _$PracticeStatsImpl(
@@ -220,6 +233,10 @@ class __$$PracticeStatsImplCopyWithImpl<$Res>
             ? _value._dailyAttempts
             : dailyAttempts // ignore: cast_nullable_to_non_nullable
                   as Map<DateTime, int>,
+        cumulativeProgress: null == cumulativeProgress
+            ? _value._cumulativeProgress
+            : cumulativeProgress // ignore: cast_nullable_to_non_nullable
+                  as List<CumulativeDataPoint>,
       ),
     );
   }
@@ -239,7 +256,9 @@ class _$PracticeStatsImpl implements _PracticeStats {
     this.longestStreak = 0,
     this.lastPracticeDate,
     final Map<DateTime, int> dailyAttempts = const {},
-  }) : _dailyAttempts = dailyAttempts;
+    final List<CumulativeDataPoint> cumulativeProgress = const [],
+  }) : _dailyAttempts = dailyAttempts,
+       _cumulativeProgress = cumulativeProgress;
 
   @override
   @JsonKey()
@@ -276,9 +295,24 @@ class _$PracticeStatsImpl implements _PracticeStats {
     return EqualUnmodifiableMapView(_dailyAttempts);
   }
 
+  /// Cumulative mastered sentences over time by HSK level.
+  /// Each data point contains counts per HSK level and total.
+  final List<CumulativeDataPoint> _cumulativeProgress;
+
+  /// Cumulative mastered sentences over time by HSK level.
+  /// Each data point contains counts per HSK level and total.
+  @override
+  @JsonKey()
+  List<CumulativeDataPoint> get cumulativeProgress {
+    if (_cumulativeProgress is EqualUnmodifiableListView)
+      return _cumulativeProgress;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_cumulativeProgress);
+  }
+
   @override
   String toString() {
-    return 'PracticeStats(totalAttempts: $totalAttempts, sequencesPracticed: $sequencesPracticed, hardCount: $hardCount, almostCount: $almostCount, goodCount: $goodCount, easyCount: $easyCount, currentStreak: $currentStreak, longestStreak: $longestStreak, lastPracticeDate: $lastPracticeDate, dailyAttempts: $dailyAttempts)';
+    return 'PracticeStats(totalAttempts: $totalAttempts, sequencesPracticed: $sequencesPracticed, hardCount: $hardCount, almostCount: $almostCount, goodCount: $goodCount, easyCount: $easyCount, currentStreak: $currentStreak, longestStreak: $longestStreak, lastPracticeDate: $lastPracticeDate, dailyAttempts: $dailyAttempts, cumulativeProgress: $cumulativeProgress)';
   }
 
   @override
@@ -307,6 +341,10 @@ class _$PracticeStatsImpl implements _PracticeStats {
             const DeepCollectionEquality().equals(
               other._dailyAttempts,
               _dailyAttempts,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._cumulativeProgress,
+              _cumulativeProgress,
             ));
   }
 
@@ -323,6 +361,7 @@ class _$PracticeStatsImpl implements _PracticeStats {
     longestStreak,
     lastPracticeDate,
     const DeepCollectionEquality().hash(_dailyAttempts),
+    const DeepCollectionEquality().hash(_cumulativeProgress),
   );
 
   /// Create a copy of PracticeStats
@@ -346,6 +385,7 @@ abstract class _PracticeStats implements PracticeStats {
     final int longestStreak,
     final DateTime? lastPracticeDate,
     final Map<DateTime, int> dailyAttempts,
+    final List<CumulativeDataPoint> cumulativeProgress,
   }) = _$PracticeStatsImpl;
 
   @override
@@ -368,6 +408,11 @@ abstract class _PracticeStats implements PracticeStats {
   DateTime? get lastPracticeDate;
   @override
   Map<DateTime, int> get dailyAttempts;
+
+  /// Cumulative mastered sentences over time by HSK level.
+  /// Each data point contains counts per HSK level and total.
+  @override
+  List<CumulativeDataPoint> get cumulativeProgress;
 
   /// Create a copy of PracticeStats
   /// with the given fields replaced by the non-null parameter values.

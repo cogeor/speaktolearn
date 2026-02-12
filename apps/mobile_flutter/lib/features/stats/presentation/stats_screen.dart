@@ -6,6 +6,7 @@ import '../../../app/theme.dart';
 import '../domain/practice_stats.dart';
 import 'stats_controller.dart';
 import 'widgets/activity_heatmap.dart';
+import 'widgets/progress_chart.dart';
 
 /// Screen displaying aggregate practice statistics.
 class StatsScreen extends ConsumerWidget {
@@ -75,47 +76,9 @@ class _StatsContent extends StatelessWidget {
             ),
           ],
         ),
-        // Rating breakdown
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Rating Breakdown',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _RatingCountCard(
-                    color: AppTheme.ratingHard,
-                    label: 'Hard',
-                    count: stats.hardCount,
-                  ),
-                  const SizedBox(width: 8),
-                  _RatingCountCard(
-                    color: AppTheme.ratingAlmost,
-                    label: 'Almost',
-                    count: stats.almostCount,
-                  ),
-                  const SizedBox(width: 8),
-                  _RatingCountCard(
-                    color: AppTheme.ratingGood,
-                    label: 'Good',
-                    count: stats.goodCount,
-                  ),
-                  const SizedBox(width: 8),
-                  _RatingCountCard(
-                    color: AppTheme.ratingEasy,
-                    label: 'Easy',
-                    count: stats.easyCount,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+        // Cumulative progress chart
+        const SizedBox(height: 24),
+        ProgressChart(dataPoints: stats.cumulativeProgress),
         // Activity heatmap
         const SizedBox(height: 24),
         const Text(
@@ -124,6 +87,46 @@ class _StatsContent extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ActivityHeatmap(dailyAttempts: stats.dailyAttempts),
+        // Rating breakdown (moved to bottom)
+        const SizedBox(height: 24),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Rating Breakdown',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _RatingCountCard(
+                  color: AppTheme.ratingHard,
+                  label: 'Hard',
+                  count: stats.hardCount,
+                ),
+                const SizedBox(width: 8),
+                _RatingCountCard(
+                  color: AppTheme.ratingAlmost,
+                  label: 'Almost',
+                  count: stats.almostCount,
+                ),
+                const SizedBox(width: 8),
+                _RatingCountCard(
+                  color: AppTheme.ratingGood,
+                  label: 'Good',
+                  count: stats.goodCount,
+                ),
+                const SizedBox(width: 8),
+                _RatingCountCard(
+                  color: AppTheme.ratingEasy,
+                  label: 'Easy',
+                  count: stats.easyCount,
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
       ],
     );
   }
