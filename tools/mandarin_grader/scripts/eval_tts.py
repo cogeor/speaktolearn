@@ -264,6 +264,13 @@ def main():
     parser.add_argument("--max-samples", type=int, default=None)
     parser.add_argument("--no-noise", action="store_true", help="Disable inference noise (for debugging)")
     parser.add_argument("--noise-snr", type=float, default=30.0, help="SNR for inference noise in dB")
+
+    # Model architecture arguments
+    parser.add_argument("--d-model", type=int, default=192, help="Model dimension")
+    parser.add_argument("--n-layers", type=int, default=4, help="Number of transformer layers")
+    parser.add_argument("--n-heads", type=int, default=6, help="Number of attention heads")
+    parser.add_argument("--dim-feedforward", type=int, default=384, help="FFN hidden dimension")
+
     args = parser.parse_args()
 
     print("=" * 60)
@@ -275,9 +282,17 @@ def main():
         SyllablePredictorV3, SyllablePredictorConfig, SyllableVocab
     )
 
-    config = SyllablePredictorConfig()
+    config = SyllablePredictorConfig(
+        d_model=args.d_model,
+        n_layers=args.n_layers,
+        n_heads=args.n_heads,
+        dim_feedforward=args.dim_feedforward,
+    )
     model = SyllablePredictorV3(config).to(args.device)
     vocab = SyllableVocab()
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Model: {total_params:,} params")
 
     if args.checkpoint.exists():
         checkpoint = torch.load(args.checkpoint, map_location=args.device)
