@@ -154,9 +154,11 @@ def _register_builtin_sources():
 
     from .synthetic_source import SyntheticDataSource
     from .aishell_source import AISHELL3DataSource
+    from .aishell_tar_source import AISHELL3TarDataSource
 
     DataSourceRegistry.register(SyntheticDataSource())
     DataSourceRegistry.register(AISHELL3DataSource())
+    DataSourceRegistry.register(AISHELL3TarDataSource())
 
 
 # Patch registry methods to auto-register on first use

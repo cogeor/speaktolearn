@@ -87,7 +87,7 @@ class TrainingConfig:
     overfit_steps: int = 200
 
 
-def load_synthetic_data(synthetic_dir: Path, logger) -> tuple[list, list]:
+def load_synthetic_data(synthetic_dir: Path, logger) -> tuple[list, list, dict]:
     """Load synthetic training data (legacy function for backwards compatibility)."""
     return load_training_data(["synthetic"], [synthetic_dir], logger)
 
@@ -116,6 +116,9 @@ def load_training_data(
 
     all_sentences = []
 
+    # Audio cache for tar-based sources (audio pre-loaded in memory)
+    audio_cache = {}
+
     for source_name, data_dir in zip(sources, data_dirs):
         logger.info(f"Loading data source: {source_name} from {data_dir}")
 
@@ -131,6 +134,12 @@ def load_training_data(
 
             sentences = source.load(data_dir, **kwargs)
             logger.info(f"  Loaded {len(sentences)} sentences from {source_name}")
+
+            # If source has audio cache (tar-based), merge it
+            if hasattr(source, 'get_audio_cache'):
+                source_cache = source.get_audio_cache()
+                audio_cache.update(source_cache)
+                logger.info(f"  Audio cache: {len(source_cache)} files pre-loaded")
 
             # Convert SentenceInfo to SyntheticSentenceInfo for compatibility
             for s in sentences:
@@ -150,7 +159,7 @@ def load_training_data(
     logger.info(f"Total sentences: {len(all_sentences)}")
 
     if not all_sentences:
-        return [], []
+        return [], [], {}
 
     # Shuffle and split
     np.random.seed(42)
@@ -160,7 +169,7 @@ def load_training_data(
     train = [all_sentences[i] for i in indices[:split_idx]]
     val = [all_sentences[i] for i in indices[split_idx:]]
     logger.info(f"Train: {len(train)}, Val: {len(val)}")
-    return train, val
+    return train, val, audio_cache
 
 
 def list_available_sources():
@@ -176,7 +185,7 @@ def list_available_sources():
         print()
 
 
-def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin"):
+def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin", preload: bool = False, logger=None, audio_cache: dict = None):
     """Create PyTorch DataLoader.
 
     Args:
@@ -185,6 +194,9 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         shuffle: Whether to shuffle
         augment: Whether to augment audio
         context_mode: "pinyin" = actual syllables, "position" = only syllable index
+        preload: Whether to preload all audio into memory (recommended for large datasets)
+        logger: Logger for progress reporting
+        audio_cache: Pre-loaded audio cache from tar sources (optional)
     """
     import torch
     from torch.utils.data import DataLoader
@@ -203,6 +215,20 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         margin_s=0.1,
         augment=augment,
     )
+
+    # If audio cache provided (from tar sources), pre-populate dataset cache
+    if audio_cache:
+        dataset._audio_cache.update(audio_cache)
+        if logger:
+            logger.info(f"  Injected {len(audio_cache)} cached audio files")
+
+    if preload:
+        def progress(loaded, total):
+            if logger:
+                logger.info(f"  Preloading audio: {loaded}/{total} ({100*loaded/total:.0f}%)")
+        if logger:
+            logger.info("Preloading audio files into memory...")
+        dataset.preload_audio(progress_callback=progress)
 
     def collate_fn(batch):
         mels, pinyin_ids_list, target_syls, target_tones = [], [], [], []
@@ -380,11 +406,19 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
     logger.info(f"Starting training from epoch {start_epoch + 1} to {config.epochs}")
     logger.info(f"Logging every {config.log_every_epochs} epochs")
 
+    import time as _time
     for epoch in range(start_epoch, config.epochs):
         model.train()
         total_loss, num_batches = 0, 0
+        epoch_start = _time.time()
 
         for batch in train_loader:
+            # Progress logging every 500 batches
+            if num_batches > 0 and num_batches % 500 == 0:
+                elapsed = _time.time() - epoch_start
+                ms_per_batch = elapsed / num_batches * 1000
+                eta_min = (len(train_loader) - num_batches) * ms_per_batch / 60000
+                logger.info(f"  Epoch {epoch+1} batch {num_batches}/{len(train_loader)} | {ms_per_batch:.0f}ms/batch | ETA: {eta_min:.1f}min")
             mel = batch["mel"].to(config.device)
             pinyin_ids = batch["pinyin_ids"].to(config.device)
             audio_mask = batch["audio_mask"].to(config.device)
@@ -510,6 +544,7 @@ def main():
     logger.info("=" * 60)
     logger.info("SyllablePredictorV3 Training")
     logger.info("=" * 60)
+    logger.info(f"Command: python {' '.join(sys.argv)}")
 
     # Parse data sources
     sources = [s.strip() for s in args.data_source.split(",")]
@@ -538,7 +573,7 @@ def main():
         logger.info(f"  {src}: {dir}")
 
     # Load data
-    train_sentences, val_sentences = load_training_data(
+    train_sentences, val_sentences, audio_cache = load_training_data(
         sources, data_dirs, logger,
         max_sentences_per_source=args.max_sentences,
     )
@@ -560,10 +595,12 @@ def main():
     logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
     logger.info(f"Device: {config.device}")
 
-    # Create dataloaders
+    # Create dataloaders (preload audio for faster training)
+    # If audio_cache is provided (from tar sources), skip preload since audio is already in memory
     logger.info(f"Context mode: {args.context_mode}")
-    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode)
-    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode)
+    preload = not audio_cache  # Only preload if no cache provided
+    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode, preload=preload, logger=logger, audio_cache=audio_cache)
+    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode, preload=preload, logger=logger, audio_cache=audio_cache)
     logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
     # Overfit test
