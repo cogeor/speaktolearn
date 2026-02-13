@@ -351,7 +351,7 @@ def save_single_tone_audio(
             n_frames = wf.getnframes()
             raw_data = wf.readframes(n_frames)
 
-        audio = np.array(struct.unpack(f'{n_frames}h', raw_data), dtype=np.float32) / 32768.0
+        audio = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32) / 32768.0
 
         # Trim silence from start and end
         audio = trim_silence(audio, target_sr)
@@ -484,7 +484,7 @@ def split_tones_from_audio(
             n_frames = wf.getnframes()
             raw_data = wf.readframes(n_frames)
 
-        audio = np.array(struct.unpack(f'{n_frames}h', raw_data), dtype=np.float32) / 32768.0
+        audio = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32) / 32768.0
 
         # Find silence boundaries
         segments = find_tone_segments(audio, target_sr, n_expected=n_expected)

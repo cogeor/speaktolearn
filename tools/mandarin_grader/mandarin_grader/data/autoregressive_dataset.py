@@ -174,13 +174,9 @@ def load_audio_wav(path: Path, target_sr: int = 16000) -> NDArray[np.float32]:
         sr = wf.getframerate()
 
     if sample_width == 2:
-        import struct
-        audio = np.array(struct.unpack(f'{n_frames}h', raw_data), dtype=np.float32)
-        audio = audio / 32768.0
+        audio = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32) / 32768.0
     elif sample_width == 4:
-        import struct
-        audio = np.array(struct.unpack(f'{n_frames}i', raw_data), dtype=np.float32)
-        audio = audio / 2147483648.0
+        audio = np.frombuffer(raw_data, dtype=np.int32).astype(np.float32) / 2147483648.0
     else:
         raise ValueError(f"Unsupported sample width: {sample_width}")
 
@@ -271,6 +267,25 @@ class AutoregressiveDataset:
 
     def __len__(self) -> int:
         return len(self._index)
+
+    def preload_audio(self, progress_callback=None) -> None:
+        """Pre-load all audio files into memory cache.
+
+        This significantly speeds up training by avoiding disk I/O during batching.
+        Call this before training starts.
+
+        Args:
+            progress_callback: Optional callback(loaded, total) for progress reporting
+        """
+        total = len(self.sentences)
+        for i, sent in enumerate(self.sentences):
+            key = str(sent.audio_path)
+            if key not in self._audio_cache:
+                self._audio_cache[key] = load_audio_wav(sent.audio_path, self.sample_rate)
+            if progress_callback and (i + 1) % 1000 == 0:
+                progress_callback(i + 1, total)
+        if progress_callback:
+            progress_callback(total, total)
 
     def _load_audio(self, path: Path) -> NDArray[np.float32]:
         """Load audio with caching."""
