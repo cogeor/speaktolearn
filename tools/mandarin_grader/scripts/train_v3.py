@@ -46,6 +46,29 @@ SYNTHETIC_DIR = Path(__file__).parent.parent / "data" / "synthetic_train"
 DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "checkpoints_v3"
 
 
+def get_warmup_cosine_scheduler(optimizer, warmup_steps: int, total_steps: int):
+    """Create a scheduler with linear warmup then cosine decay.
+
+    Args:
+        optimizer: The optimizer
+        warmup_steps: Number of warmup steps (linear from 0 to base LR)
+        total_steps: Total training steps
+
+    Returns:
+        LambdaLR scheduler
+    """
+    import torch
+    import math
+
+    def lr_lambda(step):
+        if step < warmup_steps:
+            return step / max(1, warmup_steps)
+        progress = (step - warmup_steps) / max(1, total_steps - warmup_steps)
+        return 0.5 * (1.0 + math.cos(math.pi * progress))
+
+    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+
 def setup_logging(checkpoint_dir: Path) -> logging.Logger:
     """Setup logging to both console and file."""
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -98,7 +121,7 @@ def load_training_data(
     logger,
     train_split: float = 0.8,
     max_sentences_per_source: int | None = None,
-) -> tuple[list, list]:
+) -> tuple[list, list, dict[str, np.ndarray]]:
     """Load training data from multiple sources.
 
     Args:
@@ -116,8 +139,8 @@ def load_training_data(
 
     all_sentences = []
 
-    # Audio cache for tar-based sources (audio pre-loaded in memory)
-    audio_cache = {}
+    # Mel cache for tar-based sources (pre-computed mel features in memory)
+    mel_cache = {}
 
     for source_name, data_dir in zip(sources, data_dirs):
         logger.info(f"Loading data source: {source_name} from {data_dir}")
@@ -135,11 +158,11 @@ def load_training_data(
             sentences = source.load(data_dir, **kwargs)
             logger.info(f"  Loaded {len(sentences)} sentences from {source_name}")
 
-            # If source has audio cache (tar-based), merge it
-            if hasattr(source, 'get_audio_cache'):
-                source_cache = source.get_audio_cache()
-                audio_cache.update(source_cache)
-                logger.info(f"  Audio cache: {len(source_cache)} files pre-loaded")
+            # If source has mel cache (tar-based), merge it
+            if hasattr(source, "get_mel_cache"):
+                source_cache = source.get_mel_cache()
+                mel_cache.update(source_cache)
+                logger.info(f"  Mel cache: {len(source_cache)} files pre-loaded")
 
             # Convert SentenceInfo to SyntheticSentenceInfo for compatibility
             for s in sentences:
@@ -150,6 +173,7 @@ def load_training_data(
                     syllables=s.syllables,
                     syllable_boundaries=s.syllable_boundaries,
                     sample_rate=s.sample_rate,
+                    total_samples=s.total_samples,
                 ))
 
         except Exception as e:
@@ -169,7 +193,7 @@ def load_training_data(
     train = [all_sentences[i] for i in indices[:split_idx]]
     val = [all_sentences[i] for i in indices[split_idx:]]
     logger.info(f"Train: {len(train)}, Val: {len(val)}")
-    return train, val, audio_cache
+    return train, val, mel_cache
 
 
 def list_available_sources():
@@ -185,7 +209,7 @@ def list_available_sources():
         print()
 
 
-def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin", preload: bool = False, logger=None, audio_cache: dict = None):
+def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin", preload: bool = False, logger=None, mel_cache: dict | None = None):
     """Create PyTorch DataLoader.
 
     Args:
@@ -196,11 +220,11 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         context_mode: "pinyin" = actual syllables, "position" = only syllable index
         preload: Whether to preload all audio into memory (recommended for large datasets)
         logger: Logger for progress reporting
-        audio_cache: Pre-loaded audio cache from tar sources (optional)
+        mel_cache: Pre-loaded mel cache from tar sources (optional)
     """
     import torch
     from torch.utils.data import DataLoader
-    from mandarin_grader.data.autoregressive_dataset import AutoregressiveDataset
+    from mandarin_grader.data.autoregressive_dataset import AutoregressiveDataset, spec_augment
     from mandarin_grader.model.syllable_predictor_v3 import (
         SyllablePredictorConfig, SyllableVocab, extract_mel_spectrogram,
     )
@@ -216,11 +240,11 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         augment=augment,
     )
 
-    # If audio cache provided (from tar sources), pre-populate dataset cache
-    if audio_cache:
-        dataset._audio_cache.update(audio_cache)
+    # If mel cache provided (from tar sources), pre-populate dataset cache
+    if mel_cache:
+        dataset._mel_cache.update(mel_cache)
         if logger:
-            logger.info(f"  Injected {len(audio_cache)} cached audio files")
+            logger.info(f"  Injected {len(mel_cache)} precomputed mel entries")
 
     if preload:
         def progress(loaded, total):
@@ -235,7 +259,14 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         max_pinyin_len = 0
 
         for sample in batch:
-            mel = extract_mel_spectrogram(sample.audio_chunk, config)
+            if sample.mel_chunk is not None:
+                mel = sample.mel_chunk
+            elif sample.audio_chunk is not None:
+                mel = extract_mel_spectrogram(sample.audio_chunk, config)
+                if augment:  # Apply SpecAugment to freshly computed mel
+                    mel = spec_augment(mel)
+            else:
+                raise ValueError(f"Sample {sample.sample_id} has neither mel_chunk nor audio_chunk")
             mels.append(mel)
 
             if context_mode == "pinyin":
@@ -365,14 +396,16 @@ def run_overfit_test(model, train_loader, config: TrainingConfig, device: str, l
     target_tone = batch["target_tone"].to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate * 10)
-    syl_criterion = torch.nn.CrossEntropyLoss()
-    tone_criterion = torch.nn.CrossEntropyLoss()
+    syl_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+    tone_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
 
     model.train()
     for step in range(config.overfit_steps):
         optimizer.zero_grad()
         syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
-        loss = syl_criterion(syl_logits, target_syl) + tone_criterion(tone_logits, target_tone)
+        syl_loss = syl_criterion(syl_logits, target_syl)
+        tone_loss = tone_criterion(tone_logits, target_tone)
+        loss = 0.7 * syl_loss + 0.3 * tone_loss
         loss.backward()
         optimizer.step()
 
@@ -397,13 +430,16 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
     import torch
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=config.epochs * len(train_loader))
-    syl_criterion = torch.nn.CrossEntropyLoss()
-    tone_criterion = torch.nn.CrossEntropyLoss()
+    total_steps = config.epochs * len(train_loader)
+    warmup_steps = int(0.05 * total_steps)  # 5% warmup
+    scheduler = get_warmup_cosine_scheduler(optimizer, warmup_steps, total_steps)
+    syl_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
+    tone_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
 
     best_val_acc = 0.0
 
     logger.info(f"Starting training from epoch {start_epoch + 1} to {config.epochs}")
+    logger.info(f"Warmup steps: {warmup_steps} ({warmup_steps / len(train_loader):.1f} epochs)")
     logger.info(f"Logging every {config.log_every_epochs} epochs")
 
     import time as _time
@@ -428,7 +464,9 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
 
             optimizer.zero_grad()
             syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
-            loss = syl_criterion(syl_logits, target_syl) + tone_criterion(tone_logits, target_tone)
+            syl_loss = syl_criterion(syl_logits, target_syl)
+            tone_loss = tone_criterion(tone_logits, target_tone)
+            loss = 0.7 * syl_loss + 0.3 * tone_loss
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
@@ -573,7 +611,7 @@ def main():
         logger.info(f"  {src}: {dir}")
 
     # Load data
-    train_sentences, val_sentences, audio_cache = load_training_data(
+    train_sentences, val_sentences, mel_cache = load_training_data(
         sources, data_dirs, logger,
         max_sentences_per_source=args.max_sentences,
     )
@@ -595,12 +633,12 @@ def main():
     logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
     logger.info(f"Device: {config.device}")
 
-    # Create dataloaders (preload audio for faster training)
-    # If audio_cache is provided (from tar sources), skip preload since audio is already in memory
+    # Create dataloaders (preload audio for non-mel sources).
+    # If mel_cache is provided, no audio preload is needed for that source.
     logger.info(f"Context mode: {args.context_mode}")
-    preload = not audio_cache  # Only preload if no cache provided
-    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode, preload=preload, logger=logger, audio_cache=audio_cache)
-    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode, preload=preload, logger=logger, audio_cache=audio_cache)
+    preload = not mel_cache
+    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache)
+    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache)
     logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
     # Overfit test

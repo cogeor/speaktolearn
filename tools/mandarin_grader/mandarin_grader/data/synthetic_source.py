@@ -53,6 +53,7 @@ class SyntheticDataSource(DataSource):
             syllables=s.syllables,
             syllable_boundaries=s.syllable_boundaries,
             sample_rate=s.sample_rate,
+            total_samples=None,
         )
 
     def is_available(self, data_dir: Path) -> bool:

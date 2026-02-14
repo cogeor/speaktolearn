@@ -38,6 +38,7 @@ class SentenceInfo:
     syllables: list[TargetSyllable]  # Parsed syllable info with tones
     syllable_boundaries: list[tuple[int, int]]  # [(start_sample, end_sample), ...]
     sample_rate: int = 16000
+    total_samples: int | None = None
 
 
 class DataSource(ABC):

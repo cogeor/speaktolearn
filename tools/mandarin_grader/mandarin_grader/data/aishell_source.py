@@ -222,6 +222,7 @@ class AISHELL3DataSource(DataSource):
                     syllables=syllables,
                     syllable_boundaries=boundaries,
                     sample_rate=16000,
+                    total_samples=audio_samples,
                 ))
                 count += 1
 

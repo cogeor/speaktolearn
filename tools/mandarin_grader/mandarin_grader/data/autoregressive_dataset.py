@@ -35,7 +35,8 @@ class AutoregressiveSample:
     """A single training sample for autoregressive prediction."""
 
     sample_id: str
-    audio_chunk: NDArray[np.float32]  # [n_samples] raw audio for 1s chunk
+    audio_chunk: NDArray[np.float32] | None  # [n_samples] raw audio for 1s chunk
+    mel_chunk: NDArray[np.float32] | None  # [n_mels, time] precomputed mel chunk
     sample_rate: int
     pinyin_context: list[str]  # Previous syllables (base pinyin, no tone)
     target_syllable: str  # Base pinyin of target syllable
@@ -54,6 +55,7 @@ class SyntheticSentenceInfo:
     # Boundaries in samples (from synthesis metadata or uniform split)
     syllable_boundaries: list[tuple[int, int]]  # [(start_sample, end_sample), ...]
     sample_rate: int = 16000
+    total_samples: int | None = None
 
 
 def load_synthetic_metadata(data_dir: Path) -> list[SyntheticSentenceInfo]:
@@ -152,6 +154,7 @@ def load_synthetic_metadata(data_dir: Path) -> list[SyntheticSentenceInfo]:
             syllables=syllables,
             syllable_boundaries=boundaries,
             sample_rate=sample_rate,
+            total_samples=None,
         ))
 
     return sentences
@@ -264,6 +267,10 @@ class AutoregressiveDataset:
 
         # Audio cache
         self._audio_cache: dict[str, NDArray[np.float32]] = {}
+        # Optional precomputed mel cache (keyed by audio_path string)
+        self._mel_cache: dict[str, NDArray[np.float32]] = {}
+        self._mel_hop_length = 160
+        self._mel_win_length = 400
 
     def __len__(self) -> int:
         return len(self._index)
@@ -326,6 +333,101 @@ class AutoregressiveDataset:
 
         return audio
 
+    def _samples_to_frame(self, sample_idx: int) -> int:
+        return max(0, sample_idx // self._mel_hop_length)
+
+
+def spec_augment(
+    mel: NDArray[np.float32],
+    freq_masks: int = 2,
+    freq_width: int = 10,
+    time_masks: int = 2,
+    time_width: int = 40,
+) -> NDArray[np.float32]:
+    """Apply SpecAugment: frequency and time masking to mel spectrogram.
+
+    Args:
+        mel: Mel spectrogram [n_mels, time]
+        freq_masks: Number of frequency masks
+        freq_width: Max width of each frequency mask
+        time_masks: Number of time masks
+        time_width: Max width of each time mask
+
+    Returns:
+        Augmented mel spectrogram
+    """
+    mel = mel.copy()
+    n_mels, n_time = mel.shape
+
+    # Frequency masking
+    for _ in range(freq_masks):
+        f = np.random.randint(0, freq_width + 1)
+        f0 = np.random.randint(0, max(1, n_mels - f))
+        mel[f0:f0 + f, :] = 0.0
+
+    # Time masking
+    for _ in range(time_masks):
+        t = np.random.randint(0, time_width + 1)
+        t0 = np.random.randint(0, max(1, n_time - t))
+        mel[:, t0:t0 + t] = 0.0
+
+    return mel
+
+    def _frames_for_samples(self, n_samples: int) -> int:
+        if n_samples < self._mel_win_length:
+            return 1
+        return 1 + (n_samples - self._mel_win_length) // self._mel_hop_length
+
+    def _extract_mel_chunk(
+        self,
+        mel: NDArray[np.float32],
+        sentence: SyntheticSentenceInfo,
+        syl_idx: int,
+    ) -> NDArray[np.float32]:
+        """Extract a fixed-duration mel chunk using the same chunking logic as audio."""
+        if sentence.syllable_boundaries and syl_idx < len(sentence.syllable_boundaries):
+            syl_start, syl_end = sentence.syllable_boundaries[syl_idx]
+        else:
+            total_samples = sentence.total_samples
+            if total_samples is None:
+                total_samples = max(0, (mel.shape[1] - 1) * self._mel_hop_length + self._mel_win_length)
+            n_syllables = len(sentence.syllables)
+            samples_per_syl = total_samples // max(n_syllables, 1)
+            syl_start = syl_idx * samples_per_syl
+            syl_end = (syl_idx + 1) * samples_per_syl
+
+        total_samples = sentence.total_samples
+        if total_samples is None:
+            total_samples = max(0, (mel.shape[1] - 1) * self._mel_hop_length + self._mel_win_length)
+
+        min_chunk_start = syl_end + self.margin_samples - self.chunk_samples
+        max_chunk_start = syl_start - self.margin_samples
+        min_chunk_start = max(0, min_chunk_start)
+        max_chunk_start = max(0, min(max_chunk_start, total_samples - self.chunk_samples))
+
+        if min_chunk_start > max_chunk_start:
+            syl_mid = (syl_start + syl_end) // 2
+            chunk_start = max(0, min(syl_mid - self.chunk_samples // 2, total_samples - self.chunk_samples))
+        elif self.augment:
+            chunk_start = int(np.random.randint(min_chunk_start, max_chunk_start + 1))
+        else:
+            chunk_start = (min_chunk_start + max_chunk_start) // 2
+
+        target_frames = self._frames_for_samples(self.chunk_samples)
+        start_frame = self._samples_to_frame(chunk_start)
+        end_frame = start_frame + target_frames
+
+        mel_chunk = mel[:, start_frame:end_frame]
+        if mel_chunk.shape[1] < target_frames:
+            pad = np.zeros((mel.shape[0], target_frames - mel_chunk.shape[1]), dtype=np.float32)
+            mel_chunk = np.concatenate([mel_chunk, pad], axis=1)
+
+        # Apply SpecAugment when augmenting
+        if self.augment:
+            mel_chunk = spec_augment(mel_chunk)
+
+        return mel_chunk.astype(np.float32, copy=False)
+
     def __getitem__(self, idx: int) -> AutoregressiveSample:
         """Get a training sample.
 
@@ -342,68 +444,57 @@ class AutoregressiveDataset:
         sent_idx, syl_idx = self._index[idx]
         sentence = self.sentences[sent_idx]
 
-        # Load full audio
-        audio = self._load_audio(sentence.audio_path).copy()
+        key = str(sentence.audio_path)
+        mel = self._mel_cache.get(key)
+        audio = None if mel is not None else self._load_audio(sentence.audio_path).copy()
 
         # Get target syllable info
         target_syl = sentence.syllables[syl_idx]
         target_pinyin = _remove_tone_marks(target_syl.pinyin)
         target_tone = target_syl.tone_surface
 
-        # Determine syllable boundaries (exact or estimated)
-        if sentence.syllable_boundaries and syl_idx < len(sentence.syllable_boundaries):
-            # Use exact boundaries from synthesis
-            syl_start, syl_end = sentence.syllable_boundaries[syl_idx]
+        if mel is None:
+            # Determine syllable boundaries (exact or estimated)
+            if sentence.syllable_boundaries and syl_idx < len(sentence.syllable_boundaries):
+                syl_start, syl_end = sentence.syllable_boundaries[syl_idx]
+            else:
+                n_syllables = len(sentence.syllables)
+                samples_per_syl = len(audio) // max(n_syllables, 1)
+                syl_start = syl_idx * samples_per_syl
+                syl_end = (syl_idx + 1) * samples_per_syl
+
+            # Calculate valid chunk start range
+            min_chunk_start = syl_end + self.margin_samples - self.chunk_samples
+            max_chunk_start = syl_start - self.margin_samples
+
+            min_chunk_start = max(0, min_chunk_start)
+            max_chunk_start = max(0, min(max_chunk_start, len(audio) - self.chunk_samples))
+
+            if min_chunk_start > max_chunk_start:
+                syl_mid = (syl_start + syl_end) // 2
+                chunk_start = max(0, min(syl_mid - self.chunk_samples // 2,
+                                         len(audio) - self.chunk_samples))
+            elif self.augment:
+                chunk_start = int(np.random.randint(min_chunk_start, max_chunk_start + 1))
+            else:
+                chunk_start = (min_chunk_start + max_chunk_start) // 2
+
+            chunk_end = chunk_start + self.chunk_samples
+
+            if chunk_end > len(audio):
+                chunk_end = len(audio)
+                chunk_start = max(0, chunk_end - self.chunk_samples)
+
+            chunk = audio[chunk_start:chunk_end]
+            if len(chunk) < self.chunk_samples:
+                chunk = np.pad(chunk, (0, self.chunk_samples - len(chunk)))
+
+            # Apply audio augmentation only on waveform path.
+            chunk = self._apply_augmentation(chunk)
+            mel_chunk = None
         else:
-            # Estimate boundaries (uniform split) - matches inference heuristic
-            n_syllables = len(sentence.syllables)
-            samples_per_syl = len(audio) // max(n_syllables, 1)
-            syl_start = syl_idx * samples_per_syl
-            syl_end = (syl_idx + 1) * samples_per_syl
-
-        # Calculate valid chunk start range
-        # Constraint: chunk must contain [syl_start, syl_end] with margin on both sides
-        #
-        # |<------ chunk (1s) ------>|
-        # |  margin |  syllable  | margin  |
-        #
-        # Valid chunk_start range:
-        #   - Earliest: syl_end + margin - chunk_samples (syllable near end of chunk)
-        #   - Latest: syl_start - margin (syllable near start of chunk)
-        #
-        min_chunk_start = syl_end + self.margin_samples - self.chunk_samples
-        max_chunk_start = syl_start - self.margin_samples
-
-        # Clamp to valid audio range
-        min_chunk_start = max(0, min_chunk_start)
-        max_chunk_start = max(0, min(max_chunk_start, len(audio) - self.chunk_samples))
-
-        # Handle edge cases where valid range is invalid or very small
-        if min_chunk_start > max_chunk_start:
-            # Syllable is too long or chunk too short - fall back to centering
-            syl_mid = (syl_start + syl_end) // 2
-            chunk_start = max(0, min(syl_mid - self.chunk_samples // 2,
-                                     len(audio) - self.chunk_samples))
-        elif self.augment:
-            # Randomize chunk position within valid range (training augmentation)
-            chunk_start = np.random.randint(min_chunk_start, max_chunk_start + 1)
-        else:
-            # No augmentation - use middle of valid range (deterministic)
-            chunk_start = (min_chunk_start + max_chunk_start) // 2
-
-        chunk_end = chunk_start + self.chunk_samples
-
-        # Extract chunk (may need padding if near end of audio)
-        if chunk_end > len(audio):
-            chunk_end = len(audio)
-            chunk_start = max(0, chunk_end - self.chunk_samples)
-
-        chunk = audio[chunk_start:chunk_end]
-        if len(chunk) < self.chunk_samples:
-            chunk = np.pad(chunk, (0, self.chunk_samples - len(chunk)))
-
-        # Apply audio augmentation (noise, speed - separate from position randomization)
-        chunk = self._apply_augmentation(chunk)
+            chunk = None
+            mel_chunk = self._extract_mel_chunk(mel, sentence, syl_idx)
 
         # Build pinyin context (all syllables before target)
         context = []
@@ -413,6 +504,7 @@ class AutoregressiveDataset:
         return AutoregressiveSample(
             sample_id=f"{sentence.id}_{syl_idx}",
             audio_chunk=chunk,
+            mel_chunk=mel_chunk,
             sample_rate=self.sample_rate,
             pinyin_context=context,
             target_syllable=target_pinyin,
