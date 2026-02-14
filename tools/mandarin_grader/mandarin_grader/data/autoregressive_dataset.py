@@ -26,6 +26,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..types import Tone, TargetSyllable
+from ..pitch import extract_f0_pyin, normalize_f0, hz_to_semitones
 from .lexicon import SyllableLexicon, _remove_tone_marks
 from .dataloader import AudioSample, SentenceDataset, parse_romanization
 
@@ -37,6 +38,7 @@ class AutoregressiveSample:
     sample_id: str
     audio_chunk: NDArray[np.float32] | None  # [n_samples] raw audio for 1s chunk
     mel_chunk: NDArray[np.float32] | None  # [n_mels, time] precomputed mel chunk
+    f0_chunk: NDArray[np.float32] | None  # [time] normalized F0 for the chunk
     sample_rate: int
     pinyin_context: list[str]  # Previous syllables (base pinyin, no tone)
     target_syllable: str  # Base pinyin of target syllable
@@ -272,6 +274,29 @@ class AutoregressiveDataset:
         self._mel_hop_length = 160
         self._mel_win_length = 400
 
+    def _extract_f0_chunk(
+        self,
+        audio: NDArray[np.float32],
+        sr: int = 16000,
+        hop_length: int = 160,
+    ) -> NDArray[np.float32]:
+        """Extract normalized F0 features from audio chunk.
+
+        Args:
+            audio: Audio samples [n_samples]
+            sr: Sample rate
+            hop_length: Hop length for frame extraction (should match mel)
+
+        Returns:
+            Normalized F0 [n_frames], 0 for unvoiced frames
+        """
+        f0_hz, voicing = extract_f0_pyin(
+            audio, sr=sr, fmin=50.0, fmax=500.0, hop_length=hop_length
+        )
+        semitones = hz_to_semitones(f0_hz, ref_hz=100.0)
+        normalized = normalize_f0(semitones, voicing)
+        return normalized.astype(np.float32)
+
     def __len__(self) -> int:
         return len(self._index)
 
@@ -492,9 +517,13 @@ def spec_augment(
             # Apply audio augmentation only on waveform path.
             chunk = self._apply_augmentation(chunk)
             mel_chunk = None
+            # Extract F0 from audio chunk
+            f0_chunk = self._extract_f0_chunk(chunk, self.sample_rate, self._mel_hop_length)
         else:
             chunk = None
             mel_chunk = self._extract_mel_chunk(mel, sentence, syl_idx)
+            # F0 not available when using precomputed mel (would need separate cache)
+            f0_chunk = None
 
         # Build pinyin context (all syllables before target)
         context = []
@@ -505,6 +534,7 @@ def spec_augment(
             sample_id=f"{sentence.id}_{syl_idx}",
             audio_chunk=chunk,
             mel_chunk=mel_chunk,
+            f0_chunk=f0_chunk,
             sample_rate=self.sample_rate,
             pinyin_context=context,
             target_syllable=target_pinyin,

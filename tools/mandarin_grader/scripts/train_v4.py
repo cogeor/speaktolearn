@@ -41,6 +41,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from mandarin_grader.pitch import extract_f0_pyin, normalize_f0, hz_to_semitones
+
 # Default paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 SENTENCES_JSON = PROJECT_ROOT / "apps/mobile_flutter/assets/datasets/sentences.zh.json"
@@ -111,6 +113,29 @@ class TrainingConfig:
     overfit_test: bool = False
     overfit_samples: int = 8
     overfit_steps: int = 200
+
+
+def extract_f0_features(
+    audio: np.ndarray,
+    sr: int = 16000,
+    hop_length: int = 160,
+) -> np.ndarray:
+    """Extract normalized F0 features from audio.
+
+    Args:
+        audio: Audio samples [n_samples]
+        sr: Sample rate
+        hop_length: Hop length for frame extraction
+
+    Returns:
+        Normalized F0 [n_frames], 0 for unvoiced
+    """
+    f0_hz, voicing = extract_f0_pyin(
+        audio, sr=sr, fmin=50.0, fmax=500.0, hop_length=hop_length
+    )
+    semitones = hz_to_semitones(f0_hz, ref_hz=100.0)
+    normalized = normalize_f0(semitones, voicing)
+    return normalized.astype(np.float32)
 
 
 def load_synthetic_data(synthetic_dir: Path, logger) -> tuple[list, list, dict]:
@@ -212,7 +237,7 @@ def list_available_sources():
         print()
 
 
-def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin", preload: bool = False, logger=None, mel_cache: dict | None = None):
+def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin", preload: bool = False, logger=None, mel_cache: dict | None = None, use_pitch: bool = False):
     """Create PyTorch DataLoader.
 
     Args:
@@ -224,6 +249,7 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         preload: Whether to preload all audio into memory (recommended for large datasets)
         logger: Logger for progress reporting
         mel_cache: Pre-loaded mel cache from tar sources (optional)
+        use_pitch: Whether to extract and return F0 pitch features
     """
     import torch
     from torch.utils.data import DataLoader
@@ -259,6 +285,7 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
 
     def collate_fn(batch):
         mels, pinyin_ids_list, target_syls, target_tones = [], [], [], []
+        f0_list = [] if use_pitch else None
         max_pinyin_len = 0
 
         for sample in batch:
@@ -271,6 +298,19 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
             else:
                 raise ValueError(f"Sample {sample.sample_id} has neither mel_chunk nor audio_chunk")
             mels.append(mel)
+
+            # F0 extraction (if enabled)
+            if use_pitch:
+                if sample.f0_chunk is not None:
+                    # Use pre-extracted F0 from dataset
+                    f0_list.append(sample.f0_chunk)
+                elif sample.audio_chunk is not None:
+                    # Extract F0 from audio
+                    f0 = extract_f0_features(sample.audio_chunk, config.sample_rate, config.hop_length)
+                    f0_list.append(f0)
+                else:
+                    # For precomputed mel without F0, use zeros
+                    f0_list.append(np.zeros(mel.shape[1], dtype=np.float32))
 
             if context_mode == "pinyin":
                 # Original: encode actual syllables
@@ -303,7 +343,7 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
             padded_pinyin[i, :len(ids)] = ids
             pinyin_masks[i, len(ids):] = True
 
-        return {
+        result = {
             "mel": torch.tensor(padded_mels, dtype=torch.float32),
             "pinyin_ids": torch.tensor(padded_pinyin, dtype=torch.long),
             "audio_mask": torch.tensor(audio_masks, dtype=torch.bool),
@@ -311,6 +351,16 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
             "target_syllable": torch.tensor(target_syls, dtype=torch.long),
             "target_tone": torch.tensor(target_tones, dtype=torch.long),
         }
+
+        # Pad and add F0 if used
+        if use_pitch:
+            max_f0_len = max(len(f) for f in f0_list)
+            padded_f0 = np.zeros((len(batch), max_f0_len), dtype=np.float32)
+            for i, f0 in enumerate(f0_list):
+                padded_f0[i, :len(f0)] = f0
+            result["f0"] = torch.tensor(padded_f0, dtype=torch.float32)
+
+        return result
 
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
                       collate_fn=collate_fn, num_workers=0)
@@ -329,7 +379,12 @@ def evaluate(model, dataloader, device: str) -> tuple[float, float]:
             audio_mask = batch["audio_mask"].to(device)
             pinyin_mask = batch["pinyin_mask"].to(device)
 
-            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+            # Handle F0 if present
+            f0 = batch.get("f0")
+            if f0 is not None:
+                f0 = f0.to(device)
+
+            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask, f0=f0)
 
             syl_correct += (syl_logits.argmax(-1).cpu() == batch["target_syllable"]).sum().item()
             tone_correct += (tone_logits.argmax(-1).cpu() == batch["target_tone"]).sum().item()
@@ -354,7 +409,12 @@ def evaluate_detailed(model, dataloader, device: str) -> dict:
             audio_mask = batch["audio_mask"].to(device)
             pinyin_mask = batch["pinyin_mask"].to(device)
 
-            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+            # Handle F0 if present
+            f0 = batch.get("f0")
+            if f0 is not None:
+                f0 = f0.to(device)
+
+            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask, f0=f0)
             syl_pred = syl_logits.argmax(-1).cpu()
             tone_pred = tone_logits.argmax(-1).cpu()
 
@@ -398,6 +458,11 @@ def run_overfit_test(model, train_loader, config: TrainingConfig, device: str, l
     target_syl = batch["target_syllable"].to(device)
     target_tone = batch["target_tone"].to(device)
 
+    # Handle F0 if present
+    f0 = batch.get("f0")
+    if f0 is not None:
+        f0 = f0.to(device)
+
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate * 10)
     syl_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
     tone_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
@@ -405,7 +470,7 @@ def run_overfit_test(model, train_loader, config: TrainingConfig, device: str, l
     model.train()
     for step in range(config.overfit_steps):
         optimizer.zero_grad()
-        syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+        syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask, f0=f0)
         syl_loss = syl_criterion(syl_logits, target_syl)
         tone_loss = tone_criterion(tone_logits, target_tone)
         loss = 0.7 * syl_loss + 0.3 * tone_loss
@@ -419,7 +484,7 @@ def run_overfit_test(model, train_loader, config: TrainingConfig, device: str, l
 
     model.eval()
     with torch.no_grad():
-        syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+        syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask, f0=f0)
         syl_acc = (syl_logits.argmax(-1) == target_syl).float().mean().item()
         tone_acc = (tone_logits.argmax(-1) == target_tone).float().mean().item()
 
@@ -465,8 +530,13 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
             target_syl = batch["target_syllable"].to(config.device)
             target_tone = batch["target_tone"].to(config.device)
 
+            # Handle F0 if present
+            f0 = batch.get("f0")
+            if f0 is not None:
+                f0 = f0.to(config.device)
+
             optimizer.zero_grad()
-            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask)
+            syl_logits, tone_logits = model(mel, pinyin_ids, audio_mask, pinyin_mask, f0=f0)
             syl_loss = syl_criterion(syl_logits, target_syl)
             tone_loss = tone_criterion(tone_logits, target_tone)
             loss = 0.7 * syl_loss + 0.3 * tone_loss
@@ -564,6 +634,12 @@ def main():
         help="Context mode: 'pinyin' = actual syllables (default), 'position' = only syllable count/index"
     )
 
+    # Pitch fusion
+    parser.add_argument(
+        "--use-pitch", action="store_true",
+        help="Enable F0 pitch fusion for tone classification"
+    )
+
     args = parser.parse_args()
 
     # Handle --list-sources
@@ -629,6 +705,7 @@ def main():
         n_layers=args.n_layers,
         n_heads=args.n_heads,
         dim_feedforward=args.dim_feedforward,
+        use_pitch=args.use_pitch,
     )
     model = SyllablePredictorV4(model_config).to(config.device)
 
@@ -639,9 +716,10 @@ def main():
     # Create dataloaders (preload audio for non-mel sources).
     # If mel_cache is provided, no audio preload is needed for that source.
     logger.info(f"Context mode: {args.context_mode}")
+    logger.info(f"Pitch fusion: {'enabled' if args.use_pitch else 'disabled'}")
     preload = not mel_cache
-    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache)
-    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache)
+    train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache, use_pitch=args.use_pitch)
+    val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache, use_pitch=args.use_pitch)
     logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
     # Overfit test

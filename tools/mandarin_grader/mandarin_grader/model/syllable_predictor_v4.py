@@ -66,6 +66,10 @@ class SyllablePredictorConfigV4:
     dim_feedforward: int = 384  # FFN hidden dim
     dropout: float = 0.1
 
+    # Pitch fusion
+    use_pitch: bool = False  # Enable F0 pitch fusion
+    pitch_dim: int = 1  # Input F0 dimension (1 = scalar F0 per frame)
+
     # Vocabulary sizes
     n_syllables: int = 530  # Number of base syllables (loaded dynamically)
     n_tones: int = 5  # Tones 0-4
@@ -314,6 +318,81 @@ if TORCH_AVAILABLE:
             return self.dropout2(self.linear2(self.activation(self.linear1(x))))
 
 
+    class PitchFusionBlock(nn.Module):
+        """Fuse F0 pitch features with mel-derived audio features.
+
+        Uses cross-attention where mel features query pitch features.
+        Output = mel_features + alpha * CrossAttention(mel, pitch, pitch)
+
+        This allows the model to explicitly attend to pitch contours
+        for tone classification.
+        """
+
+        def __init__(
+            self,
+            d_model: int,
+            n_heads: int,
+            pitch_dim: int = 1,
+            dropout: float = 0.1,
+        ):
+            super().__init__()
+
+            # Project F0 from pitch_dim to d_model
+            self.pitch_proj = nn.Linear(pitch_dim, d_model)
+
+            # Cross-attention: mel queries pitch
+            self.cross_attn = nn.MultiheadAttention(
+                embed_dim=d_model,
+                num_heads=n_heads,
+                dropout=dropout,
+                batch_first=True,
+            )
+
+            # Layer norm and dropout
+            self.norm = nn.LayerNorm(d_model)
+            self.dropout = nn.Dropout(dropout)
+
+            # Learnable gate for residual (initialize small)
+            self.gate = nn.Parameter(torch.ones(1) * 0.1)
+
+        def forward(
+            self,
+            mel_features: torch.Tensor,  # [batch, seq, d_model]
+            f0: torch.Tensor,  # [batch, seq, pitch_dim] or [batch, seq]
+            f0_mask: torch.Tensor | None = None,  # [batch, seq] True = masked
+        ) -> torch.Tensor:
+            """Fuse pitch info into mel features.
+
+            Args:
+                mel_features: Mel-derived features [batch, seq, d_model]
+                f0: F0 features [batch, seq] or [batch, seq, 1]
+                f0_mask: Mask for unvoiced/padded frames
+
+            Returns:
+                Fused features [batch, seq, d_model]
+            """
+            # Ensure f0 has feature dimension
+            if f0.dim() == 2:
+                f0 = f0.unsqueeze(-1)  # [batch, seq, 1]
+
+            # Project pitch to model dimension
+            pitch_features = self.pitch_proj(f0)  # [batch, seq, d_model]
+
+            # Cross-attention: mel queries pitch
+            attn_out, _ = self.cross_attn(
+                query=mel_features,
+                key=pitch_features,
+                value=pitch_features,
+                key_padding_mask=f0_mask,
+            )
+
+            # Gated residual connection
+            output = mel_features + self.gate * self.dropout(attn_out)
+            output = self.norm(output)
+
+            return output
+
+
     class SyllablePredictorV4(nn.Module):
         """Autoregressive syllable+tone predictor V4.
 
@@ -392,6 +471,16 @@ if TORCH_AVAILABLE:
                 for _ in range(config.n_layers)
             ])
 
+            # Pitch fusion (optional)
+            self.use_pitch = config.use_pitch
+            if self.use_pitch:
+                self.pitch_fusion = PitchFusionBlock(
+                    d_model=config.d_model,
+                    n_heads=config.n_heads,
+                    pitch_dim=config.pitch_dim,
+                    dropout=config.dropout,
+                )
+
             # Attention pooling (PMA - Pooling by Multihead Attention)
             self.pool_query = nn.Parameter(torch.randn(1, 1, config.d_model) * 0.02)
             self.pool_attention = nn.MultiheadAttention(
@@ -444,6 +533,8 @@ if TORCH_AVAILABLE:
             pinyin_ids: torch.Tensor | np.ndarray,
             audio_mask: torch.Tensor | None = None,
             pinyin_mask: torch.Tensor | None = None,
+            f0: torch.Tensor | np.ndarray | None = None,
+            f0_mask: torch.Tensor | None = None,
         ) -> tuple[torch.Tensor, torch.Tensor]:
             """Forward pass.
 
@@ -452,6 +543,8 @@ if TORCH_AVAILABLE:
                 pinyin_ids: Pinyin token IDs [batch, seq_len]
                 audio_mask: Mask for padded audio frames [batch, time]
                 pinyin_mask: Mask for padded pinyin tokens [batch, seq_len]
+                f0: F0 pitch features [batch, time] (optional, for pitch fusion)
+                f0_mask: Mask for unvoiced/padded F0 frames [batch, time]
 
             Returns:
                 Tuple of (syllable_logits, tone_logits)
@@ -524,6 +617,39 @@ if TORCH_AVAILABLE:
             if pinyin_mask is not None:
                 pinyin_mask = pinyin_mask.to(device)
 
+            # Pitch fusion (if enabled and F0 provided)
+            if self.use_pitch and f0 is not None:
+                if isinstance(f0, np.ndarray):
+                    f0 = torch.from_numpy(f0).float().to(device)
+                else:
+                    f0 = f0.to(device)
+                if f0_mask is not None:
+                    f0_mask = f0_mask.to(device)
+
+                # Downsample F0 to match CNN output (4x downsampling)
+                # F0: [batch, time] -> [batch, time//4]
+                f0_len = f0.shape[1]
+                f0_downsampled = F.avg_pool1d(
+                    f0.unsqueeze(1),  # [batch, 1, time]
+                    kernel_size=4,
+                    stride=4,
+                    padding=0,
+                ).squeeze(1)  # [batch, time//4]
+
+                # Pad/truncate to match audio_embed length
+                if f0_downsampled.shape[1] < audio_embed.shape[1]:
+                    pad_len = audio_embed.shape[1] - f0_downsampled.shape[1]
+                    f0_downsampled = F.pad(f0_downsampled, (0, pad_len))
+                elif f0_downsampled.shape[1] > audio_embed.shape[1]:
+                    f0_downsampled = f0_downsampled[:, :audio_embed.shape[1]]
+
+                # Create F0 mask from downsampled frames (unvoiced = 0 in normalized F0)
+                # Mask True = should be masked (unvoiced)
+                f0_ds_mask = (f0_downsampled == 0)
+
+                # Apply pitch fusion
+                audio_embed = self.pitch_fusion(audio_embed, f0_downsampled, f0_ds_mask)
+
             # Add modality embedding to audio
             audio_embed = audio_embed + self.audio_type_embed
 
@@ -570,12 +696,14 @@ if TORCH_AVAILABLE:
             self,
             mel: torch.Tensor | np.ndarray,
             pinyin_ids: torch.Tensor | np.ndarray,
+            f0: torch.Tensor | np.ndarray | None = None,
         ) -> PredictorOutput:
             """Make predictions.
 
             Args:
                 mel: Mel spectrogram [batch, n_mels, time] or [n_mels, time]
                 pinyin_ids: Pinyin token IDs [batch, seq_len] or [seq_len]
+                f0: F0 pitch features [batch, time] or [time] (optional)
 
             Returns:
                 PredictorOutput with logits and predictions
@@ -591,8 +719,15 @@ if TORCH_AVAILABLE:
             if pinyin_ids.dim() == 1:
                 pinyin_ids = pinyin_ids.unsqueeze(0)
 
+            # Handle F0
+            if f0 is not None:
+                if isinstance(f0, np.ndarray):
+                    f0 = torch.from_numpy(f0).float()
+                if f0.dim() == 1:
+                    f0 = f0.unsqueeze(0)
+
             with torch.no_grad():
-                syllable_logits, tone_logits = self.forward(mel, pinyin_ids)
+                syllable_logits, tone_logits = self.forward(mel, pinyin_ids, f0=f0)
 
             syllable_pred = syllable_logits[0].argmax().item()
             tone_pred = tone_logits[0].argmax().item()
@@ -621,18 +756,20 @@ else:
         def __init__(self, config: SyllablePredictorConfigV4 | None = None):
             self.config = config or SyllablePredictorConfigV4()
             self.vocab = SyllableVocab()
+            self.use_pitch = self.config.use_pitch
 
-        def forward(self, mel, pinyin_ids, audio_mask=None, pinyin_mask=None):
+        def forward(self, mel, pinyin_ids, audio_mask=None, pinyin_mask=None, f0=None, f0_mask=None):
             batch = mel.shape[0]
             return (
                 np.random.randn(batch, self.config.n_syllables),
                 np.random.randn(batch, self.config.n_tones),
             )
 
-        def predict(self, mel, pinyin_ids):
+        def predict(self, mel, pinyin_ids, f0=None):
             syl_logits, tone_logits = self.forward(
                 mel if mel.ndim == 3 else mel[np.newaxis],
                 pinyin_ids if pinyin_ids.ndim == 2 else pinyin_ids[np.newaxis],
+                f0=f0,
             )
             return PredictorOutput(
                 syllable_logits=syl_logits,
