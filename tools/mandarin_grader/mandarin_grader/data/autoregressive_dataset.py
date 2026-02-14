@@ -195,6 +195,43 @@ def load_audio_wav(path: Path, target_sr: int = 16000) -> NDArray[np.float32]:
     return audio
 
 
+def spec_augment(
+    mel: NDArray[np.float32],
+    freq_masks: int = 2,
+    freq_width: int = 10,
+    time_masks: int = 2,
+    time_width: int = 40,
+) -> NDArray[np.float32]:
+    """Apply SpecAugment: frequency and time masking to mel spectrogram.
+
+    Args:
+        mel: Mel spectrogram [n_mels, time]
+        freq_masks: Number of frequency masks
+        freq_width: Max width of each frequency mask
+        time_masks: Number of time masks
+        time_width: Max width of each time mask
+
+    Returns:
+        Augmented mel spectrogram
+    """
+    mel = mel.copy()
+    n_mels, n_time = mel.shape
+
+    # Frequency masking
+    for _ in range(freq_masks):
+        f = np.random.randint(0, freq_width + 1)
+        f0 = np.random.randint(0, max(1, n_mels - f))
+        mel[f0:f0 + f, :] = 0.0
+
+    # Time masking
+    for _ in range(time_masks):
+        t = np.random.randint(0, time_width + 1)
+        t0 = np.random.randint(0, max(1, n_time - t))
+        mel[:, t0:t0 + t] = 0.0
+
+    return mel
+
+
 class AutoregressiveDataset:
     """Dataset for autoregressive syllable+tone prediction.
 
@@ -360,43 +397,6 @@ class AutoregressiveDataset:
 
     def _samples_to_frame(self, sample_idx: int) -> int:
         return max(0, sample_idx // self._mel_hop_length)
-
-
-def spec_augment(
-    mel: NDArray[np.float32],
-    freq_masks: int = 2,
-    freq_width: int = 10,
-    time_masks: int = 2,
-    time_width: int = 40,
-) -> NDArray[np.float32]:
-    """Apply SpecAugment: frequency and time masking to mel spectrogram.
-
-    Args:
-        mel: Mel spectrogram [n_mels, time]
-        freq_masks: Number of frequency masks
-        freq_width: Max width of each frequency mask
-        time_masks: Number of time masks
-        time_width: Max width of each time mask
-
-    Returns:
-        Augmented mel spectrogram
-    """
-    mel = mel.copy()
-    n_mels, n_time = mel.shape
-
-    # Frequency masking
-    for _ in range(freq_masks):
-        f = np.random.randint(0, freq_width + 1)
-        f0 = np.random.randint(0, max(1, n_mels - f))
-        mel[f0:f0 + f, :] = 0.0
-
-    # Time masking
-    for _ in range(time_masks):
-        t = np.random.randint(0, time_width + 1)
-        t0 = np.random.randint(0, max(1, n_time - t))
-        mel[:, t0:t0 + t] = 0.0
-
-    return mel
 
     def _frames_for_samples(self, n_samples: int) -> int:
         if n_samples < self._mel_win_length:
