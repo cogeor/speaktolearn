@@ -97,6 +97,38 @@ class PredictorOutput:
     tone_logits: NDArray[np.float32]  # [batch, n_tones]
     syllable_pred: int | None = None
     tone_pred: int | None = None
+    # Probability outputs for threshold-based grading
+    syllable_prob: float | None = None  # Probability of predicted syllable
+    tone_prob: float | None = None  # Probability of predicted tone
+
+
+# Grade thresholds for mapping probability to user-facing grades
+# prob < 0.2 → bad, 0.2-0.4 → almost, 0.4-0.6 → good, >= 0.6 → easy
+GRADE_THRESHOLDS = {
+    'bad': 0.0,
+    'almost': 0.2,
+    'good': 0.4,
+    'easy': 0.6,
+}
+
+
+def probability_to_grade(prob: float) -> str:
+    """Map probability to grade using thresholds.
+
+    Args:
+        prob: Probability of the correct class (0.0 to 1.0)
+
+    Returns:
+        Grade string: 'bad', 'almost', 'good', or 'easy'
+    """
+    if prob >= GRADE_THRESHOLDS['easy']:
+        return 'easy'
+    elif prob >= GRADE_THRESHOLDS['good']:
+        return 'good'
+    elif prob >= GRADE_THRESHOLDS['almost']:
+        return 'almost'
+    else:
+        return 'bad'
 
 
 class SyllableVocab:
@@ -796,11 +828,19 @@ if TORCH_AVAILABLE:
             syllable_pred = syllable_logits[0].argmax().item()
             tone_pred = tone_logits[0].argmax().item()
 
+            # Compute softmax probabilities for the predicted classes
+            syllable_probs = torch.softmax(syllable_logits[0], dim=-1)
+            tone_probs = torch.softmax(tone_logits[0], dim=-1)
+            syllable_prob = syllable_probs[syllable_pred].item()
+            tone_prob = tone_probs[tone_pred].item()
+
             return PredictorOutput(
                 syllable_logits=syllable_logits.cpu().numpy(),
                 tone_logits=tone_logits.cpu().numpy(),
                 syllable_pred=syllable_pred,
                 tone_pred=tone_pred,
+                syllable_prob=syllable_prob,
+                tone_prob=tone_prob,
             )
 
         def count_parameters(self) -> tuple[int, int]:
