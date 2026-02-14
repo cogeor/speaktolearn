@@ -20,6 +20,8 @@ import '../features/recording/domain/recording_repository.dart';
 import '../features/selection/domain/get_next_by_level.dart';
 import '../features/recording/presentation/recording_controller.dart';
 import '../features/recording/presentation/recording_state.dart';
+import '../features/scoring/domain/pronunciation_scorer.dart';
+import '../features/ml_inference/data/mock_ml_scorer.dart';
 import '../features/settings/data/settings_repository_impl.dart';
 import '../features/settings/domain/settings_repository.dart';
 import '../features/text_sequences/data/dataset_source.dart';
@@ -96,6 +98,14 @@ final recordingControllerProvider =
         audioPlayer: ref.watch(audioPlayerProvider),
       );
     });
+
+/// Provider for ML-based pronunciation scorer.
+///
+/// Currently uses [MockMlScorer] for debugging. Replace with ONNX scorer
+/// for production use.
+final pronunciationScorerProvider = Provider<PronunciationScorer>((ref) {
+  return MockMlScorer();
+});
 
 const _datasetFingerprintKey = '__dataset_fingerprint_v1';
 const _datasetAssetPath = 'assets/datasets/sentences.zh.json';

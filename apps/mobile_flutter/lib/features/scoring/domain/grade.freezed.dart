@@ -43,6 +43,10 @@ mixin _$Grade {
   /// Additional details about the scoring (CER, edit distance, etc.).
   Map<String, dynamic>? get details => throw _privateConstructorUsedError;
 
+  /// Per-character scores from ML model (0.0-1.0 each).
+  /// Length should match text.characters.length when present.
+  List<double>? get characterScores => throw _privateConstructorUsedError;
+
   /// Serializes this Grade to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
@@ -64,6 +68,7 @@ abstract class $GradeCopyWith<$Res> {
     int? completeness,
     String? recognizedText,
     Map<String, dynamic>? details,
+    List<double>? characterScores,
   });
 }
 
@@ -88,6 +93,7 @@ class _$GradeCopyWithImpl<$Res, $Val extends Grade>
     Object? completeness = freezed,
     Object? recognizedText = freezed,
     Object? details = freezed,
+    Object? characterScores = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -115,6 +121,10 @@ class _$GradeCopyWithImpl<$Res, $Val extends Grade>
                 ? _value.details
                 : details // ignore: cast_nullable_to_non_nullable
                       as Map<String, dynamic>?,
+            characterScores: freezed == characterScores
+                ? _value.characterScores
+                : characterScores // ignore: cast_nullable_to_non_nullable
+                      as List<double>?,
           )
           as $Val,
     );
@@ -136,6 +146,7 @@ abstract class _$$GradeImplCopyWith<$Res> implements $GradeCopyWith<$Res> {
     int? completeness,
     String? recognizedText,
     Map<String, dynamic>? details,
+    List<double>? characterScores,
   });
 }
 
@@ -159,6 +170,7 @@ class __$$GradeImplCopyWithImpl<$Res>
     Object? completeness = freezed,
     Object? recognizedText = freezed,
     Object? details = freezed,
+    Object? characterScores = freezed,
   }) {
     return _then(
       _$GradeImpl(
@@ -186,6 +198,10 @@ class __$$GradeImplCopyWithImpl<$Res>
             ? _value._details
             : details // ignore: cast_nullable_to_non_nullable
                   as Map<String, dynamic>?,
+        characterScores: freezed == characterScores
+            ? _value._characterScores
+            : characterScores // ignore: cast_nullable_to_non_nullable
+                  as List<double>?,
       ),
     );
   }
@@ -201,7 +217,9 @@ class _$GradeImpl implements _Grade {
     this.completeness,
     this.recognizedText,
     final Map<String, dynamic>? details,
-  }) : _details = details;
+    final List<double>? characterScores,
+  }) : _details = details,
+       _characterScores = characterScores;
 
   factory _$GradeImpl.fromJson(Map<String, dynamic> json) =>
       _$$GradeImplFromJson(json);
@@ -243,9 +261,24 @@ class _$GradeImpl implements _Grade {
     return EqualUnmodifiableMapView(value);
   }
 
+  /// Per-character scores from ML model (0.0-1.0 each).
+  /// Length should match text.characters.length when present.
+  final List<double>? _characterScores;
+
+  /// Per-character scores from ML model (0.0-1.0 each).
+  /// Length should match text.characters.length when present.
+  @override
+  List<double>? get characterScores {
+    final value = _characterScores;
+    if (value == null) return null;
+    if (_characterScores is EqualUnmodifiableListView) return _characterScores;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   @override
   String toString() {
-    return 'Grade(overall: $overall, method: $method, accuracy: $accuracy, completeness: $completeness, recognizedText: $recognizedText, details: $details)';
+    return 'Grade(overall: $overall, method: $method, accuracy: $accuracy, completeness: $completeness, recognizedText: $recognizedText, details: $details, characterScores: $characterScores)';
   }
 
   @override
@@ -261,7 +294,11 @@ class _$GradeImpl implements _Grade {
                 other.completeness == completeness) &&
             (identical(other.recognizedText, recognizedText) ||
                 other.recognizedText == recognizedText) &&
-            const DeepCollectionEquality().equals(other._details, _details));
+            const DeepCollectionEquality().equals(other._details, _details) &&
+            const DeepCollectionEquality().equals(
+              other._characterScores,
+              _characterScores,
+            ));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -274,6 +311,7 @@ class _$GradeImpl implements _Grade {
     completeness,
     recognizedText,
     const DeepCollectionEquality().hash(_details),
+    const DeepCollectionEquality().hash(_characterScores),
   );
 
   /// Create a copy of Grade
@@ -298,6 +336,7 @@ abstract class _Grade implements Grade {
     final int? completeness,
     final String? recognizedText,
     final Map<String, dynamic>? details,
+    final List<double>? characterScores,
   }) = _$GradeImpl;
 
   factory _Grade.fromJson(Map<String, dynamic> json) = _$GradeImpl.fromJson;
@@ -329,6 +368,11 @@ abstract class _Grade implements Grade {
   /// Additional details about the scoring (CER, edit distance, etc.).
   @override
   Map<String, dynamic>? get details;
+
+  /// Per-character scores from ML model (0.0-1.0 each).
+  /// Length should match text.characters.length when present.
+  @override
+  List<double>? get characterScores;
 
   /// Create a copy of Grade
   /// with the given fields replaced by the non-null parameter values.

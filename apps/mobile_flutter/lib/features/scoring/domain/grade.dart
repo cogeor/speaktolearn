@@ -27,6 +27,10 @@ class Grade with _$Grade {
 
     /// Additional details about the scoring (CER, edit distance, etc.).
     Map<String, dynamic>? details,
+
+    /// Per-character scores from ML model (0.0-1.0 each).
+    /// Length should match text.characters.length when present.
+    List<double>? characterScores,
   }) = _Grade;
 
   factory Grade.fromJson(Map<String, dynamic> json) => _$GradeFromJson(json);
