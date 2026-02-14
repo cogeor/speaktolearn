@@ -23,9 +23,10 @@ class RecordingRepositoryImpl implements RecordingRepository {
   }
 
   /// Gets the file path for a text sequence's recording.
+  /// Using .wav extension for ML-compatible 16kHz PCM audio.
   Future<String> _getFilePath(String textSequenceId) async {
     final dir = await _getRecordingsDir();
-    return '$dir/$textSequenceId.m4a';
+    return '$dir/$textSequenceId.wav';
   }
 
   @override

@@ -36,14 +36,20 @@ class RecordPluginRecorder implements AudioRecorder {
 
     try {
       final tempDir = await getTemporaryDirectory();
-      final fileName = '${_uuid.v4()}.m4a';
+      // Use .wav extension for ML-compatible audio format
+      final fileName = '${_uuid.v4()}.wav';
       _currentPath = '${tempDir.path}/$fileName';
 
       await _recorder.start(
         const record_pkg.RecordConfig(
-          encoder: record_pkg.AudioEncoder.aacLc,
-          sampleRate: 44100,
-          bitRate: 128000,
+          // WAV encoder for uncompressed PCM audio
+          encoder: record_pkg.AudioEncoder.wav,
+          // 16kHz sample rate for ML model compatibility
+          sampleRate: 16000,
+          // Mono audio (1 channel) for ML processing
+          numChannels: 1,
+          // 16-bit PCM (default for WAV)
+          bitRate: 256000, // Higher bitrate for WAV
         ),
         path: _currentPath!,
       );
