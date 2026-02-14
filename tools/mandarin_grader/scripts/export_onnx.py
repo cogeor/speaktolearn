@@ -11,11 +11,17 @@ Usage:
     # Export with validation
     python export_onnx.py --checkpoint checkpoints_v4/best_model.pt --output model.onnx --validate
 
+    # Export with metadata generation
+    python export_onnx.py --checkpoint checkpoints_v4/best_model.pt --output model.onnx --metadata
+
     # Export with custom opset version
     python export_onnx.py --checkpoint checkpoints_v4/best_model.pt --output model.onnx --opset 17
 
     # Export in FP16 precision
     python export_onnx.py --checkpoint checkpoints_v4/best_model.pt --output model.onnx --fp16
+
+    # Full export with validation and metadata
+    python export_onnx.py --checkpoint checkpoints_v4/best_model.pt --output model.onnx --validate --metadata --fp16
 
 Model Information:
     - Input: mel [batch, 80, time], pinyin_ids [batch, seq_len], masks
@@ -24,7 +30,9 @@ Model Information:
 """
 
 import argparse
+import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 import numpy as np
@@ -394,6 +402,152 @@ def generate_test_samples(
     return samples[:num_samples]
 
 
+def generate_model_metadata(
+    onnx_path: Path,
+    config: SyllablePredictorConfigV4,
+    checkpoint_path: Path,
+    use_fp16: bool,
+    opset_version: int,
+) -> dict:
+    """Generate model metadata JSON.
+
+    Args:
+        onnx_path: Path to exported ONNX model
+        config: Model configuration
+        checkpoint_path: Path to original checkpoint
+        use_fp16: Whether model is in FP16 precision
+        opset_version: ONNX opset version
+
+    Returns:
+        Dictionary containing model metadata
+    """
+    # Get model file size
+    model_size_bytes = onnx_path.stat().st_size
+    model_size_mb = model_size_bytes / (1024 * 1024)
+
+    # Create metadata structure
+    metadata = {
+        "model_info": {
+            "name": "SyllablePredictorV4",
+            "version": "4.0",
+            "architecture": "CNN + RoPE Transformer + Attention Pooling",
+            "created_at": datetime.utcnow().isoformat() + "Z",
+            "checkpoint_source": str(checkpoint_path.name),
+            "precision": "fp16" if use_fp16 else "fp32",
+            "opset_version": opset_version,
+            "model_size_bytes": model_size_bytes,
+            "model_size_mb": round(model_size_mb, 2),
+        },
+        "input_specs": {
+            "mel": {
+                "shape": ["batch", 80, "time"],
+                "dtype": "float16" if use_fp16 else "float32",
+                "description": "Log-mel spectrogram features",
+                "notes": "time dimension is variable (typically ~100 frames for 1s audio)"
+            },
+            "pinyin_ids": {
+                "shape": ["batch", "seq_len"],
+                "dtype": "int64",
+                "description": "Pinyin token IDs for context (previous syllables)",
+                "notes": "seq_len is variable, typically 1-50 tokens"
+            },
+            "audio_mask": {
+                "shape": ["batch", "time"],
+                "dtype": "bool",
+                "description": "Padding mask for audio frames (True = padded/ignored)",
+                "notes": "Must match time dimension of mel input"
+            },
+            "pinyin_mask": {
+                "shape": ["batch", "seq_len"],
+                "dtype": "bool",
+                "description": "Padding mask for pinyin tokens (True = padded/ignored)",
+                "notes": "Must match seq_len dimension of pinyin_ids input"
+            }
+        },
+        "output_specs": {
+            "syllable_logits": {
+                "shape": ["batch", config.n_syllables],
+                "dtype": "float16" if use_fp16 else "float32",
+                "description": "Logits for syllable prediction (apply softmax for probabilities)",
+                "num_classes": config.n_syllables
+            },
+            "tone_logits": {
+                "shape": ["batch", config.n_tones],
+                "dtype": "float16" if use_fp16 else "float32",
+                "description": "Logits for tone prediction (apply softmax for probabilities)",
+                "num_classes": config.n_tones
+            }
+        },
+        "preprocessing": {
+            "audio": {
+                "sample_rate": config.sample_rate,
+                "n_mels": config.n_mels,
+                "hop_length": config.hop_length,
+                "win_length": config.win_length,
+                "n_fft": 512,
+                "fmin": 0,
+                "fmax": 8000,
+                "notes": "Use librosa.feature.melspectrogram or equivalent with these params"
+            },
+            "normalization": {
+                "method": "log_mel",
+                "description": "Apply log to mel spectrogram: log(mel + 1e-9)"
+            }
+        },
+        "vocabulary": {
+            "n_syllables": config.n_syllables,
+            "n_tones": config.n_tones,
+            "special_tokens": {
+                "PAD": config.pad_token,
+                "BOS": config.bos_token
+            },
+            "notes": "Syllable vocab includes special tokens. Valid token range: [0, n_syllables-1]"
+        },
+        "model_architecture": {
+            "d_model": config.d_model,
+            "n_layers": config.n_layers,
+            "n_heads": config.n_heads,
+            "dim_feedforward": config.dim_feedforward,
+            "cnn_kernel_size": config.cnn_kernel_size,
+            "max_audio_frames": config.max_audio_frames,
+            "max_pinyin_len": config.max_pinyin_len
+        }
+    }
+
+    return metadata
+
+
+def save_model_metadata(
+    metadata: dict,
+    onnx_path: Path,
+) -> Path:
+    """Save model metadata JSON alongside ONNX file.
+
+    Args:
+        metadata: Metadata dictionary
+        onnx_path: Path to ONNX model file
+
+    Returns:
+        Path to saved metadata JSON file
+    """
+    # Create metadata filename: model.onnx -> model_metadata.json
+    metadata_path = onnx_path.with_suffix('').with_suffix('.onnx').parent / (onnx_path.stem + '_metadata.json')
+
+    print(f"\nGenerating model metadata...")
+    with open(metadata_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
+
+    print(f"  Metadata saved to: {metadata_path}")
+    print(f"  Model size: {metadata['model_info']['model_size_mb']} MB")
+    print(f"  Precision: {metadata['model_info']['precision']}")
+    print(f"  Input: mel {metadata['input_specs']['mel']['shape']}, "
+          f"pinyin_ids {metadata['input_specs']['pinyin_ids']['shape']}")
+    print(f"  Output: syllable_logits [{metadata['output_specs']['syllable_logits']['num_classes']}], "
+          f"tone_logits [{metadata['output_specs']['tone_logits']['num_classes']}]")
+
+    return metadata_path
+
+
 def validate_onnx_export(
     pytorch_model: SyllablePredictorV4,
     onnx_path: Path,
@@ -619,6 +773,11 @@ def main():
         action="store_true",
         help="Validate export by comparing PyTorch vs ONNX outputs"
     )
+    parser.add_argument(
+        "--metadata",
+        action="store_true",
+        help="Generate model_metadata.json with model specifications and preprocessing params"
+    )
 
     args = parser.parse_args()
 
@@ -645,6 +804,18 @@ def main():
         # Export to ONNX
         export_to_onnx(model, args.output, config, args.opset, args.fp16)
 
+        # Generate metadata if requested
+        metadata_path = None
+        if args.metadata:
+            metadata = generate_model_metadata(
+                args.output,
+                config,
+                args.checkpoint,
+                args.fp16,
+                args.opset
+            )
+            metadata_path = save_model_metadata(metadata, args.output)
+
         # Validate if requested
         if args.validate:
             validation_passed = validate_onnx_export(model, args.output, config)
@@ -659,6 +830,8 @@ def main():
         print(f"Output: {args.output}")
         print(f"Opset version: {args.opset}")
         print(f"Precision: {'FP16' if args.fp16 else 'FP32'}")
+        if args.metadata:
+            print(f"Metadata: {metadata_path}")
         if args.validate:
             print("Validation: PASSED")
 
