@@ -239,18 +239,12 @@ def export_to_onnx(
     """
     device = next(model.parameters()).device
 
-    # Convert to FP16 if requested
-    if use_fp16:
-        print("Converting model to FP16 precision...")
-        model = model.half()
+    # Always export in FP32 first, then convert to FP16 if requested
+    # This ensures inputs/outputs stay as float32 for compatibility
 
     # Prepare dummy inputs
     print("Preparing dummy inputs...")
     dummy_inputs = prepare_dummy_inputs(config, device)
-
-    if use_fp16:
-        # Convert mel input to FP16
-        dummy_inputs = (dummy_inputs[0].half(),) + dummy_inputs[1:]
 
     # Define input and output names
     input_names = ['mel', 'pinyin_ids', 'audio_mask', 'pinyin_mask']
@@ -286,6 +280,35 @@ def export_to_onnx(
             output_names=output_names,
             dynamic_axes=dynamic_axes,
         )
+
+        # Convert to FP16 if requested (keeps I/O as float32 for compatibility)
+        if use_fp16:
+            print("\nConverting internal ops to FP16 (keeping I/O as float32)...")
+            try:
+                import onnx
+                from onnxruntime.transformers import float16
+
+                model_fp32 = onnx.load(str(output_path))
+                model_fp16 = float16.convert_float_to_float16(
+                    model_fp32,
+                    keep_io_types=True,  # Keep inputs/outputs as float32
+                )
+                onnx.save(model_fp16, str(output_path))
+                print("  FP16 conversion successful (I/O remains float32)")
+            except ImportError:
+                try:
+                    # Fallback to onnxconverter-common
+                    from onnxconverter_common import float16 as onnx_float16
+                    model_fp32 = onnx.load(str(output_path))
+                    model_fp16 = onnx_float16.convert_float_to_float16(
+                        model_fp32,
+                        keep_io_types=True,
+                    )
+                    onnx.save(model_fp16, str(output_path))
+                    print("  FP16 conversion successful (I/O remains float32)")
+                except Exception as e:
+                    print(f"  Warning: FP16 conversion failed: {e}")
+                    print("  Keeping model in FP32 format")
 
         # Get file size
         file_size_mb = output_path.stat().st_size / (1024 * 1024)
@@ -436,7 +459,7 @@ def generate_model_metadata(
         "input_specs": {
             "mel": {
                 "shape": ["batch", 80, "time"],
-                "dtype": "float16" if use_fp16 else "float32",
+                "dtype": "float32",  # I/O always float32, internal ops may be fp16
                 "description": "Log-mel spectrogram features",
                 "notes": "time dimension is variable (typically ~100 frames for 1s audio)"
             },
@@ -462,13 +485,13 @@ def generate_model_metadata(
         "output_specs": {
             "syllable_logits": {
                 "shape": ["batch", config.n_syllables],
-                "dtype": "float16" if use_fp16 else "float32",
+                "dtype": "float32",  # I/O always float32
                 "description": "Logits for syllable prediction (apply softmax for probabilities)",
                 "num_classes": config.n_syllables
             },
             "tone_logits": {
                 "shape": ["batch", config.n_tones],
-                "dtype": "float16" if use_fp16 else "float32",
+                "dtype": "float32",  # I/O always float32
                 "description": "Logits for tone prediction (apply softmax for probabilities)",
                 "num_classes": config.n_tones
             }
