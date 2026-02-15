@@ -24,7 +24,7 @@ class OnnxMlScorer implements MlScorer {
   bool _isReady = false;
 
   static const _method = 'onnx_v4';
-  static const _modelPath = 'assets/models/v4_model.onnx';
+  static const _modelPath = 'assets/models/model.onnx';
 
   @override
   bool get isReady => _isReady;

@@ -1,0 +1,121 @@
+{
+  "model_info": {
+    "name": "SyllablePredictorV4",
+    "version": "4.0",
+    "architecture": "CNN + RoPE Transformer + Attention Pooling",
+    "created_at": "2026-02-15T19:06:00.879844Z",
+    "checkpoint_source": "best_model.pt",
+    "precision": "fp32",
+    "opset_version": 17,
+    "model_size_bytes": 83286651,
+    "model_size_mb": 79.43
+  },
+  "input_specs": {
+    "mel": {
+      "shape": [
+        "batch",
+        80,
+        "time"
+      ],
+      "dtype": "float32",
+      "description": "Log-mel spectrogram features",
+      "notes": "time dimension is variable (typically ~100 frames for 1s audio)"
+    },
+    "pinyin_ids": {
+      "shape": [
+        "batch",
+        "seq_len"
+      ],
+      "dtype": "int64",
+      "description": "Pinyin token IDs for context (previous syllables)",
+      "notes": "seq_len is variable, typically 1-50 tokens"
+    },
+    "audio_mask": {
+      "shape": [
+        "batch",
+        "time"
+      ],
+      "dtype": "bool",
+      "description": "Padding mask for audio frames (True = padded/ignored)",
+      "notes": "Must match time dimension of mel input"
+    },
+    "pinyin_mask": {
+      "shape": [
+        "batch",
+        "seq_len"
+      ],
+      "dtype": "bool",
+      "description": "Padding mask for pinyin tokens (True = padded/ignored)",
+      "notes": "Must match seq_len dimension of pinyin_ids input"
+    }
+  },
+  "output_specs": {
+    "syllable_logits": {
+      "shape": [
+        "batch",
+        532
+      ],
+      "dtype": "float32",
+      "description": "Logits for syllable prediction (apply softmax for probabilities)",
+      "num_classes": 532
+    },
+    "tone_logits": {
+      "shape": [
+        "batch",
+        5
+      ],
+      "dtype": "float32",
+      "description": "Logits for tone prediction (apply softmax for probabilities)",
+      "num_classes": 5
+    }
+  },
+  "preprocessing": {
+    "audio": {
+      "sample_rate": 16000,
+      "n_mels": 80,
+      "hop_length": 160,
+      "win_length": 400,
+      "n_fft": 512,
+      "fmin": 0,
+      "fmax": 8000,
+      "notes": "Use librosa.feature.melspectrogram or equivalent with these params"
+    },
+    "normalization": {
+      "method": "log_mel",
+      "description": "Apply log to mel spectrogram: log(mel + 1e-9)"
+    }
+  },
+  "vocabulary": {
+    "n_syllables": 532,
+    "n_tones": 5,
+    "special_tokens": {
+      "PAD": 0,
+      "BOS": 1
+    },
+    "notes": "Syllable vocab includes special tokens. Valid token range: [0, n_syllables-1]"
+  },
+  "model_architecture": {
+    "d_model": 480,
+    "n_layers": 8,
+    "n_heads": 15,
+    "dim_feedforward": 1440,
+    "cnn_kernel_size": 3,
+    "max_audio_frames": 100,
+    "max_pinyin_len": 50
+  },
+  "grade_thresholds": {
+    "description": "Probability thresholds for mapping model confidence to user-facing grades",
+    "thresholds": {
+      "bad": 0.0,
+      "almost": 0.2,
+      "good": 0.4,
+      "easy": 0.6
+    },
+    "mapping": {
+      "bad": "prob < 0.2",
+      "almost": "0.2 <= prob < 0.4",
+      "good": "0.4 <= prob < 0.6",
+      "easy": "prob >= 0.6"
+    }
+  }
+}
