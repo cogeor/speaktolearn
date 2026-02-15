@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:math';
+import 'dart:math' show exp, max;
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
@@ -299,25 +299,14 @@ class OnnxMlScorer implements MlScorer {
   }
 
   /// Fallback score when model fails or data is unavailable.
+  ///
+  /// Returns a Grade with no characterScores, so ColoredText displays
+  /// white (unscored) text instead of random colors.
   Grade _fallbackScore(TextSequence sequence) {
-    final characters = sequence.text.characters.toList();
-    final charCount = characters.length;
-    final random = Random();
-
-    // Generate random scores
-    final characterScores = List.generate(
-      charCount,
-      (_) => 0.5 + random.nextDouble() * 0.3, // 0.5-0.8 range
-    );
-
-    final avgScore = characterScores.isEmpty
-        ? 0.0
-        : characterScores.reduce((a, b) => a + b) / characterScores.length;
-
     return Grade(
-      overall: (avgScore * 100).round(),
+      overall: 0,
       method: '${_method}_fallback',
-      characterScores: characterScores,
+      characterScores: null, // No scores = white text in ColoredText
       details: {
         'fallback': true,
         'reason': 'Model not available or error occurred',
