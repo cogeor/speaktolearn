@@ -1,4 +1,4 @@
-.PHONY: setup install-hooks generate clean run test help
+.PHONY: setup install-hooks generate clean run test deploy-model help
 
 # Default target
 help:
@@ -7,6 +7,7 @@ help:
 	@echo "  make setup      - Set up Python virtual environment"
 	@echo "  make install-hooks - Configure local git hooks"
 	@echo "  make generate   - Generate text + audio and export to Flutter"
+	@echo "  make deploy-model - Deploy V4 model to Flutter (auto-detects latest checkpoint)"
 	@echo "  make clean      - Remove generated files"
 	@echo "  make run        - Run Flutter app"
 	@echo "  make test       - Run all tests"
@@ -50,6 +51,16 @@ clean:
 # Run Flutter app
 run:
 	cd apps/mobile_flutter && flutter run
+
+# Deploy V4 model to Flutter
+deploy-model:
+	@echo "==> Deploying V4 model to Flutter..."
+	cd tools/mandarin_grader && uv run python scripts/deploy_to_flutter.py
+	@echo ""
+	@echo "==> Running flutter pub get..."
+	cd apps/mobile_flutter && flutter pub get
+	@echo ""
+	@echo "Done! Model deployed to $(FLUTTER_ASSETS)/models/"
 
 # Run tests
 test:

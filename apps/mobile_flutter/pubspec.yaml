@@ -61,3 +61,4 @@ flutter:
     - assets/datasets/
     - assets/examples/female/
     - assets/examples/male/
+    - assets/models/
