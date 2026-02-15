@@ -17,6 +17,7 @@ import 'home_state.dart';
 import '../../text_sequences/presentation/sequence_list_controller.dart';
 import 'practice_sheet.dart';
 import 'widgets/activity_summary.dart';
+import 'widgets/colored_text.dart';
 import 'widgets/level_picker.dart';
 import 'widgets/rating_nav_buttons.dart';
 
@@ -267,8 +268,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                             widget.state.currentProgress,
                           );
                         },
-                        child: Text(
-                          sequence.text,
+                        child: ColoredText(
+                          text: sequence.text,
+                          scores: recordingState.latestGrade?.characterScores,
                           style: Theme.of(context).textTheme.displayLarge,
                           textAlign: TextAlign.center,
                         ),

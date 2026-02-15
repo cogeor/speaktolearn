@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../../scoring/domain/grade.dart';
+
 part 'recording_state.freezed.dart';
 
 /// Explicit phases for the recording state machine.
@@ -43,6 +45,10 @@ class RecordingState with _$RecordingState {
 
     /// Total duration in seconds for progress calculation. Null when not recording.
     int? totalDurationSeconds,
+
+    /// Latest pronunciation grade from ML scorer.
+    /// Contains character-level scores for ColoredText visualization.
+    Grade? latestGrade,
   }) = _RecordingState;
 
   /// Whether the recorder is actively recording audio.

@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/audio/audio_player.dart' show AudioPlayer, PlaybackState;
 import '../../../core/audio/audio_source.dart';
 import '../../text_sequences/domain/text_sequence.dart';
+import '../../scoring/domain/pronunciation_scorer.dart';
 import '../domain/audio_recorder.dart';
 import '../domain/recording.dart';
 import '../domain/recording_duration_calculator.dart';
@@ -33,14 +34,17 @@ class RecordingController extends StateNotifier<RecordingState> {
     required AudioRecorder recorder,
     required RecordingRepository repository,
     required AudioPlayer audioPlayer,
+    required PronunciationScorer scorer,
   }) : _recorder = recorder,
        _repository = repository,
        _audioPlayer = audioPlayer,
+       _scorer = scorer,
        super(const RecordingState());
 
   final AudioRecorder _recorder;
   final RecordingRepository _repository;
   final AudioPlayer _audioPlayer;
+  final PronunciationScorer _scorer;
 
   Timer? _autoStopTimer;
   Timer? _countdownTimer;
@@ -193,6 +197,7 @@ class RecordingController extends StateNotifier<RecordingState> {
   /// Saves the recording file and transitions to complete phase.
   ///
   /// Creates a [Recording] object and saves it to the repository.
+  /// Scores the pronunciation using the ML scorer and updates state with the grade.
   Future<void> _saveRecording(
     String filePath,
     TextSequence textSequence,
@@ -208,11 +213,15 @@ class RecordingController extends StateNotifier<RecordingState> {
       // Save recording to enable replay functionality
       await _repository.saveLatest(recording);
 
-      // Transition to complete phase after file is saved
+      // Score the pronunciation using ML scorer
+      final grade = await _scorer.score(textSequence, recording);
+
+      // Transition to complete phase after file is saved and scored
       state = state.copyWith(
         phase: RecordingPhase.complete,
         hasLatestRecording: true,
         hasPlayedBack: false,
+        latestGrade: grade,
       );
     } catch (e) {
       HapticFeedback.heavyImpact();
@@ -274,8 +283,13 @@ class RecordingController extends StateNotifier<RecordingState> {
   ///
   /// Called after rating a sentence to reset the state for the next one.
   /// Sets [hasPlayedBack] and [hasLatestRecording] to false.
+  /// Clears the latest grade.
   void resetPlaybackState() {
-    state = state.copyWith(hasPlayedBack: false, hasLatestRecording: false);
+    state = state.copyWith(
+      hasPlayedBack: false,
+      hasLatestRecording: false,
+      latestGrade: null,
+    );
   }
 
   /// Cancels any active recording or playback.

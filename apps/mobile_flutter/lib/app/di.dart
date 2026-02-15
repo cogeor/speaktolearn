@@ -96,6 +96,7 @@ final recordingControllerProvider =
         recorder: ref.watch(audioRecorderProvider),
         repository: ref.watch(recordingRepositoryProvider),
         audioPlayer: ref.watch(audioPlayerProvider),
+        scorer: ref.watch(pronunciationScorerProvider),
       );
     });
 

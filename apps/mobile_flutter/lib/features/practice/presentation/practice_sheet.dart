@@ -8,6 +8,7 @@ import '../../progress/domain/sentence_rating.dart';
 import '../../progress/domain/text_sequence_progress.dart';
 import '../../example_audio/presentation/example_audio_controller.dart';
 import '../../recording/presentation/widgets/recording_waveform.dart';
+import 'widgets/colored_text.dart';
 import 'widgets/score_bar.dart';
 
 /// Provider for example audio controller.
@@ -51,6 +52,8 @@ class _PracticeSheetState extends ConsumerState<PracticeSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final recordingState = ref.watch(recordingControllerProvider);
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -68,8 +71,9 @@ class _PracticeSheetState extends ConsumerState<PracticeSheet> {
             ),
             const SizedBox(height: 24),
             // Text display
-            Text(
-              widget.sequence.text,
+            ColoredText(
+              text: widget.sequence.text,
+              scores: recordingState.latestGrade?.characterScores,
               style: Theme.of(context).textTheme.bodyLarge,
               textAlign: TextAlign.center,
             ),

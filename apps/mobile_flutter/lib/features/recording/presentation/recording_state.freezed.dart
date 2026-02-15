@@ -33,6 +33,10 @@ mixin _$RecordingState {
   /// Total duration in seconds for progress calculation. Null when not recording.
   int? get totalDurationSeconds => throw _privateConstructorUsedError;
 
+  /// Latest pronunciation grade from ML scorer.
+  /// Contains character-level scores for ColoredText visualization.
+  Grade? get latestGrade => throw _privateConstructorUsedError;
+
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -55,7 +59,10 @@ abstract class $RecordingStateCopyWith<$Res> {
     String? error,
     int? remainingSeconds,
     int? totalDurationSeconds,
+    Grade? latestGrade,
   });
+
+  $GradeCopyWith<$Res>? get latestGrade;
 }
 
 /// @nodoc
@@ -80,6 +87,7 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
     Object? error = freezed,
     Object? remainingSeconds = freezed,
     Object? totalDurationSeconds = freezed,
+    Object? latestGrade = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -111,9 +119,27 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
                 ? _value.totalDurationSeconds
                 : totalDurationSeconds // ignore: cast_nullable_to_non_nullable
                       as int?,
+            latestGrade: freezed == latestGrade
+                ? _value.latestGrade
+                : latestGrade // ignore: cast_nullable_to_non_nullable
+                      as Grade?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of RecordingState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $GradeCopyWith<$Res>? get latestGrade {
+    if (_value.latestGrade == null) {
+      return null;
+    }
+
+    return $GradeCopyWith<$Res>(_value.latestGrade!, (value) {
+      return _then(_value.copyWith(latestGrade: value) as $Val);
+    });
   }
 }
 
@@ -134,7 +160,11 @@ abstract class _$$RecordingStateImplCopyWith<$Res>
     String? error,
     int? remainingSeconds,
     int? totalDurationSeconds,
+    Grade? latestGrade,
   });
+
+  @override
+  $GradeCopyWith<$Res>? get latestGrade;
 }
 
 /// @nodoc
@@ -158,6 +188,7 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
     Object? error = freezed,
     Object? remainingSeconds = freezed,
     Object? totalDurationSeconds = freezed,
+    Object? latestGrade = freezed,
   }) {
     return _then(
       _$RecordingStateImpl(
@@ -189,6 +220,10 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
             ? _value.totalDurationSeconds
             : totalDurationSeconds // ignore: cast_nullable_to_non_nullable
                   as int?,
+        latestGrade: freezed == latestGrade
+            ? _value.latestGrade
+            : latestGrade // ignore: cast_nullable_to_non_nullable
+                  as Grade?,
       ),
     );
   }
@@ -205,6 +240,7 @@ class _$RecordingStateImpl extends _RecordingState {
     this.error,
     this.remainingSeconds,
     this.totalDurationSeconds,
+    this.latestGrade,
   }) : super._();
 
   /// The current phase in the recording state machine.
@@ -234,9 +270,14 @@ class _$RecordingStateImpl extends _RecordingState {
   @override
   final int? totalDurationSeconds;
 
+  /// Latest pronunciation grade from ML scorer.
+  /// Contains character-level scores for ColoredText visualization.
+  @override
+  final Grade? latestGrade;
+
   @override
   String toString() {
-    return 'RecordingState(phase: $phase, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, hasPlayedBack: $hasPlayedBack, error: $error, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds)';
+    return 'RecordingState(phase: $phase, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, hasPlayedBack: $hasPlayedBack, error: $error, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds, latestGrade: $latestGrade)';
   }
 
   @override
@@ -255,7 +296,9 @@ class _$RecordingStateImpl extends _RecordingState {
             (identical(other.remainingSeconds, remainingSeconds) ||
                 other.remainingSeconds == remainingSeconds) &&
             (identical(other.totalDurationSeconds, totalDurationSeconds) ||
-                other.totalDurationSeconds == totalDurationSeconds));
+                other.totalDurationSeconds == totalDurationSeconds) &&
+            (identical(other.latestGrade, latestGrade) ||
+                other.latestGrade == latestGrade));
   }
 
   @override
@@ -268,6 +311,7 @@ class _$RecordingStateImpl extends _RecordingState {
     error,
     remainingSeconds,
     totalDurationSeconds,
+    latestGrade,
   );
 
   /// Create a copy of RecordingState
@@ -291,6 +335,7 @@ abstract class _RecordingState extends RecordingState {
     final String? error,
     final int? remainingSeconds,
     final int? totalDurationSeconds,
+    final Grade? latestGrade,
   }) = _$RecordingStateImpl;
   const _RecordingState._() : super._();
 
@@ -316,6 +361,11 @@ abstract class _RecordingState extends RecordingState {
   /// Total duration in seconds for progress calculation. Null when not recording.
   @override
   int? get totalDurationSeconds;
+
+  /// Latest pronunciation grade from ML scorer.
+  /// Contains character-level scores for ColoredText visualization.
+  @override
+  Grade? get latestGrade;
 
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.
