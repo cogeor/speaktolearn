@@ -34,3 +34,6 @@ tools/mandarin_grader/*.npy
 *.log
 build_log*.txt
 logs/
+
+# ONNX Runtime native libraries (download via setup script)
+apps/mobile_flutter/android/app/src/main/jniLibs/
