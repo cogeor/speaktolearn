@@ -98,46 +98,6 @@ def setup_logging(checkpoint_dir: Path) -> logging.Logger:
     return logger
 
 
-def get_curriculum_ratio(epoch: int) -> float:
-    """Get curriculum ratio for mixing AISHELL-3 and TTS data.
-
-    Returns ratio of AISHELL-3 samples (1.0 = 100% native, 0.0 = 100% TTS).
-    Gradually shifts from native to TTS data over training epochs.
-
-    Args:
-        epoch: Current epoch (1-indexed)
-
-    Returns:
-        Ratio of AISHELL-3 samples in the mix
-    """
-    if epoch <= 10:
-        return 0.9  # 90% AISHELL-3, 10% TTS
-    elif epoch <= 20:
-        return 0.7  # 70% AISHELL-3, 30% TTS
-    elif epoch <= 30:
-        return 0.5  # 50% AISHELL-3, 50% TTS
-    else:
-        return 0.3  # 30% AISHELL-3, 70% TTS
-
-
-def get_domain_lambda(epoch: int, total_epochs: int) -> float:
-    """Get domain lambda for gradient reversal strength.
-
-    Ramps from 0 to 1.0 over training using sigmoid schedule for smooth transition.
-    This gradually increases the domain adversarial loss contribution.
-
-    Args:
-        epoch: Current epoch (1-indexed)
-        total_epochs: Total number of training epochs
-
-    Returns:
-        Domain lambda value between 0 and 1
-    """
-    progress = epoch / max(total_epochs, 1)
-    # Sigmoid ramp: 2 / (1 + exp(-10p)) - 1
-    return 2.0 / (1.0 + np.exp(-10 * progress)) - 1.0
-
-
 @dataclass
 class TrainingConfig:
     """Training configuration."""
@@ -153,10 +113,6 @@ class TrainingConfig:
     overfit_test: bool = False
     overfit_samples: int = 8
     overfit_steps: int = 200
-
-    # Domain adversarial training
-    domain_adapt: bool = False
-    tts_dir: Path | None = None
 
 
 def extract_f0_features(
@@ -206,8 +162,17 @@ def load_training_data(
     Returns:
         (train_sentences, val_sentences) lists
     """
-    from mandarin_grader.data.data_source import DataSourceRegistry, SentenceInfo
+    from mandarin_grader.data.synthetic_source import SyntheticDataSource
+    from mandarin_grader.data.aishell_tar_source import AISHELL3TarDataSource
+    from mandarin_grader.data.tts_source import TTSDataSource
     from mandarin_grader.data.autoregressive_dataset import SyntheticSentenceInfo
+
+    # Map source names to classes
+    source_classes = {
+        "synthetic": SyntheticDataSource(),
+        "aishell3": AISHELL3TarDataSource(),
+        "tts": TTSDataSource(),
+    }
 
     all_sentences = []
 
@@ -218,7 +183,11 @@ def load_training_data(
         logger.info(f"Loading data source: {source_name} from {data_dir}")
 
         try:
-            source = DataSourceRegistry.get(source_name)
+            if source_name not in source_classes:
+                logger.error(f"  Unknown data source: {source_name}. Available: {list(source_classes.keys())}")
+                continue
+
+            source = source_classes[source_name]
             if not source.is_available(data_dir):
                 logger.warning(f"  Source not available at {data_dir}")
                 continue
@@ -270,106 +239,39 @@ def load_training_data(
 
 def list_available_sources():
     """Print available data sources and exit."""
-    from mandarin_grader.data.data_source import DataSourceRegistry
+    from mandarin_grader.data.synthetic_source import SyntheticDataSource
+    from mandarin_grader.data.aishell_tar_source import AISHELL3TarDataSource
+    from mandarin_grader.data.tts_source import TTSDataSource
+
+    sources = {
+        "synthetic": SyntheticDataSource(),
+        "aishell3": AISHELL3TarDataSource(),
+        "tts": TTSDataSource(),
+    }
 
     print("Available data sources:")
     print()
-    for name in DataSourceRegistry.list_sources():
-        source = DataSourceRegistry.get(name)
+    for name, source in sources.items():
         print(f"  {name}")
         print(f"    {source.description}")
         print()
 
 
-class MixedDomainDataset:
-    """Dataset that mixes samples from two domains with curriculum learning.
-
-    Wraps two AutoregressiveDatasets (native and TTS) and provides a combined
-    interface with domain labels. The mixing ratio can be adjusted per epoch.
-
-    Domain labels:
-        0 = AISHELL-3 / native speech
-        1 = TTS-generated speech
-    """
-
-    def __init__(
-        self,
-        native_dataset,  # AutoregressiveDataset for AISHELL-3
-        tts_dataset,     # AutoregressiveDataset for TTS
-        native_ratio: float = 0.9,
-    ):
-        """Initialize mixed domain dataset.
-
-        Args:
-            native_dataset: Dataset for native speech (domain 0)
-            tts_dataset: Dataset for TTS speech (domain 1)
-            native_ratio: Initial ratio of native samples (0.0 to 1.0)
-        """
-        self.native_dataset = native_dataset
-        self.tts_dataset = tts_dataset
-        self.native_ratio = native_ratio
-
-        # Track which samples are from which domain
-        self._native_len = len(native_dataset)
-        self._tts_len = len(tts_dataset)
-        self._total_len = self._native_len + self._tts_len
-
-        # Build sampling indices
-        self._rebuild_indices()
-
-    def _rebuild_indices(self):
-        """Rebuild sampling indices based on current ratio."""
-        # Number of samples to take from each domain
-        target_native = int(self._total_len * self.native_ratio)
-        target_tts = self._total_len - target_native
-
-        # Cap to available samples
-        native_count = min(target_native, self._native_len)
-        tts_count = min(target_tts, self._tts_len)
-
-        # Build index list: (domain, idx_in_domain)
-        self._indices = []
-
-        # Sample from native
-        native_indices = np.random.choice(self._native_len, size=native_count, replace=native_count > self._native_len)
-        for idx in native_indices:
-            self._indices.append((0, idx))
-
-        # Sample from TTS
-        tts_indices = np.random.choice(self._tts_len, size=tts_count, replace=tts_count > self._tts_len)
-        for idx in tts_indices:
-            self._indices.append((1, idx))
-
-        # Shuffle
-        np.random.shuffle(self._indices)
-
-    def set_epoch(self, epoch: int):
-        """Update mixing ratio for curriculum learning and rebuild indices.
-
-        Args:
-            epoch: Current epoch (1-indexed)
-        """
-        self.native_ratio = get_curriculum_ratio(epoch)
-        self._rebuild_indices()
-
-    def __len__(self) -> int:
-        return len(self._indices)
-
-    def __getitem__(self, idx: int):
-        """Get sample with domain label.
-
-        Returns:
-            Tuple of (sample, domain_label) where domain_label is 0 or 1
-        """
-        domain, domain_idx = self._indices[idx]
-        if domain == 0:
-            sample = self.native_dataset[domain_idx]
-        else:
-            sample = self.tts_dataset[domain_idx]
-        return sample, domain
-
-
-def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: bool, context_mode: str = "pinyin", preload: bool = False, logger=None, mel_cache: dict | None = None, use_pitch: bool = False, include_domain_labels: bool = False):
+def create_dataloader(
+    sentences: list,
+    batch_size: int,
+    shuffle: bool,
+    augment: bool,
+    context_mode: str = "pinyin",
+    preload: bool = False,
+    logger=None,
+    mel_cache: dict | None = None,
+    use_pitch: bool = False,
+    include_domain_labels: bool = False,
+    speed_variation: float = 0.1,
+    pitch_shift_semitones: float = 0.0,
+    formant_shift_percent: float = 0.0,
+):
     """Create PyTorch DataLoader.
 
     Args:
@@ -382,6 +284,9 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         logger: Logger for progress reporting
         mel_cache: Pre-loaded mel cache from tar sources (optional)
         use_pitch: Whether to extract and return F0 pitch features
+        speed_variation: Speed variation fraction (0.1 = +/-10%)
+        pitch_shift_semitones: Max pitch shift in semitones (+/-), 0 to disable
+        formant_shift_percent: Max formant shift in percent (+/-), 0 to disable
     """
     import torch
     from torch.utils.data import DataLoader
@@ -399,6 +304,9 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
         chunk_duration_s=1.0,
         margin_s=0.1,
         augment=augment,
+        speed_variation=speed_variation,
+        pitch_shift_semitones=pitch_shift_semitones,
+        formant_shift_percent=formant_shift_percent,
     )
 
     # If mel cache provided (from tar sources), pre-populate dataset cache
@@ -498,176 +406,6 @@ def create_dataloader(sentences: list, batch_size: int, shuffle: bool, augment: 
                       collate_fn=collate_fn, num_workers=0)
 
 
-def create_mixed_domain_dataloader(
-    native_sentences: list,
-    tts_sentences: list,
-    batch_size: int,
-    augment: bool,
-    context_mode: str = "pinyin",
-    preload: bool = False,
-    logger=None,
-    native_mel_cache: dict | None = None,
-    tts_mel_cache: dict | None = None,
-    use_pitch: bool = False,
-    initial_native_ratio: float = 0.9,
-):
-    """Create DataLoader for mixed domain training with domain labels.
-
-    Args:
-        native_sentences: List of sentence info for native speech (AISHELL-3)
-        tts_sentences: List of sentence info for TTS speech
-        batch_size: Batch size
-        augment: Whether to augment audio
-        context_mode: "pinyin" = actual syllables, "position" = only syllable index
-        preload: Whether to preload all audio into memory
-        logger: Logger for progress reporting
-        native_mel_cache: Pre-loaded mel cache for native source
-        tts_mel_cache: Pre-loaded mel cache for TTS source
-        use_pitch: Whether to extract and return F0 pitch features
-        initial_native_ratio: Initial curriculum ratio (default 0.9 = 90% native)
-
-    Returns:
-        Tuple of (DataLoader, MixedDomainDataset) - dataset returned for set_epoch calls
-    """
-    import torch
-    from torch.utils.data import DataLoader
-    from mandarin_grader.data.autoregressive_dataset import AutoregressiveDataset, spec_augment
-    from mandarin_grader.model.syllable_predictor_v4 import (
-        SyllablePredictorConfigV4, SyllableVocab, extract_mel_spectrogram,
-    )
-
-    config = SyllablePredictorConfigV4()
-    vocab = SyllableVocab()
-
-    # Create native dataset
-    native_dataset = AutoregressiveDataset(
-        sentences=native_sentences,
-        sample_rate=config.sample_rate,
-        chunk_duration_s=1.0,
-        margin_s=0.1,
-        augment=augment,
-    )
-    if native_mel_cache:
-        native_dataset._mel_cache.update(native_mel_cache)
-        if logger:
-            logger.info(f"  Injected {len(native_mel_cache)} precomputed mel entries (native)")
-
-    # Create TTS dataset
-    tts_dataset = AutoregressiveDataset(
-        sentences=tts_sentences,
-        sample_rate=config.sample_rate,
-        chunk_duration_s=1.0,
-        margin_s=0.1,
-        augment=augment,
-    )
-    if tts_mel_cache:
-        tts_dataset._mel_cache.update(tts_mel_cache)
-        if logger:
-            logger.info(f"  Injected {len(tts_mel_cache)} precomputed mel entries (TTS)")
-
-    # Preload audio if needed
-    if preload:
-        def progress(loaded, total):
-            if logger:
-                logger.info(f"  Preloading audio: {loaded}/{total} ({100*loaded/total:.0f}%)")
-        if logger:
-            logger.info("Preloading native audio files into memory...")
-        native_dataset.preload_audio(progress_callback=progress)
-        if logger:
-            logger.info("Preloading TTS audio files into memory...")
-        tts_dataset.preload_audio(progress_callback=progress)
-
-    # Create mixed dataset
-    mixed_dataset = MixedDomainDataset(
-        native_dataset=native_dataset,
-        tts_dataset=tts_dataset,
-        native_ratio=initial_native_ratio,
-    )
-
-    def collate_fn(batch):
-        """Collate function for mixed domain batches."""
-        mels, pinyin_ids_list, target_syls, target_tones, domain_labels = [], [], [], [], []
-        f0_list = [] if use_pitch else None
-        max_pinyin_len = 0
-
-        for sample, domain in batch:
-            if sample.mel_chunk is not None:
-                mel = sample.mel_chunk
-            elif sample.audio_chunk is not None:
-                mel = extract_mel_spectrogram(sample.audio_chunk, config)
-                if augment:
-                    mel = spec_augment(mel)
-            else:
-                raise ValueError(f"Sample {sample.sample_id} has neither mel_chunk nor audio_chunk")
-            mels.append(mel)
-
-            # F0 extraction (if enabled)
-            if use_pitch:
-                if sample.f0_chunk is not None:
-                    f0_list.append(sample.f0_chunk)
-                elif sample.audio_chunk is not None:
-                    f0 = extract_f0_features(sample.audio_chunk, config.sample_rate, config.hop_length)
-                    f0_list.append(f0)
-                else:
-                    f0_list.append(np.zeros(mel.shape[1], dtype=np.float32))
-
-            if context_mode == "pinyin":
-                ids = vocab.encode_sequence(sample.pinyin_context, add_bos=True)
-            else:
-                position_token = 2 + sample.syllable_idx
-                ids = [vocab.bos_token, position_token]
-
-            pinyin_ids_list.append(ids)
-            max_pinyin_len = max(max_pinyin_len, len(ids))
-
-            target_syls.append(vocab.encode(sample.target_syllable))
-            target_tones.append(sample.target_tone)
-            domain_labels.append(domain)
-
-        # Pad mels
-        max_time = max(m.shape[1] for m in mels)
-        n_mels = mels[0].shape[0]
-        padded_mels = np.zeros((len(batch), n_mels, max_time), dtype=np.float32)
-        audio_masks = np.zeros((len(batch), max_time), dtype=bool)
-        for i, mel in enumerate(mels):
-            padded_mels[i, :, :mel.shape[1]] = mel
-            audio_masks[i, mel.shape[1]:] = True
-
-        # Pad pinyin
-        padded_pinyin = np.zeros((len(batch), max_pinyin_len), dtype=np.int64)
-        pinyin_masks = np.zeros((len(batch), max_pinyin_len), dtype=bool)
-        for i, ids in enumerate(pinyin_ids_list):
-            padded_pinyin[i, :len(ids)] = ids
-            pinyin_masks[i, len(ids):] = True
-
-        result = {
-            "mel": torch.tensor(padded_mels, dtype=torch.float32),
-            "pinyin_ids": torch.tensor(padded_pinyin, dtype=torch.long),
-            "audio_mask": torch.tensor(audio_masks, dtype=torch.bool),
-            "pinyin_mask": torch.tensor(pinyin_masks, dtype=torch.bool),
-            "target_syllable": torch.tensor(target_syls, dtype=torch.long),
-            "target_tone": torch.tensor(target_tones, dtype=torch.long),
-            "domain_label": torch.tensor(domain_labels, dtype=torch.long),
-        }
-
-        # Pad and add F0 if used
-        if use_pitch:
-            max_f0_len = max(len(f) for f in f0_list)
-            padded_f0 = np.zeros((len(batch), max_f0_len), dtype=np.float32)
-            for i, f0 in enumerate(f0_list):
-                padded_f0[i, :len(f0)] = f0
-            result["f0"] = torch.tensor(padded_f0, dtype=torch.float32)
-
-        return result
-
-    dataloader = DataLoader(
-        mixed_dataset, batch_size=batch_size, shuffle=True,
-        collate_fn=collate_fn, num_workers=0
-    )
-
-    return dataloader, mixed_dataset
-
-
 def evaluate(model, dataloader, device: str) -> tuple[float, float]:
     """Evaluate model. Returns (syllable_acc, tone_acc)."""
     import torch
@@ -736,91 +474,6 @@ def evaluate_detailed(model, dataloader, device: str) -> dict:
         "per_tone_accuracy": {t: per_tone_correct[t] / max(per_tone_total[t], 1) for t in range(5)},
         "per_tone_counts": dict(per_tone_total),
         "total_samples": total,
-    }
-
-
-def evaluate_by_domain(model, dataloader, device: str) -> dict:
-    """Evaluate model with per-domain breakdown.
-
-    Args:
-        model: The model to evaluate
-        dataloader: DataLoader with domain_label in batches
-        device: Device to use
-
-    Returns:
-        Dict with per-domain and combined accuracies:
-        {
-            "aishell3": {"syllable_acc": float, "tone_acc": float, "total": int},
-            "tts": {"syllable_acc": float, "tone_acc": float, "total": int},
-            "combined": {"syllable_acc": float, "tone_acc": float, "total": int},
-        }
-    """
-    import torch
-    model.eval()
-
-    # Per-domain counters
-    domain_stats = {
-        0: {"syl_correct": 0, "tone_correct": 0, "total": 0},  # AISHELL-3
-        1: {"syl_correct": 0, "tone_correct": 0, "total": 0},  # TTS
-    }
-
-    with torch.no_grad():
-        for batch in dataloader:
-            mel = batch["mel"].to(device)
-            pinyin_ids = batch["pinyin_ids"].to(device)
-            audio_mask = batch["audio_mask"].to(device)
-            pinyin_mask = batch["pinyin_mask"].to(device)
-            domain_labels = batch["domain_label"]
-
-            # Handle F0 if present
-            f0 = batch.get("f0")
-            if f0 is not None:
-                f0 = f0.to(device)
-
-            # Get model output (ignore domain_logits if returned)
-            output = model(mel, pinyin_ids, audio_mask, pinyin_mask, f0=f0)
-            syl_logits, tone_logits = output[0], output[1]
-
-            syl_pred = syl_logits.argmax(-1).cpu()
-            tone_pred = tone_logits.argmax(-1).cpu()
-
-            # Track per-domain metrics
-            for i in range(mel.shape[0]):
-                domain = domain_labels[i].item()
-                target_syl = batch["target_syllable"][i].item()
-                target_tone = batch["target_tone"][i].item()
-
-                domain_stats[domain]["total"] += 1
-                if syl_pred[i].item() == target_syl:
-                    domain_stats[domain]["syl_correct"] += 1
-                if tone_pred[i].item() == target_tone:
-                    domain_stats[domain]["tone_correct"] += 1
-
-    # Compute accuracies
-    def compute_acc(stats):
-        total = max(stats["total"], 1)
-        return {
-            "syllable_acc": stats["syl_correct"] / total,
-            "tone_acc": stats["tone_correct"] / total,
-            "total": stats["total"],
-        }
-
-    aishell_stats = compute_acc(domain_stats[0])
-    tts_stats = compute_acc(domain_stats[1])
-
-    # Combined stats
-    combined_total = domain_stats[0]["total"] + domain_stats[1]["total"]
-    combined_syl = domain_stats[0]["syl_correct"] + domain_stats[1]["syl_correct"]
-    combined_tone = domain_stats[0]["tone_correct"] + domain_stats[1]["tone_correct"]
-
-    return {
-        "aishell3": aishell_stats,
-        "tts": tts_stats,
-        "combined": {
-            "syllable_acc": combined_syl / max(combined_total, 1),
-            "tone_acc": combined_tone / max(combined_total, 1),
-            "total": combined_total,
-        },
     }
 
 
@@ -904,12 +557,6 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
         epoch_start = _time.time()
 
         for batch in train_loader:
-            # Progress logging every 500 batches
-            if num_batches > 0 and num_batches % 500 == 0:
-                elapsed = _time.time() - epoch_start
-                ms_per_batch = elapsed / num_batches * 1000
-                eta_min = (len(train_loader) - num_batches) * ms_per_batch / 60000
-                logger.info(f"  Epoch {epoch+1} batch {num_batches}/{len(train_loader)} | {ms_per_batch:.0f}ms/batch | ETA: {eta_min:.1f}min")
             mel = batch["mel"].to(config.device)
             pinyin_ids = batch["pinyin_ids"].to(config.device)
             audio_mask = batch["audio_mask"].to(config.device)
@@ -973,182 +620,6 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
     return best_val_acc
 
 
-def train_domain_adapt(
-    model,
-    train_loader,
-    mixed_dataset,  # MixedDomainDataset for curriculum updates
-    val_loader,
-    config: TrainingConfig,
-    logger,
-    start_epoch: int = 0,
-):
-    """Training loop with domain adversarial adaptation.
-
-    Uses gradient reversal to learn domain-invariant features and
-    curriculum learning to gradually shift from native to TTS data.
-
-    Args:
-        model: SyllablePredictorV4 with use_domain_adversarial=True
-        train_loader: DataLoader from create_mixed_domain_dataloader
-        mixed_dataset: MixedDomainDataset for set_epoch calls
-        val_loader: Validation DataLoader (also with domain labels)
-        config: TrainingConfig
-        logger: Logger
-        start_epoch: Epoch to resume from
-
-    Returns:
-        Best validation accuracy
-    """
-    import torch
-
-    optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
-    total_steps = config.epochs * len(train_loader)
-    warmup_steps = int(0.05 * total_steps)
-    scheduler = get_warmup_cosine_scheduler(optimizer, warmup_steps, total_steps)
-
-    syl_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
-    tone_criterion = torch.nn.CrossEntropyLoss(label_smoothing=0.1)
-    domain_criterion = torch.nn.CrossEntropyLoss()
-
-    best_val_acc = 0.0
-
-    logger.info(f"Starting domain adversarial training from epoch {start_epoch + 1} to {config.epochs}")
-    logger.info(f"Warmup steps: {warmup_steps} ({warmup_steps / len(train_loader):.1f} epochs)")
-    logger.info(f"Logging every {config.log_every_epochs} epochs")
-
-    import time as _time
-    for epoch in range(start_epoch, config.epochs):
-        # Update curriculum ratio for this epoch
-        mixed_dataset.set_epoch(epoch + 1)
-        native_ratio = get_curriculum_ratio(epoch + 1)
-        domain_lambda = get_domain_lambda(epoch + 1, config.epochs)
-
-        logger.info(f"Epoch {epoch+1}: native_ratio={native_ratio:.2f}, domain_lambda={domain_lambda:.3f}")
-
-        model.train()
-        total_loss, total_task_loss, total_domain_loss = 0, 0, 0
-        domain_correct, domain_total = 0, 0
-        num_batches = 0
-        epoch_start = _time.time()
-
-        for batch in train_loader:
-            # Progress logging every 500 batches
-            if num_batches > 0 and num_batches % 500 == 0:
-                elapsed = _time.time() - epoch_start
-                ms_per_batch = elapsed / num_batches * 1000
-                eta_min = (len(train_loader) - num_batches) * ms_per_batch / 60000
-                logger.info(
-                    f"  Epoch {epoch+1} batch {num_batches}/{len(train_loader)} | "
-                    f"{ms_per_batch:.0f}ms/batch | ETA: {eta_min:.1f}min"
-                )
-
-            mel = batch["mel"].to(config.device)
-            pinyin_ids = batch["pinyin_ids"].to(config.device)
-            audio_mask = batch["audio_mask"].to(config.device)
-            pinyin_mask = batch["pinyin_mask"].to(config.device)
-            target_syl = batch["target_syllable"].to(config.device)
-            target_tone = batch["target_tone"].to(config.device)
-            domain_labels = batch["domain_label"].to(config.device)
-
-            # Handle F0 if present
-            f0 = batch.get("f0")
-            if f0 is not None:
-                f0 = f0.to(config.device)
-
-            optimizer.zero_grad()
-
-            # Forward with domain_lambda > 0 to get domain logits
-            output = model(mel, pinyin_ids, audio_mask, pinyin_mask, f0=f0, domain_lambda=domain_lambda)
-            syl_logits, tone_logits = output[0], output[1]
-
-            # Task losses
-            syl_loss = syl_criterion(syl_logits, target_syl)
-            tone_loss = tone_criterion(tone_logits, target_tone)
-            task_loss = 0.7 * syl_loss + 0.3 * tone_loss
-
-            # Domain loss (if domain logits returned)
-            if len(output) == 3:
-                domain_logits = output[2]
-                domain_loss = domain_criterion(domain_logits, domain_labels)
-                # Total loss: task loss + domain loss (gradient already reversed in forward)
-                loss = task_loss + domain_lambda * domain_loss
-
-                # Track domain accuracy
-                domain_pred = domain_logits.argmax(-1)
-                domain_correct += (domain_pred == domain_labels).sum().item()
-                domain_total += mel.shape[0]
-                total_domain_loss += domain_loss.item()
-            else:
-                loss = task_loss
-
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-            scheduler.step()
-
-            total_loss += loss.item()
-            total_task_loss += task_loss.item()
-            num_batches += 1
-
-        avg_loss = total_loss / max(num_batches, 1)
-        avg_task_loss = total_task_loss / max(num_batches, 1)
-        avg_domain_loss = total_domain_loss / max(num_batches, 1)
-        domain_acc = domain_correct / max(domain_total, 1)
-
-        # Log and checkpoint every N epochs
-        if (epoch + 1) % config.log_every_epochs == 0 or epoch == config.epochs - 1:
-            # Per-domain evaluation
-            domain_metrics = evaluate_by_domain(model, val_loader, config.device)
-
-            logger.info(
-                f"Epoch {epoch+1:3d}/{config.epochs} | "
-                f"Loss: {avg_loss:.4f} (task={avg_task_loss:.4f}, dom={avg_domain_loss:.4f}) | "
-                f"Domain acc: {domain_acc:.4f}"
-            )
-            logger.info(
-                f"  AISHELL-3: Syl={domain_metrics['aishell3']['syllable_acc']:.4f}, "
-                f"Tone={domain_metrics['aishell3']['tone_acc']:.4f} "
-                f"({domain_metrics['aishell3']['total']} samples)"
-            )
-            logger.info(
-                f"  TTS:       Syl={domain_metrics['tts']['syllable_acc']:.4f}, "
-                f"Tone={domain_metrics['tts']['tone_acc']:.4f} "
-                f"({domain_metrics['tts']['total']} samples)"
-            )
-            logger.info(
-                f"  Combined:  Syl={domain_metrics['combined']['syllable_acc']:.4f}, "
-                f"Tone={domain_metrics['combined']['tone_acc']:.4f}"
-            )
-
-            # Save checkpoint
-            ckpt_path = config.checkpoint_dir / f"checkpoint_epoch{epoch+1}.pt"
-            torch.save({
-                "epoch": epoch + 1,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-                "domain_metrics": domain_metrics,
-                "domain_lambda": domain_lambda,
-                "native_ratio": native_ratio,
-            }, ckpt_path)
-
-            # Save best model (based on combined accuracy)
-            val_combined = (
-                domain_metrics["combined"]["syllable_acc"] +
-                domain_metrics["combined"]["tone_acc"]
-            ) / 2
-            if val_combined > best_val_acc:
-                best_val_acc = val_combined
-                best_path = config.checkpoint_dir / "best_model.pt"
-                torch.save({
-                    "epoch": epoch + 1,
-                    "model_state_dict": model.state_dict(),
-                    "domain_metrics": domain_metrics,
-                }, best_path)
-                logger.info(f"  -> New best model! Combined: {val_combined:.4f}")
-
-    return best_val_acc
-
-
 def main():
     import torch
 
@@ -1203,14 +674,18 @@ def main():
         help="Enable F0 pitch fusion for tone classification"
     )
 
-    # Domain adversarial training
+    # Augmentation parameters
     parser.add_argument(
-        "--domain-adapt", action="store_true",
-        help="Enable domain adversarial training (DANN) with TTS data"
+        "--speed-variation", type=float, default=0.1,
+        help="Speed variation fraction (0.1 = ±10%%, 0.05 = ±5%%). Default: 0.1"
     )
     parser.add_argument(
-        "--tts-dir", type=Path, default=None,
-        help="Directory containing TTS data for domain adaptation (required if --domain-adapt)"
+        "--pitch-shift", type=float, default=0.0,
+        help="Max pitch shift in semitones (±). 0 to disable. Recommended: 2.0"
+    )
+    parser.add_argument(
+        "--formant-shift", type=float, default=0.0,
+        help="Max formant shift in percent (±). 0 to disable. Recommended: 10.0"
     )
 
     args = parser.parse_args()
@@ -1228,14 +703,7 @@ def main():
         checkpoint_dir=args.checkpoint_dir,
         device=args.device,
         overfit_test=args.overfit_test,
-        domain_adapt=args.domain_adapt,
-        tts_dir=args.tts_dir,
     )
-
-    # Validate domain adaptation args
-    if config.domain_adapt and config.tts_dir is None:
-        print("Error: --tts-dir is required when using --domain-adapt")
-        return
 
     logger = setup_logging(config.checkpoint_dir)
     logger.info("=" * 60)
@@ -1286,7 +754,6 @@ def main():
         n_heads=args.n_heads,
         dim_feedforward=args.dim_feedforward,
         use_pitch=args.use_pitch,
-        use_domain_adversarial=config.domain_adapt,
     )
     model = SyllablePredictorV4(model_config).to(config.device)
 
@@ -1298,64 +765,24 @@ def main():
     # If mel_cache is provided, no audio preload is needed for that source.
     logger.info(f"Context mode: {args.context_mode}")
     logger.info(f"Pitch fusion: {'enabled' if args.use_pitch else 'disabled'}")
-    logger.info(f"Domain adaptation: {'enabled' if config.domain_adapt else 'disabled'}")
+    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%")
 
     preload = not mel_cache
 
-    # Domain adaptation mode: need separate loaders for native and TTS
-    if config.domain_adapt:
-        from mandarin_grader.data.data_source import DataSourceRegistry
-
-        # Load TTS data
-        logger.info(f"Loading TTS data from: {config.tts_dir}")
-        tts_source = DataSourceRegistry.get("tts")
-        if not tts_source.is_available(config.tts_dir):
-            logger.error(f"TTS data not found at {config.tts_dir}")
-            return
-
-        tts_sentences_all = tts_source.load(config.tts_dir, max_sentences=args.max_sentences)
-        logger.info(f"Loaded {len(tts_sentences_all)} TTS sentences")
-
-        # Split TTS data
-        np.random.seed(42)
-        tts_indices = np.random.permutation(len(tts_sentences_all))
-        tts_split_idx = int(len(tts_sentences_all) * 0.8)
-        tts_train = [tts_sentences_all[i] for i in tts_indices[:tts_split_idx]]
-        tts_val = [tts_sentences_all[i] for i in tts_indices[tts_split_idx:]]
-        logger.info(f"TTS split: Train={len(tts_train)}, Val={len(tts_val)}")
-
-        # Create mixed domain dataloaders
-        train_loader, mixed_dataset = create_mixed_domain_dataloader(
-            native_sentences=train_sentences,
-            tts_sentences=tts_train,
-            batch_size=config.batch_size,
-            augment=True,
-            context_mode=args.context_mode,
-            preload=preload,
-            logger=logger,
-            native_mel_cache=mel_cache,
-            use_pitch=args.use_pitch,
-        )
-
-        # Validation loader also needs domain labels
-        val_loader, val_mixed_dataset = create_mixed_domain_dataloader(
-            native_sentences=val_sentences,
-            tts_sentences=tts_val,
-            batch_size=config.batch_size,
-            augment=False,
-            context_mode=args.context_mode,
-            preload=preload,
-            logger=logger,
-            native_mel_cache=mel_cache,
-            use_pitch=args.use_pitch,
-            initial_native_ratio=0.5,  # Balanced for validation
-        )
-        logger.info(f"Mixed domain batches: Train={len(train_loader)}, Val={len(val_loader)}")
-    else:
-        train_loader = create_dataloader(train_sentences, config.batch_size, shuffle=True, augment=True, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache, use_pitch=args.use_pitch)
-        val_loader = create_dataloader(val_sentences, config.batch_size, shuffle=False, augment=False, context_mode=args.context_mode, preload=preload, logger=logger, mel_cache=mel_cache, use_pitch=args.use_pitch)
-        mixed_dataset = None
-        logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
+    train_loader = create_dataloader(
+        train_sentences, config.batch_size, shuffle=True, augment=True,
+        context_mode=args.context_mode, preload=preload, logger=logger,
+        mel_cache=mel_cache, use_pitch=args.use_pitch,
+        speed_variation=args.speed_variation,
+        pitch_shift_semitones=args.pitch_shift,
+        formant_shift_percent=args.formant_shift,
+    )
+    val_loader = create_dataloader(
+        val_sentences, config.batch_size, shuffle=False, augment=False,
+        context_mode=args.context_mode, preload=preload, logger=logger,
+        mel_cache=mel_cache, use_pitch=args.use_pitch,
+    )
+    logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
     # Overfit test
     if config.overfit_test:
@@ -1373,70 +800,30 @@ def main():
             logger.info(f"Resumed from {ckpt_path} (epoch {start_epoch})")
 
     # Train
-    if config.domain_adapt:
-        best_acc = train_domain_adapt(
-            model, train_loader, mixed_dataset, val_loader, config, logger, start_epoch
-        )
+    best_acc = train(model, train_loader, val_loader, config, logger, start_epoch)
 
-        # Final evaluation with per-domain breakdown
-        logger.info("=" * 60)
-        logger.info("FINAL EVALUATION (Domain Adaptation)")
-        logger.info("=" * 60)
+    # Final evaluation
+    logger.info("=" * 60)
+    logger.info("FINAL EVALUATION")
+    logger.info("=" * 60)
 
-        domain_metrics = evaluate_by_domain(model, val_loader, config.device)
+    train_results = evaluate_detailed(model, train_loader, config.device)
+    val_results = evaluate_detailed(model, val_loader, config.device)
 
-        logger.info(
-            f"AISHELL-3: Syl={domain_metrics['aishell3']['syllable_acc']:.4f}, "
-            f"Tone={domain_metrics['aishell3']['tone_acc']:.4f} "
-            f"({domain_metrics['aishell3']['total']} samples)"
-        )
-        logger.info(
-            f"TTS:       Syl={domain_metrics['tts']['syllable_acc']:.4f}, "
-            f"Tone={domain_metrics['tts']['tone_acc']:.4f} "
-            f"({domain_metrics['tts']['total']} samples)"
-        )
-        logger.info(
-            f"Combined:  Syl={domain_metrics['combined']['syllable_acc']:.4f}, "
-            f"Tone={domain_metrics['combined']['tone_acc']:.4f}"
-        )
+    logger.info(f"Train - Syl: {train_results['syllable_accuracy']:.4f}, Tone: {train_results['tone_accuracy']:.4f}")
+    logger.info(f"Val   - Syl: {val_results['syllable_accuracy']:.4f}, Tone: {val_results['tone_accuracy']:.4f}")
 
-        # Save final report
-        report = {
-            "config": {
-                "epochs": config.epochs,
-                "batch_size": config.batch_size,
-                "lr": config.learning_rate,
-                "domain_adapt": True,
-            },
-            "model_params": total_params,
-            "domain_metrics": domain_metrics,
-            "best_val_combined": best_acc,
-        }
-    else:
-        best_acc = train(model, train_loader, val_loader, config, logger, start_epoch)
+    for t in range(5):
+        logger.info(f"  Tone {t}: {val_results['per_tone_accuracy'][t]:.4f} ({val_results['per_tone_counts'].get(t, 0)} samples)")
 
-        # Final evaluation
-        logger.info("=" * 60)
-        logger.info("FINAL EVALUATION")
-        logger.info("=" * 60)
-
-        train_results = evaluate_detailed(model, train_loader, config.device)
-        val_results = evaluate_detailed(model, val_loader, config.device)
-
-        logger.info(f"Train - Syl: {train_results['syllable_accuracy']:.4f}, Tone: {train_results['tone_accuracy']:.4f}")
-        logger.info(f"Val   - Syl: {val_results['syllable_accuracy']:.4f}, Tone: {val_results['tone_accuracy']:.4f}")
-
-        for t in range(5):
-            logger.info(f"  Tone {t}: {val_results['per_tone_accuracy'][t]:.4f} ({val_results['per_tone_counts'].get(t, 0)} samples)")
-
-        # Save final report
-        report = {
-            "config": {"epochs": config.epochs, "batch_size": config.batch_size, "lr": config.learning_rate},
-            "model_params": total_params,
-            "train_results": train_results,
-            "val_results": val_results,
-            "best_val_combined": best_acc,
-        }
+    # Save final report
+    report = {
+        "config": {"epochs": config.epochs, "batch_size": config.batch_size, "lr": config.learning_rate},
+        "model_params": total_params,
+        "train_results": train_results,
+        "val_results": val_results,
+        "best_val_combined": best_acc,
+    }
 
     with open(config.checkpoint_dir / "training_report.json", "w") as f:
         json.dump(report, f, indent=2)

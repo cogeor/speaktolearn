@@ -136,9 +136,6 @@ def infer_config_from_state_dict(state_dict: dict) -> dict:
     # Check for pitch fusion
     params["use_pitch"] = "pitch_fusion.pitch_proj.weight" in state_dict
 
-    # Check for domain adversarial
-    params["use_domain_adversarial"] = "domain_classifier.0.weight" in state_dict
-
     return params
 
 
@@ -163,12 +160,10 @@ def create_model_for_export(checkpoint_path: Path, device: str) -> tuple[Syllabl
     print(f"  n_heads: {inferred['n_heads']}")
     print(f"  dim_feedforward: {inferred['dim_feedforward']}")
     print(f"  use_pitch: {inferred['use_pitch']}")
-    print(f"  use_domain_adversarial: {inferred['use_domain_adversarial']}")
 
     # Create config with inferred settings (but force inference mode)
     config = SyllablePredictorConfigV4(
         use_pitch=False,  # Disable for inference (even if trained with it)
-        use_domain_adversarial=False,  # Disable for inference
         d_model=inferred["d_model"],
         n_layers=inferred["n_layers"],
         n_heads=inferred["n_heads"],
@@ -179,11 +174,11 @@ def create_model_for_export(checkpoint_path: Path, device: str) -> tuple[Syllabl
     # Create model
     model = SyllablePredictorV4(config)
 
-    # Filter state_dict to remove pitch_fusion and domain_classifier keys if present
+    # Filter state_dict to remove pitch_fusion keys if present
     # (since we're creating model without them for inference)
     filtered_state_dict = {
         k: v for k, v in state_dict.items()
-        if not k.startswith("pitch_fusion.") and not k.startswith("domain_classifier.") and not k.startswith("gradient_reversal")
+        if not k.startswith("pitch_fusion.")
     }
 
     # Load state dict

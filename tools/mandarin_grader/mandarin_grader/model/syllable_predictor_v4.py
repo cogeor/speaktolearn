@@ -70,9 +70,6 @@ class SyllablePredictorConfigV4:
     use_pitch: bool = False  # Enable F0 pitch fusion
     pitch_dim: int = 1  # Input F0 dimension (1 = scalar F0 per frame)
 
-    # Domain adversarial training
-    use_domain_adversarial: bool = False  # Enable domain adversarial training
-
     # Vocabulary sizes
     n_syllables: int = 530  # Number of base syllables (loaded dynamically)
     n_tones: int = 5  # Tones 0-4
@@ -185,42 +182,6 @@ except ImportError:
 
 
 if TORCH_AVAILABLE:
-
-    class GradientReversalFunction(torch.autograd.Function):
-        """Gradient reversal for domain adversarial training.
-
-        During forward pass, acts as identity. During backward pass,
-        reverses gradients by multiplying with -lambda.
-        """
-
-        @staticmethod
-        def forward(ctx, x: torch.Tensor, lambda_: float) -> torch.Tensor:
-            ctx.lambda_ = lambda_
-            return x.view_as(x)
-
-        @staticmethod
-        def backward(ctx, grad_output: torch.Tensor) -> tuple[torch.Tensor, None]:
-            return -ctx.lambda_ * grad_output, None
-
-    class GradientReversalLayer(nn.Module):
-        """Gradient reversal layer for domain adaptation.
-
-        Wraps GradientReversalFunction to provide a module interface.
-        Use in domain adversarial training to make encoder features
-        domain-invariant by reversing gradients from domain classifier.
-        """
-
-        def forward(self, x: torch.Tensor, lambda_: float = 1.0) -> torch.Tensor:
-            """Apply gradient reversal.
-
-            Args:
-                x: Input tensor
-                lambda_: Gradient reversal strength (0 = no reversal, 1 = full reversal)
-
-            Returns:
-                Same tensor, but gradients will be reversed during backward
-            """
-            return GradientReversalFunction.apply(x, lambda_)
 
     class RotaryPositionalEmbedding(nn.Module):
         """Rotary Position Embedding (RoPE).
@@ -579,17 +540,6 @@ if TORCH_AVAILABLE:
                 nn.Linear(config.d_model // 2, config.n_tones),
             )
 
-            # Domain adversarial training (optional)
-            self.use_domain_adversarial = config.use_domain_adversarial
-            if self.use_domain_adversarial:
-                self.gradient_reversal = GradientReversalLayer()
-                self.domain_classifier = nn.Sequential(
-                    nn.Linear(config.d_model, config.d_model // 2),
-                    nn.GELU(),
-                    nn.Dropout(config.dropout),
-                    nn.Linear(config.d_model // 2, 2),  # 2 domains: AISHELL-3=0, TTS=1
-                )
-
             # Initialize weights
             self._init_weights()
 
@@ -617,8 +567,7 @@ if TORCH_AVAILABLE:
             pinyin_mask: torch.Tensor | None = None,
             f0: torch.Tensor | np.ndarray | None = None,
             f0_mask: torch.Tensor | None = None,
-            domain_lambda: float = 0.0,
-        ) -> tuple[torch.Tensor, torch.Tensor] | tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        ) -> tuple[torch.Tensor, torch.Tensor]:
             """Forward pass.
 
             Args:
@@ -628,17 +577,11 @@ if TORCH_AVAILABLE:
                 pinyin_mask: Mask for padded pinyin tokens [batch, seq_len]
                 f0: F0 pitch features [batch, time] (optional, for pitch fusion)
                 f0_mask: Mask for unvoiced/padded F0 frames [batch, time]
-                domain_lambda: Gradient reversal strength for domain adversarial training.
-                    0.0 = no domain classification, >0 = return domain logits
 
             Returns:
-                If domain_lambda > 0 and use_domain_adversarial:
-                    Tuple of (syllable_logits, tone_logits, domain_logits)
-                Else:
-                    Tuple of (syllable_logits, tone_logits)
+                Tuple of (syllable_logits, tone_logits)
                 - syllable_logits: [batch, n_syllables]
                 - tone_logits: [batch, n_tones]
-                - domain_logits: [batch, 2] (0=AISHELL-3, 1=TTS)
             """
             if isinstance(mel, np.ndarray):
                 mel = torch.from_numpy(mel).float()
@@ -778,13 +721,6 @@ if TORCH_AVAILABLE:
             # Dual heads
             syllable_logits = self.syllable_head(pooled)
             tone_logits = self.tone_head(pooled)
-
-            # Domain classification (for domain adversarial training)
-            if self.use_domain_adversarial and domain_lambda > 0:
-                # Apply gradient reversal before domain classifier
-                domain_input = self.gradient_reversal(pooled, domain_lambda)
-                domain_logits = self.domain_classifier(domain_input)
-                return syllable_logits, tone_logits, domain_logits
 
             return syllable_logits, tone_logits
 
