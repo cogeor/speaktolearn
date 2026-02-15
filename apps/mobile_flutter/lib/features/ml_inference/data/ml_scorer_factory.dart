@@ -1,0 +1,42 @@
+import '../domain/ml_scorer.dart';
+import 'onnx_ml_scorer_v4.dart';
+import 'onnx_ml_scorer_v5.dart';
+
+/// Model version enum for scorer selection.
+enum ModelVersion {
+  /// V4 architecture: 1s audio chunks, pinyin_ids for position
+  v4,
+
+  /// V5 architecture: full sentence audio, position embedding
+  v5,
+}
+
+/// Factory for creating ML scorers based on model version.
+///
+/// Usage:
+/// ```dart
+/// final scorer = MlScorerFactory.create(ModelVersion.v4);
+/// await scorer.initialize();
+/// final grade = await scorer.score(sequence, recording);
+/// ```
+class MlScorerFactory {
+  MlScorerFactory._();
+
+  /// Current default model version.
+  ///
+  /// Change this to switch the default model used by the app.
+  static const defaultVersion = ModelVersion.v4;
+
+  /// Create an ML scorer for the specified model version.
+  static MlScorer create([ModelVersion version = defaultVersion]) {
+    switch (version) {
+      case ModelVersion.v4:
+        return OnnxMlScorerV4();
+      case ModelVersion.v5:
+        return OnnxMlScorerV5();
+    }
+  }
+
+  /// Create the default scorer.
+  static MlScorer createDefault() => create(defaultVersion);
+}
