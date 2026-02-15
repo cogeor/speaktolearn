@@ -22,6 +22,7 @@ import '../features/recording/presentation/recording_controller.dart';
 import '../features/recording/presentation/recording_state.dart';
 import '../features/scoring/domain/pronunciation_scorer.dart';
 import '../features/ml_inference/data/mock_ml_scorer.dart';
+import '../features/ml_inference/data/onnx_ml_scorer.dart';
 import '../features/settings/data/settings_repository_impl.dart';
 import '../features/settings/domain/settings_repository.dart';
 import '../features/text_sequences/data/dataset_source.dart';
@@ -102,10 +103,19 @@ final recordingControllerProvider =
 
 /// Provider for ML-based pronunciation scorer.
 ///
-/// Currently uses [MockMlScorer] for debugging. Replace with ONNX scorer
-/// for production use.
+/// Uses [OnnxMlScorer] with graceful fallback to [MockMlScorer] if
+/// the ONNX model fails to load.
 final pronunciationScorerProvider = Provider<PronunciationScorer>((ref) {
-  return MockMlScorer();
+  final scorer = OnnxMlScorer();
+
+  // Eagerly initialize to detect model availability
+  scorer.initialize().catchError((error) {
+    // Log error but allow app to continue with fallback scoring
+    print('ONNX scorer initialization failed: $error');
+    print('App will use fallback scoring in OnnxMlScorer');
+  });
+
+  return scorer;
 });
 
 const _datasetFingerprintKey = '__dataset_fingerprint_v1';
