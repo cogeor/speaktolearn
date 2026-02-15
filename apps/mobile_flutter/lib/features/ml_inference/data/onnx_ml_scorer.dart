@@ -56,18 +56,25 @@ class OnnxMlScorer implements MlScorer {
 
   @override
   Future<Grade> score(TextSequence sequence, Recording recording) async {
+    final totalStopwatch = Stopwatch()..start();
+
     if (!_isReady) {
       await initialize();
     }
 
     try {
       // 1. Load audio from recording file
+      var stepWatch = Stopwatch()..start();
       final audioFile = File(recording.filePath);
       final audioBytes = await audioFile.readAsBytes();
       final audioSamples = _parseWavToSamples(audioBytes);
+      print('⏱️ Audio load: ${stepWatch.elapsedMilliseconds}ms (${audioSamples.length} samples)');
 
       // 2. Extract mel spectrogram
+      stepWatch.reset();
+      stepWatch.start();
       final mel = _melExtractor.extract(audioSamples);
+      print('⏱️ Mel extraction: ${stepWatch.elapsedMilliseconds}ms (${mel[0].length} frames)');
 
       // 3. Get pinyin syllables from sequence
       final syllables = _parsePinyin(sequence.romanization ?? '');
@@ -78,6 +85,8 @@ class OnnxMlScorer implements MlScorer {
       }
 
       // 4. For each syllable, run inference and get probability
+      stepWatch.reset();
+      stepWatch.start();
       final scores = <double>[];
       for (int i = 0; i < syllables.length; i++) {
         final context = syllables.sublist(0, i);
@@ -85,6 +94,7 @@ class OnnxMlScorer implements MlScorer {
         final prob = await _runInference(mel, pinyinIds, syllables[i]);
         scores.add(prob);
       }
+      print('⏱️ Inference (${syllables.length} syllables): ${stepWatch.elapsedMilliseconds}ms (${(stepWatch.elapsedMilliseconds / syllables.length).toStringAsFixed(1)}ms/syllable)');
 
       // 5. Map syllable scores to character scores
       final characters = sequence.text.characters.toList();
@@ -99,6 +109,10 @@ class OnnxMlScorer implements MlScorer {
           ? 0.0
           : characterScores.reduce((a, b) => a + b) / characterScores.length;
 
+      totalStopwatch.stop();
+      print('⏱️ TOTAL scoring: ${totalStopwatch.elapsedMilliseconds}ms');
+      print('📊 Scores: ${scores.map((s) => s.toStringAsFixed(3)).join(", ")}');
+
       return Grade(
         overall: (avgScore * 100).round(),
         method: _method,
@@ -111,6 +125,7 @@ class OnnxMlScorer implements MlScorer {
       );
     } catch (e) {
       // On any error, fall back to mock-like behavior
+      print('❌ Scoring error: $e');
       return _fallbackScore(sequence);
     }
   }
@@ -140,16 +155,9 @@ class OnnxMlScorer implements MlScorer {
     // Prepare pinyin_ids: [1, seq_len]
     final pinyinFlat = Int64List.fromList(pinyinIds.map((e) => e).toList());
 
-    // Create masks: all ones for simplicity (no padding)
-    final audioMask = Float32List(timeFrames);
-    for (int i = 0; i < timeFrames; i++) {
-      audioMask[i] = 1.0;
-    }
-
-    final pinyinMask = Float32List(pinyinIds.length);
-    for (int i = 0; i < pinyinIds.length; i++) {
-      pinyinMask[i] = 1.0;
-    }
+    // Create masks: all false = no padding (True means padded/ignored)
+    final audioMask = List<bool>.filled(timeFrames, false);
+    final pinyinMask = List<bool>.filled(pinyinIds.length, false);
 
     // Create input tensors
     final melTensor = OrtValueTensor.createTensorWithDataList(
