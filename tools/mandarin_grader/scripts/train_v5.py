@@ -220,9 +220,11 @@ def create_dataloader(
     from mandarin_grader.model.syllable_predictor_v4 import SyllablePredictorConfigV4
     mel_config = SyllablePredictorConfigV4()
 
+    # Max frames = 100 frames/s * max_duration_s (fixed for efficiency)
+    max_frames = int(max_duration_s * 100)
+
     def collate_fn(batch):
         mels, positions, target_syls, target_tones = [], [], [], []
-        max_time = 0
 
         for sample in batch:
             if sample.mel_full is not None:
@@ -234,20 +236,23 @@ def create_dataloader(
             else:
                 raise ValueError(f"Sample {sample.sample_id} has neither mel nor audio")
 
-            mels.append(mel)
-            max_time = max(max_time, mel.shape[1])
+            # Truncate to max_frames to avoid slow training
+            if mel.shape[1] > max_frames:
+                mel = mel[:, :max_frames]
 
+            mels.append(mel)
             positions.append(sample.position)
             target_syls.append(vocab.encode(sample.target_syllable))
             target_tones.append(sample.target_tone)
 
-        # Pad mels to max_time
+        # Pad mels to max_frames (fixed size for efficiency)
         n_mels = mels[0].shape[0]
-        padded_mels = np.zeros((len(batch), n_mels, max_time), dtype=np.float32)
-        audio_masks = np.zeros((len(batch), max_time), dtype=bool)
+        padded_mels = np.zeros((len(batch), n_mels, max_frames), dtype=np.float32)
+        audio_masks = np.ones((len(batch), max_frames), dtype=bool)  # Start masked
         for i, mel in enumerate(mels):
-            padded_mels[i, :, :mel.shape[1]] = mel
-            audio_masks[i, mel.shape[1]:] = True
+            mel_len = mel.shape[1]
+            padded_mels[i, :, :mel_len] = mel
+            audio_masks[i, :mel_len] = False  # Unmask valid frames
 
         return {
             "mel": torch.tensor(padded_mels, dtype=torch.float32),
@@ -471,6 +476,8 @@ def main():
     parser.add_argument("--n-layers", type=int, default=4)
     parser.add_argument("--n-heads", type=int, default=6)
     parser.add_argument("--dim-feedforward", type=int, default=384)
+    parser.add_argument("--attention-window", type=int, default=32,
+                        help="Longformer local attention window size (each side)")
 
     # Augmentation
     parser.add_argument("--speed-variation", type=float, default=0.1)
@@ -531,6 +538,7 @@ def main():
         n_layers=args.n_layers,
         n_heads=args.n_heads,
         dim_feedforward=args.dim_feedforward,
+        attention_window=args.attention_window,
         max_audio_frames=int(args.max_duration_s * 100),  # ~10ms per frame
     )
     model = SyllablePredictorV5(model_config).to(config.device)
