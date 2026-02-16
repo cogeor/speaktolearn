@@ -8,13 +8,14 @@ Key differences from V4:
 - Full sentence audio instead of 1s chunks
 - Single position token instead of pinyin sequence
 - Non-autoregressive: position selects which syllable to predict
+- Longformer-style local+global attention for efficient processing
 
 Architecture:
     Input: mel [bs, n_mels, time] + position [bs, 1]
     - Audio: mel -> CNN (8x downsampling) -> [bs, time//8, d_model]
     - Position: embedding -> [bs, 1, d_model] -> broadcast to audio
     - Combined: audio_embed + position_embed
-    - Transformer with RoPE
+    - Transformer with RoPE and Longformer attention (local window + global)
     - Attention pooling (PMA)
     - Output: syllable head (532 classes) + tone head (5 classes)
 """
@@ -64,6 +65,10 @@ class SyllablePredictorConfigV5:
     n_layers: int = 4
     dim_feedforward: int = 384
     dropout: float = 0.1
+
+    # Longformer-style attention
+    attention_window: int = 32  # Local attention window size (each side)
+    use_global_attention: bool = True  # Position token has global attention
 
     # Vocabulary sizes
     n_syllables: int = 530  # Number of base syllables
@@ -140,8 +145,45 @@ if TORCH_AVAILABLE:
         return (x * cos) + (rotate_half(x) * sin)
 
 
+    def create_longformer_attention_mask(
+        seq_len: int,
+        window_size: int,
+        global_indices: list[int] | None = None,
+        device: torch.device | None = None,
+    ) -> torch.Tensor:
+        """Create Longformer-style attention mask.
+
+        Args:
+            seq_len: Sequence length
+            window_size: Size of sliding window (total window = 2*window_size + 1)
+            global_indices: Positions with global attention (can attend everywhere)
+            device: Device to create tensor on
+
+        Returns:
+            Attention mask of shape [seq_len, seq_len] where True = masked (cannot attend)
+        """
+        # Start with all positions masked
+        mask = torch.ones(seq_len, seq_len, dtype=torch.bool, device=device)
+
+        # Create local attention windows
+        for i in range(seq_len):
+            # Each position can attend to window_size positions on each side
+            start = max(0, i - window_size)
+            end = min(seq_len, i + window_size + 1)
+            mask[i, start:end] = False
+
+        # Global attention: specified positions can attend to all and be attended by all
+        if global_indices:
+            for idx in global_indices:
+                if 0 <= idx < seq_len:
+                    mask[idx, :] = False  # Global token attends to all
+                    mask[:, idx] = False  # All tokens attend to global token
+
+        return mask
+
+
     class RoPETransformerEncoderLayer(nn.Module):
-        """Transformer encoder layer with Rotary Position Embeddings."""
+        """Transformer encoder layer with Rotary Position Embeddings and Longformer attention."""
 
         def __init__(
             self,
@@ -150,12 +192,14 @@ if TORCH_AVAILABLE:
             dim_feedforward: int,
             dropout: float = 0.1,
             norm_first: bool = True,
+            attention_window: int | None = None,
         ):
             super().__init__()
             self.d_model = d_model
             self.nhead = nhead
             self.head_dim = d_model // nhead
             self.norm_first = norm_first
+            self.attention_window = attention_window
 
             self.q_proj = nn.Linear(d_model, d_model)
             self.k_proj = nn.Linear(d_model, d_model)
@@ -179,12 +223,13 @@ if TORCH_AVAILABLE:
             cos: torch.Tensor,
             sin: torch.Tensor,
             src_key_padding_mask: torch.Tensor | None = None,
+            attn_mask: torch.Tensor | None = None,
         ) -> torch.Tensor:
             if self.norm_first:
-                src = src + self._sa_block(self.norm1(src), cos, sin, src_key_padding_mask)
+                src = src + self._sa_block(self.norm1(src), cos, sin, src_key_padding_mask, attn_mask)
                 src = src + self._ff_block(self.norm2(src))
             else:
-                src = self.norm1(src + self._sa_block(src, cos, sin, src_key_padding_mask))
+                src = self.norm1(src + self._sa_block(src, cos, sin, src_key_padding_mask, attn_mask))
                 src = self.norm2(src + self._ff_block(src))
             return src
 
@@ -194,6 +239,7 @@ if TORCH_AVAILABLE:
             cos: torch.Tensor,
             sin: torch.Tensor,
             key_padding_mask: torch.Tensor | None,
+            attn_mask: torch.Tensor | None = None,
         ) -> torch.Tensor:
             batch_size, seq_len, _ = x.shape
 
@@ -214,9 +260,17 @@ if TORCH_AVAILABLE:
             scale = math.sqrt(self.head_dim)
             attn_weights = torch.matmul(q, k.transpose(-2, -1)) / scale
 
+            # Apply Longformer attention mask (local + global)
+            if attn_mask is not None:
+                # attn_mask shape: [seq_len, seq_len], True = masked
+                # Expand for batch and heads: [1, 1, seq_len, seq_len]
+                attn_mask_expanded = attn_mask.unsqueeze(0).unsqueeze(0)
+                attn_weights = attn_weights.masked_fill(attn_mask_expanded, float("-inf"))
+
+            # Apply padding mask
             if key_padding_mask is not None:
-                attn_mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
-                attn_weights = attn_weights.masked_fill(attn_mask, float("-inf"))
+                attn_mask_pad = key_padding_mask.unsqueeze(1).unsqueeze(2)
+                attn_weights = attn_weights.masked_fill(attn_mask_pad, float("-inf"))
 
             attn_weights = F.softmax(attn_weights, dim=-1)
             attn_weights = self.dropout(attn_weights)
@@ -239,7 +293,9 @@ if TORCH_AVAILABLE:
         1. Audio CNN: mel frames -> d_model (8x sequence reduction)
         2. Position embedding: position_idx -> d_model (broadcast to audio)
         3. Add position embedding to audio frames
-        4. RoPE Transformer encoder
+        4. RoPE Transformer encoder with Longformer-style attention:
+           - Local sliding window attention (default window=32)
+           - Global attention on position 0 for aggregating sentence context
         5. Attention pooling (PMA)
         6. Dual output heads (syllable + tone)
         """
@@ -296,7 +352,7 @@ if TORCH_AVAILABLE:
             max_seq_len = config.max_audio_frames // 8 + 1  # +1 for safety
             self.rope = RotaryPositionalEmbedding(dim=config.d_model, max_len=max_seq_len)
 
-            # Transformer encoder with RoPE
+            # Transformer encoder with RoPE and Longformer attention
             self.transformer_layers = nn.ModuleList([
                 RoPETransformerEncoderLayer(
                     d_model=config.d_model,
@@ -304,6 +360,7 @@ if TORCH_AVAILABLE:
                     dim_feedforward=config.dim_feedforward,
                     dropout=config.dropout,
                     norm_first=True,
+                    attention_window=config.attention_window,
                 )
                 for _ in range(config.n_layers)
             ])
@@ -436,10 +493,26 @@ if TORCH_AVAILABLE:
             # Get RoPE cos/sin
             cos, sin = self.rope(audio_embed)
 
-            # Transformer with RoPE
+            # Create Longformer attention mask for local + global attention
+            # Position 0 is treated as global (can attend to all positions)
+            # This is compatible with the position embedding which broadcasts to all frames
+            seq_len = audio_embed.shape[1]
+            if self.config.use_global_attention:
+                global_indices = [0]  # First position has global attention
+            else:
+                global_indices = None
+
+            attn_mask = create_longformer_attention_mask(
+                seq_len=seq_len,
+                window_size=self.config.attention_window,
+                global_indices=global_indices,
+                device=audio_embed.device,
+            )
+
+            # Transformer with RoPE and Longformer attention
             encoded = audio_embed
             for layer in self.transformer_layers:
-                encoded = layer(encoded, cos, sin, src_key_padding_mask=audio_mask)
+                encoded = layer(encoded, cos, sin, src_key_padding_mask=audio_mask, attn_mask=attn_mask)
 
             # Attention pooling (PMA)
             query = self.pool_query.expand(batch_size, -1, -1)
