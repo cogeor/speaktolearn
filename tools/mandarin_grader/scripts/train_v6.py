@@ -159,6 +159,8 @@ def create_dataloader(
     mel_cache: dict | None = None,
     max_duration_s: float = 10.0,
     speed_variation: float = 0.1,
+    pitch_shift_semitones: float = 0.0,
+    formant_shift_percent: float = 0.0,
 ):
     import torch
     from torch.utils.data import DataLoader
@@ -177,6 +179,8 @@ def create_dataloader(
         max_duration_s=max_duration_s,
         augment=augment,
         speed_variation=speed_variation,
+        pitch_shift_semitones=pitch_shift_semitones,
+        formant_shift_percent=formant_shift_percent,
     )
 
     if mel_cache:
@@ -353,6 +357,8 @@ def main():
     parser.add_argument("--attention-window", type=int, default=32)
 
     parser.add_argument("--speed-variation", type=float, default=0.1)
+    parser.add_argument("--pitch-shift", type=float, default=0.0)
+    parser.add_argument("--formant-shift", type=float, default=0.0)
     parser.add_argument("--compile", action="store_true", help="Use torch.compile for FlexAttention optimization")
 
     args = parser.parse_args()
@@ -423,6 +429,7 @@ def main():
     logger.info(f"Attention window: {args.attention_window}")
     logger.info(f"FlexAttention available: {FLEX_ATTENTION_AVAILABLE}")
     logger.info(f"Device: {config.device}")
+    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%")
 
     preload = not mel_cache
 
@@ -431,6 +438,8 @@ def main():
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
         speed_variation=args.speed_variation,
+        pitch_shift_semitones=args.pitch_shift,
+        formant_shift_percent=args.formant_shift,
     )
     val_loader = create_dataloader(
         val_sentences, config.batch_size, shuffle=False, augment=False,
