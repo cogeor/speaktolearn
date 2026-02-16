@@ -73,7 +73,7 @@ class SyllablePredictorConfigV5:
     # Vocabulary sizes
     n_syllables: int = 530  # Number of base syllables
     n_tones: int = 5  # Tones 0-4
-    max_positions: int = 30  # Max syllables per sentence
+    max_positions: int = 60  # Max syllables per sentence (10s at ~5 syl/s)
 
     # Special tokens
     pad_token: int = 0
