@@ -17,7 +17,7 @@ Usage:
 Model Information:
     - Input: mel [batch, 80, time], position [batch, 1], audio_mask [batch, time]
     - Output: syllable_logits [batch, 532], tone_logits [batch, 5]
-    - Architecture: CNN front-end, Position Embedding, RoPE Transformer, Attention pooling
+    - Architecture: CNN (8x downsampling) + Position Embedding + RoPE Transformer + Longformer Attention + PMA Pooling
 """
 
 import argparse
@@ -99,19 +99,50 @@ def infer_config_from_state_dict(state_dict: dict) -> dict:
     else:
         params["max_positions"] = 30
 
+    # Infer CNN downsampling factor by counting Conv1d layers in audio_cnn
+    # Each Conv1d layer with stride=2 halves the sequence length
+    cnn_layer_indices = set()
+    for key in state_dict.keys():
+        if key.startswith("audio_cnn.") and key.endswith(".weight"):
+            # audio_cnn.{idx}.weight - extract layer index
+            parts = key.split(".")
+            if len(parts) >= 3:
+                try:
+                    idx = int(parts[1])
+                    # Check if this is a Conv1d (weight shape: [out_ch, in_ch, kernel])
+                    if len(state_dict[key].shape) == 3:
+                        cnn_layer_indices.add(idx)
+                except ValueError:
+                    pass
+
+    # Each Conv1d layer applies stride=2, so total downsampling = 2^num_conv_layers
+    num_cnn_layers = len(cnn_layer_indices) if cnn_layer_indices else 3  # Default: 3 layers = 8x
+    params["cnn_downsampling_factor"] = 2 ** num_cnn_layers
+
     # Infer max_audio_frames from RoPE cache (cos_cached shape is [1, seq_len, d_model])
     if "rope.cos_cached" in state_dict:
-        # RoPE cache is for downsampled audio: actual_frames = cache_len * 4
+        # RoPE cache is for downsampled audio: actual_frames = cache_len * downsampling_factor
         rope_seq_len = state_dict["rope.cos_cached"].shape[1]
-        params["max_audio_frames"] = rope_seq_len * 4
+        params["max_audio_frames"] = rope_seq_len * params["cnn_downsampling_factor"]
     else:
         params["max_audio_frames"] = 1000  # Default
+
+    # Attention window cannot be inferred from state_dict (stored as scalar attribute, not tensor)
+    # Use default value from config
+    params["attention_window"] = 32
+
+    # Global attention flag - also cannot be inferred, use default
+    params["use_global_attention"] = True
 
     return params
 
 
-def create_model_for_export(checkpoint_path: Path, device: str) -> tuple[SyllablePredictorV5, SyllablePredictorConfigV5]:
-    """Create and load model for export."""
+def create_model_for_export(checkpoint_path: Path, device: str) -> tuple[SyllablePredictorV5, SyllablePredictorConfigV5, dict]:
+    """Create and load model for export.
+
+    Returns:
+        Tuple of (model, config, inferred_params)
+    """
     state_dict = load_checkpoint(checkpoint_path, device)
 
     print("Inferring model architecture from checkpoint...")
@@ -122,6 +153,8 @@ def create_model_for_export(checkpoint_path: Path, device: str) -> tuple[Syllabl
     print(f"  dim_feedforward: {inferred['dim_feedforward']}")
     print(f"  max_positions: {inferred['max_positions']}")
     print(f"  max_audio_frames: {inferred.get('max_audio_frames', 1000)}")
+    print(f"  cnn_downsampling_factor: {inferred.get('cnn_downsampling_factor', 8)}x")
+    print(f"  attention_window: {inferred.get('attention_window', 32)}")
 
     config = SyllablePredictorConfigV5(
         d_model=inferred["d_model"],
@@ -130,6 +163,7 @@ def create_model_for_export(checkpoint_path: Path, device: str) -> tuple[Syllabl
         dim_feedforward=inferred["dim_feedforward"],
         max_positions=inferred["max_positions"],
         max_audio_frames=inferred.get("max_audio_frames", 1000),
+        attention_window=inferred.get("attention_window", 32),
         dropout=0.0,
     )
 
@@ -142,7 +176,7 @@ def create_model_for_export(checkpoint_path: Path, device: str) -> tuple[Syllabl
     print(f"  Model parameters: {total_params:,} total")
     print(f"  Model size: {total_params * 4 / 1024 / 1024:.2f} MB (FP32)")
 
-    return model, config
+    return model, config, inferred
 
 
 def prepare_dummy_inputs(config: SyllablePredictorConfigV5, device: str) -> tuple:
@@ -166,7 +200,14 @@ def export_to_onnx(
     opset_version: int,
     use_fp16: bool,
 ) -> None:
-    """Export model to ONNX format."""
+    """Export model to ONNX format.
+
+    Note on attention mask handling:
+    The Longformer-style attention mask is created dynamically in the model's forward()
+    based on config.attention_window and config.use_global_attention. During ONNX export,
+    this mask is baked into the graph for the max_audio_frames sequence length.
+    The mask creation uses simple tensor operations that are ONNX-compatible.
+    """
     device = next(model.parameters()).device
 
     print("Preparing dummy inputs...")
@@ -189,6 +230,7 @@ def export_to_onnx(
     print(f"    mel: {list(dummy_inputs[0].shape)} -> [batch, 80, time]")
     print(f"    position: {list(dummy_inputs[1].shape)} -> [batch, 1]")
     print(f"    audio_mask: {list(dummy_inputs[2].shape)} -> [batch, time]")
+    print(f"  Note: Longformer attention mask is baked for max sequence length")
 
     try:
         torch.onnx.export(
@@ -235,16 +277,22 @@ def generate_model_metadata(
     checkpoint_path: Path,
     use_fp16: bool,
     opset_version: int,
+    inferred_params: dict | None = None,
 ) -> dict:
     """Generate model metadata JSON."""
     model_size_bytes = onnx_path.stat().st_size
     model_size_mb = model_size_bytes / (1024 * 1024)
 
+    # Get downsampling factor from inferred params or default
+    cnn_downsampling_factor = 8
+    if inferred_params and "cnn_downsampling_factor" in inferred_params:
+        cnn_downsampling_factor = inferred_params["cnn_downsampling_factor"]
+
     metadata = {
         "model_info": {
             "name": "SyllablePredictorV5",
             "version": "5.0",
-            "architecture": "CNN + Position Embedding + RoPE Transformer + Attention Pooling",
+            "architecture": "CNN (8x downsampling) + Position Embedding + RoPE Transformer + Longformer Attention + PMA Pooling",
             "created_at": datetime.utcnow().isoformat() + "Z",
             "checkpoint_source": str(checkpoint_path.name),
             "precision": "fp16" if use_fp16 else "fp32",
@@ -313,6 +361,11 @@ def generate_model_metadata(
             "dim_feedforward": config.dim_feedforward,
             "max_audio_frames": config.max_audio_frames,
             "max_positions": config.max_positions,
+            "cnn_downsampling_factor": cnn_downsampling_factor,
+            "attention_window": config.attention_window,
+            "use_global_attention": config.use_global_attention,
+            "attention_type": "longformer",
+            "attention_notes": "Local sliding window (size=2*window+1) with global attention on position 0",
         }
     }
 
@@ -328,7 +381,7 @@ def save_model_metadata(metadata: dict, onnx_path: Path) -> Path:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
 
     print(f"  Metadata saved to: {metadata_path}")
-    print(f"  Model version: V5 (full-sentence, position-based)")
+    print(f"  Model version: V5 (full-sentence, position-based, Longformer attention)")
 
     return metadata_path
 
@@ -366,9 +419,10 @@ def validate_onnx_export(
     max_syllable_error = 0.0
     max_tone_error = 0.0
 
-    # ONNX export uses fixed input size due to RoPE cache being baked in
+    # ONNX export uses fixed input size due to RoPE cache and attention mask being baked in
     fixed_mel_len = config.max_audio_frames
     print(f"  Using fixed mel length: {fixed_mel_len} (matching export)")
+    print(f"  Attention window: {config.attention_window}")
 
     for i in range(num_test_samples):
         # Generate random test input with FIXED size
@@ -446,13 +500,14 @@ def main():
     print(f"Using device: {device}")
 
     try:
-        model, config = create_model_for_export(args.checkpoint, device)
+        model, config, inferred = create_model_for_export(args.checkpoint, device)
 
         export_to_onnx(model, args.output, config, args.opset, args.fp16)
 
         if args.metadata:
             metadata = generate_model_metadata(
-                args.output, config, args.checkpoint, args.fp16, args.opset
+                args.output, config, args.checkpoint, args.fp16, args.opset,
+                inferred_params=inferred
             )
             save_model_metadata(metadata, args.output)
 
