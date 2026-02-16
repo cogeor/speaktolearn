@@ -11,7 +11,7 @@ Key differences from V4:
 
 Architecture:
     Input: mel [bs, n_mels, time] + position [bs, 1]
-    - Audio: mel -> CNN (4x downsampling) -> [bs, time//4, d_model]
+    - Audio: mel -> CNN (8x downsampling) -> [bs, time//8, d_model]
     - Position: embedding -> [bs, 1, d_model] -> broadcast to audio
     - Combined: audio_embed + position_embed
     - Transformer with RoPE
@@ -236,7 +236,7 @@ if TORCH_AVAILABLE:
         predicts syllable and tone for that position.
 
         Architecture:
-        1. Audio CNN: mel frames -> d_model (4x sequence reduction)
+        1. Audio CNN: mel frames -> d_model (8x sequence reduction)
         2. Position embedding: position_idx -> d_model (broadcast to audio)
         3. Add position embedding to audio frames
         4. RoPE Transformer encoder
@@ -254,7 +254,7 @@ if TORCH_AVAILABLE:
             self.vocab = SyllableVocab()
             vocab_size = len(self.vocab)
 
-            # CNN front-end: [n_mels, time] -> [d_model, time//4]
+            # CNN front-end: [n_mels, time] -> [d_model, time//8]
             self.audio_cnn = nn.Sequential(
                 nn.Conv1d(
                     config.n_mels,
@@ -274,6 +274,15 @@ if TORCH_AVAILABLE:
                 ),
                 nn.BatchNorm1d(config.d_model),
                 nn.GELU(),
+                nn.Conv1d(
+                    config.d_model,
+                    config.d_model,
+                    kernel_size=config.cnn_kernel_size,
+                    stride=2,
+                    padding=config.cnn_kernel_size // 2,
+                ),
+                nn.BatchNorm1d(config.d_model),
+                nn.GELU(),
             )
 
             # Position embedding: position_idx -> d_model
@@ -284,7 +293,7 @@ if TORCH_AVAILABLE:
             self.audio_type_embed = nn.Parameter(torch.randn(1, 1, config.d_model) * 0.02)
 
             # RoPE for transformer positional encoding
-            max_seq_len = config.max_audio_frames // 4 + 1  # +1 for safety
+            max_seq_len = config.max_audio_frames // 8 + 1  # +1 for safety
             self.rope = RotaryPositionalEmbedding(dim=config.d_model, max_len=max_seq_len)
 
             # Transformer encoder with RoPE
@@ -374,12 +383,12 @@ if TORCH_AVAILABLE:
             batch_size = mel.shape[0]
             original_audio_len = mel.shape[2]
 
-            # CNN front-end: [batch, n_mels, time] -> [batch, d_model, time//4]
+            # CNN front-end: [batch, n_mels, time] -> [batch, d_model, time//8]
             audio_embed = self.audio_cnn(mel)
-            audio_embed = audio_embed.transpose(1, 2)  # [batch, time//4, d_model]
+            audio_embed = audio_embed.transpose(1, 2)  # [batch, time//8, d_model]
             downsampled_audio_len = audio_embed.shape[1]
 
-            max_downsampled_frames = self.config.max_audio_frames // 4
+            max_downsampled_frames = self.config.max_audio_frames // 8
 
             # Pad/truncate audio to max_downsampled_frames
             actual_downsampled_len = downsampled_audio_len
@@ -394,11 +403,11 @@ if TORCH_AVAILABLE:
             if audio_mask is not None:
                 audio_mask = audio_mask.to(device)
                 orig_mask_len = audio_mask.shape[1]
-                ds_len = (orig_mask_len + 3) // 4
+                ds_len = (orig_mask_len + 7) // 8
                 downsampled_mask = torch.ones(batch_size, ds_len, dtype=torch.bool, device=device)
                 for i in range(ds_len):
-                    start_idx = i * 4
-                    end_idx = min(start_idx + 4, orig_mask_len)
+                    start_idx = i * 8
+                    end_idx = min(start_idx + 8, orig_mask_len)
                     downsampled_mask[:, i] = audio_mask[:, start_idx:end_idx].all(dim=1)
                 audio_mask = downsampled_mask
 
@@ -409,7 +418,7 @@ if TORCH_AVAILABLE:
                 elif audio_mask.shape[1] > max_downsampled_frames:
                     audio_mask = audio_mask[:, :max_downsampled_frames]
             else:
-                ds_len = (original_audio_len + 3) // 4
+                ds_len = (original_audio_len + 7) // 8
                 ds_len = min(ds_len, max_downsampled_frames)
                 audio_mask = torch.zeros(batch_size, max_downsampled_frames, dtype=torch.bool, device=device)
                 audio_mask[:, ds_len:] = True
