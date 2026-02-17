@@ -51,11 +51,24 @@ class SyllableVocab {
   /// Encode a single syllable to its token ID
   ///
   /// Returns [padToken] for unknown syllables.
-  /// Normalizes input by converting to lowercase and replacing 'v' with 'u'.
+  /// Normalizes input by stripping tone marks and converting to lowercase.
   int encode(String syllable) {
-    // Normalize: lowercase and handle u/v variants
-    final normalized = syllable.toLowerCase().replaceAll('v', 'u');
+    // Strip tone marks, lowercase, and handle u/v variants
+    final normalized = _stripTones(syllable.toLowerCase()).replaceAll('v', 'u');
     return _sylToIdx[normalized] ?? padToken;
+  }
+
+  /// Strip tone marks from pinyin syllable.
+  static String _stripTones(String syllable) {
+    const toneMap = {
+      'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a',
+      'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e',
+      'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i',
+      'ō': 'o', 'ó': 'o', 'ǒ': 'o', 'ò': 'o',
+      'ū': 'u', 'ú': 'u', 'ǔ': 'u', 'ù': 'u',
+      'ǖ': 'v', 'ǘ': 'v', 'ǚ': 'v', 'ǜ': 'v', 'ü': 'v',
+    };
+    return syllable.split('').map((c) => toneMap[c] ?? c).join();
   }
 
   /// Decode a token ID to its syllable string

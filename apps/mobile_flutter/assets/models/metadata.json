@@ -3,12 +3,12 @@
     "name": "SyllablePredictorV4",
     "version": "4.0",
     "architecture": "CNN + RoPE Transformer + Attention Pooling",
-    "created_at": "2026-02-15T19:14:46.812006Z",
+    "created_at": "2026-02-15T22:06:03.138758Z",
     "checkpoint_source": "best_model.pt",
-    "precision": "fp16",
+    "precision": "fp32",
     "opset_version": 17,
-    "model_size_bytes": 41953213,
-    "model_size_mb": 40.01
+    "model_size_bytes": 83286651,
+    "model_size_mb": 79.43
   },
   "input_specs": {
     "mel": {
@@ -97,7 +97,7 @@
   "model_architecture": {
     "d_model": 480,
     "n_layers": 8,
-    "n_heads": 15,
+    "n_heads": 6,
     "dim_feedforward": 1440,
     "cnn_kernel_size": 3,
     "max_audio_frames": 100,

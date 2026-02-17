@@ -235,9 +235,13 @@ class RecordingController extends StateNotifier<RecordingState> {
   /// Checks if a latest recording exists for the given text sequence.
   ///
   /// Updates [RecordingState.hasLatestRecording] based on the result.
+  /// Clears [latestGrade] since we're switching to a different sentence.
   Future<void> checkLatestRecording(String textSequenceId) async {
     final recording = await _repository.getLatest(textSequenceId);
-    state = state.copyWith(hasLatestRecording: recording != null);
+    state = state.copyWith(
+      hasLatestRecording: recording != null,
+      latestGrade: null,
+    );
   }
 
   /// Replays the latest recording for the given text sequence.
