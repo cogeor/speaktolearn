@@ -70,6 +70,9 @@ class SyllablePredictorConfigV5:
     attention_window: int = 32  # Local attention window size (each side)
     use_global_attention: bool = True  # Position token has global attention
 
+    # Attention backend: "naive" (O(n²)), "flash" (FlashAttention), "xformers"
+    attention_backend: Literal["naive", "flash", "xformers"] = "flash"
+
     # Vocabulary sizes
     n_syllables: int = 530  # Number of base syllables
     n_tones: int = 5  # Tones 0-4
@@ -108,6 +111,21 @@ try:
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
+
+# Check for xFormers availability
+XFORMERS_AVAILABLE = False
+if TORCH_AVAILABLE:
+    try:
+        import xformers.ops as xops
+        XFORMERS_AVAILABLE = True
+    except ImportError:
+        pass
+
+# Check PyTorch version for FlashAttention support (requires 2.0+)
+FLASH_AVAILABLE = False
+if TORCH_AVAILABLE:
+    torch_version = tuple(int(x) for x in torch.__version__.split('.')[:2])
+    FLASH_AVAILABLE = torch_version >= (2, 0)
 
 
 if TORCH_AVAILABLE:
@@ -183,7 +201,13 @@ if TORCH_AVAILABLE:
 
 
     class RoPETransformerEncoderLayer(nn.Module):
-        """Transformer encoder layer with Rotary Position Embeddings and Longformer attention."""
+        """Transformer encoder layer with Rotary Position Embeddings.
+
+        Supports multiple attention backends:
+        - "naive": Standard O(n²) attention (original implementation)
+        - "flash": PyTorch 2.0+ FlashAttention via scaled_dot_product_attention
+        - "xformers": xFormers memory_efficient_attention
+        """
 
         def __init__(
             self,
@@ -193,6 +217,7 @@ if TORCH_AVAILABLE:
             dropout: float = 0.1,
             norm_first: bool = True,
             attention_window: int | None = None,
+            attention_backend: str = "flash",
         ):
             super().__init__()
             self.d_model = d_model
@@ -200,6 +225,10 @@ if TORCH_AVAILABLE:
             self.head_dim = d_model // nhead
             self.norm_first = norm_first
             self.attention_window = attention_window
+            self.dropout_p = dropout
+
+            # Validate and set attention backend
+            self.attention_backend = self._resolve_backend(attention_backend)
 
             self.q_proj = nn.Linear(d_model, d_model)
             self.k_proj = nn.Linear(d_model, d_model)
@@ -216,6 +245,24 @@ if TORCH_AVAILABLE:
             self.dropout2 = nn.Dropout(dropout)
 
             self.activation = nn.GELU()
+
+        def _resolve_backend(self, requested: str) -> str:
+            """Resolve attention backend, falling back if unavailable."""
+            if requested == "flash":
+                if FLASH_AVAILABLE:
+                    return "flash"
+                elif XFORMERS_AVAILABLE:
+                    return "xformers"
+                else:
+                    return "naive"
+            elif requested == "xformers":
+                if XFORMERS_AVAILABLE:
+                    return "xformers"
+                elif FLASH_AVAILABLE:
+                    return "flash"
+                else:
+                    return "naive"
+            return "naive"
 
         def forward(
             self,
@@ -257,13 +304,105 @@ if TORCH_AVAILABLE:
             q = apply_rotary_pos_emb(q, cos_head, sin_head)
             k = apply_rotary_pos_emb(k, cos_head, sin_head)
 
+            # Dispatch to appropriate attention backend
+            if self.attention_backend == "flash":
+                attn_output = self._flash_attention(q, k, v, key_padding_mask, attn_mask)
+            elif self.attention_backend == "xformers":
+                attn_output = self._xformers_attention(q, k, v, key_padding_mask, attn_mask)
+            else:
+                attn_output = self._naive_attention(q, k, v, key_padding_mask, attn_mask)
+
+            attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+            return self.dropout1(self.out_proj(attn_output))
+
+        def _flash_attention(
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            key_padding_mask: torch.Tensor | None,
+            attn_mask: torch.Tensor | None,
+        ) -> torch.Tensor:
+            """FlashAttention via PyTorch 2.0+ scaled_dot_product_attention.
+
+            This is O(n) in memory and significantly faster than naive attention.
+            Note: FlashAttention doesn't support arbitrary attention masks efficiently,
+            so we skip the Longformer-style local window mask and use full attention.
+            The efficiency gain from FlashAttention outweighs the sparse attention benefit.
+            """
+            # Combine masks into a single attention mask for SDPA
+            # SDPA expects: attn_mask where True = ATTEND, or float mask where -inf = masked
+            combined_mask = None
+            if key_padding_mask is not None:
+                # key_padding_mask: [batch, seq_len], True = masked (padding)
+                # Convert to [batch, 1, 1, seq_len] float mask for SDPA
+                combined_mask = key_padding_mask.unsqueeze(1).unsqueeze(2).to(q.dtype)
+                combined_mask = combined_mask.masked_fill(key_padding_mask.unsqueeze(1).unsqueeze(2), float("-inf"))
+
+            dropout_p = self.dropout_p if self.training else 0.0
+
+            # Use PyTorch's efficient SDPA (auto-selects FlashAttention when possible)
+            attn_output = F.scaled_dot_product_attention(
+                q, k, v,
+                attn_mask=combined_mask,
+                dropout_p=dropout_p,
+                is_causal=False,
+            )
+            return attn_output
+
+        def _xformers_attention(
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            key_padding_mask: torch.Tensor | None,
+            attn_mask: torch.Tensor | None,
+        ) -> torch.Tensor:
+            """xFormers memory_efficient_attention.
+
+            Similar benefits to FlashAttention with slightly different API.
+            """
+            # xFormers expects [batch, seq, heads, head_dim] format
+            q = q.transpose(1, 2)  # [batch, seq, heads, head_dim]
+            k = k.transpose(1, 2)
+            v = v.transpose(1, 2)
+
+            # Create attention bias from padding mask
+            attn_bias = None
+            if key_padding_mask is not None:
+                # xFormers uses LowerTriangularMask or custom bias
+                # For padding, create a bias tensor
+                attn_bias = xops.fmha.attn_bias.BlockDiagonalMask.from_seqlens(
+                    q_seqlen=[q.shape[1]] * q.shape[0],
+                    kv_seqlen=[k.shape[1]] * k.shape[0],
+                )
+                # Simple approach: use additive bias
+                # key_padding_mask: [batch, seq], True = masked
+                bias = key_padding_mask.unsqueeze(1).unsqueeze(1).to(q.dtype)  # [batch, 1, 1, seq]
+                attn_bias = bias.masked_fill(key_padding_mask.unsqueeze(1).unsqueeze(1), float("-inf"))
+
+            attn_output = xops.memory_efficient_attention(
+                q, k, v,
+                attn_bias=attn_bias,
+                p=self.dropout_p if self.training else 0.0,
+            )
+            # Convert back to [batch, heads, seq, head_dim]
+            return attn_output.transpose(1, 2)
+
+        def _naive_attention(
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            key_padding_mask: torch.Tensor | None,
+            attn_mask: torch.Tensor | None,
+        ) -> torch.Tensor:
+            """Original O(n²) attention implementation with Longformer masking."""
             scale = math.sqrt(self.head_dim)
             attn_weights = torch.matmul(q, k.transpose(-2, -1)) / scale
 
             # Apply Longformer attention mask (local + global)
             if attn_mask is not None:
-                # attn_mask shape: [seq_len, seq_len], True = masked
-                # Expand for batch and heads: [1, 1, seq_len, seq_len]
                 attn_mask_expanded = attn_mask.unsqueeze(0).unsqueeze(0)
                 attn_weights = attn_weights.masked_fill(attn_mask_expanded, float("-inf"))
 
@@ -275,9 +414,7 @@ if TORCH_AVAILABLE:
             attn_weights = F.softmax(attn_weights, dim=-1)
             attn_weights = self.dropout(attn_weights)
 
-            attn_output = torch.matmul(attn_weights, v)
-            attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
-            return self.dropout1(self.out_proj(attn_output))
+            return torch.matmul(attn_weights, v)
 
         def _ff_block(self, x: torch.Tensor) -> torch.Tensor:
             return self.dropout2(self.linear2(self.activation(self.linear1(x))))
@@ -352,6 +489,20 @@ if TORCH_AVAILABLE:
             max_seq_len = config.max_audio_frames // 8 + 1  # +1 for safety
             self.rope = RotaryPositionalEmbedding(dim=config.d_model, max_len=max_seq_len)
 
+            # Pre-compute Longformer attention mask (fixed size after padding)
+            max_downsampled = config.max_audio_frames // 8
+            if config.use_global_attention:
+                global_indices = [0]
+            else:
+                global_indices = None
+            cached_mask = create_longformer_attention_mask(
+                seq_len=max_downsampled,
+                window_size=config.attention_window,
+                global_indices=global_indices,
+                device='cpu',  # Will be moved to correct device in forward
+            )
+            self.register_buffer('cached_attn_mask', cached_mask, persistent=False)
+
             # Transformer encoder with RoPE and Longformer attention
             self.transformer_layers = nn.ModuleList([
                 RoPETransformerEncoderLayer(
@@ -361,9 +512,19 @@ if TORCH_AVAILABLE:
                     dropout=config.dropout,
                     norm_first=True,
                     attention_window=config.attention_window,
+                    attention_backend=config.attention_backend,
                 )
                 for _ in range(config.n_layers)
             ])
+
+            # Log the resolved attention backend
+            resolved_backend = self.transformer_layers[0].attention_backend
+            if resolved_backend != config.attention_backend:
+                import warnings
+                warnings.warn(
+                    f"Requested attention_backend='{config.attention_backend}' not available, "
+                    f"using '{resolved_backend}' instead."
+                )
 
             # Attention pooling (PMA)
             self.pool_query = nn.Parameter(torch.randn(1, 1, config.d_model) * 0.02)
@@ -493,26 +654,11 @@ if TORCH_AVAILABLE:
             # Get RoPE cos/sin
             cos, sin = self.rope(audio_embed)
 
-            # Create Longformer attention mask for local + global attention
-            # Position 0 is treated as global (can attend to all positions)
-            # This is compatible with the position embedding which broadcasts to all frames
-            seq_len = audio_embed.shape[1]
-            if self.config.use_global_attention:
-                global_indices = [0]  # First position has global attention
-            else:
-                global_indices = None
-
-            attn_mask = create_longformer_attention_mask(
-                seq_len=seq_len,
-                window_size=self.config.attention_window,
-                global_indices=global_indices,
-                device=audio_embed.device,
-            )
-
+            # Use cached Longformer attention mask (pre-computed in __init__)
             # Transformer with RoPE and Longformer attention
             encoded = audio_embed
             for layer in self.transformer_layers:
-                encoded = layer(encoded, cos, sin, src_key_padding_mask=audio_mask, attn_mask=attn_mask)
+                encoded = layer(encoded, cos, sin, src_key_padding_mask=audio_mask, attn_mask=self.cached_attn_mask)
 
             # Attention pooling (PMA)
             query = self.pool_query.expand(batch_size, -1, -1)

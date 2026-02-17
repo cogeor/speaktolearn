@@ -478,6 +478,9 @@ def main():
     parser.add_argument("--dim-feedforward", type=int, default=384)
     parser.add_argument("--attention-window", type=int, default=32,
                         help="Longformer local attention window size (each side)")
+    parser.add_argument("--attention-backend", type=str, default="flash",
+                        choices=["naive", "flash", "xformers"],
+                        help="Attention backend: naive (O(n²)), flash (PyTorch 2.0+), xformers")
 
     # Augmentation
     parser.add_argument("--speed-variation", type=float, default=0.1)
@@ -539,12 +542,15 @@ def main():
         n_heads=args.n_heads,
         dim_feedforward=args.dim_feedforward,
         attention_window=args.attention_window,
+        attention_backend=args.attention_backend,
         max_audio_frames=int(args.max_duration_s * 100),  # ~10ms per frame
     )
     model = SyllablePredictorV5(model_config).to(config.device)
 
     total_params = sum(p.numel() for p in model.parameters())
+    resolved_backend = model.transformer_layers[0].attention_backend
     logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
+    logger.info(f"Attention backend: {args.attention_backend} -> {resolved_backend}")
     logger.info(f"Device: {config.device}")
     logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%")
 
