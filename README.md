@@ -348,4 +348,4 @@ uv pip install -e ".[dev]"
 
 ## License
 
-[Add your license here]
+MIT
