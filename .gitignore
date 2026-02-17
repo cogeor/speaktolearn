@@ -23,6 +23,10 @@ tools/mandarin_grader/checkpoints/
 tools/mandarin_grader/checkpoints_*/
 tools/mandarin_grader/logs/
 
+# Pulled recordings from device (debug/test data)
+tools/mandarin_grader/pulled_recordings/
+tools/mandarin_grader/pulled_recordings_*/
+
 # Build artifacts
 tools/mandarin_grader/mandarin_grader.egg-info/
 tools/mandarin_grader/uv.lock
