@@ -242,3 +242,141 @@ class AudioAugmenter:
         successful = sum(1 for _, out in results if out is not None)
         logger.info(f"Enhanced {successful}/{len(input_paths)} files")
         return results
+
+
+# =============================================================================
+# Waveform-level augmentations (pitch shifting, formant shifting)
+# =============================================================================
+
+import numpy as np
+from numpy.typing import NDArray
+
+
+def pitch_shift(
+    audio: NDArray[np.float32],
+    semitones: float,
+    sr: int = 16000,
+) -> NDArray[np.float32]:
+    """Shift pitch by given number of semitones without changing duration.
+
+    Uses librosa's pitch_shift which applies a high-quality phase vocoder.
+
+    Args:
+        audio: Audio samples [n_samples], float32
+        semitones: Pitch shift in semitones (positive = higher, negative = lower)
+        sr: Sample rate
+
+    Returns:
+        Pitch-shifted audio [n_samples], same length as input
+    """
+    if abs(semitones) < 0.01:
+        return audio
+
+    import librosa
+
+    # librosa.effects.pitch_shift uses n_steps for semitones
+    shifted = librosa.effects.pitch_shift(
+        y=audio,
+        sr=sr,
+        n_steps=semitones,
+        bins_per_octave=12,
+    )
+
+    return shifted.astype(np.float32)
+
+
+def formant_shift(
+    audio: NDArray[np.float32],
+    shift_ratio: float,
+    sr: int = 16000,
+) -> NDArray[np.float32]:
+    """Shift formants without changing pitch or duration.
+
+    Formant shifting simulates different vocal tract lengths:
+    - shift_ratio > 1.0: Shorter vocal tract (child-like, brighter)
+    - shift_ratio < 1.0: Longer vocal tract (deeper, more resonant)
+
+    Implementation: resample -> pitch shift back
+    1. Resample audio by shift_ratio (changes both pitch and formants)
+    2. Pitch shift back to original pitch (preserves formant change)
+
+    Args:
+        audio: Audio samples [n_samples], float32
+        shift_ratio: Formant shift ratio (1.0 = no change, 1.1 = +10% formants)
+        sr: Sample rate
+
+    Returns:
+        Formant-shifted audio [n_samples], same length as input
+    """
+    if abs(shift_ratio - 1.0) < 0.01:
+        return audio
+
+    import librosa
+
+    original_length = len(audio)
+
+    # Step 1: Resample to change both pitch and formants
+    # If shift_ratio > 1, we want higher formants
+    # Resampling to higher rate then back = pitch down, so we do inverse
+    target_sr = int(sr * shift_ratio)
+    resampled = librosa.resample(audio, orig_sr=sr, target_sr=target_sr)
+
+    # Step 2: Pitch shift back to original pitch
+    # Resampling by factor R changes pitch by R, so we shift back by -log2(R)*12 semitones
+    semitones_to_correct = -12 * np.log2(shift_ratio)
+    corrected = librosa.effects.pitch_shift(
+        y=resampled,
+        sr=target_sr,
+        n_steps=semitones_to_correct,
+        bins_per_octave=12,
+    )
+
+    # Step 3: Resample back to original sample rate and length
+    result = librosa.resample(corrected, orig_sr=target_sr, target_sr=sr)
+
+    # Ensure same length as input
+    if len(result) > original_length:
+        result = result[:original_length]
+    elif len(result) < original_length:
+        result = np.pad(result, (0, original_length - len(result)))
+
+    return result.astype(np.float32)
+
+
+def random_pitch_shift(
+    audio: NDArray[np.float32],
+    max_semitones: float = 2.0,
+    sr: int = 16000,
+) -> NDArray[np.float32]:
+    """Apply random pitch shift within range.
+
+    Args:
+        audio: Audio samples [n_samples], float32
+        max_semitones: Maximum shift in either direction (default ±2 semitones)
+        sr: Sample rate
+
+    Returns:
+        Pitch-shifted audio
+    """
+    semitones = np.random.uniform(-max_semitones, max_semitones)
+    return pitch_shift(audio, semitones, sr)
+
+
+def random_formant_shift(
+    audio: NDArray[np.float32],
+    max_shift_percent: float = 10.0,
+    sr: int = 16000,
+) -> NDArray[np.float32]:
+    """Apply random formant shift within range.
+
+    Args:
+        audio: Audio samples [n_samples], float32
+        max_shift_percent: Maximum shift in either direction (default ±10%)
+        sr: Sample rate
+
+    Returns:
+        Formant-shifted audio
+    """
+    # Convert percent to ratio: ±10% -> [0.9, 1.1]
+    shift_ratio = 1.0 + np.random.uniform(-max_shift_percent, max_shift_percent) / 100.0
+    return formant_shift(audio, shift_ratio, sr)

@@ -29,6 +29,7 @@ from ..types import Tone, TargetSyllable
 from ..pitch import extract_f0_pyin, normalize_f0, hz_to_semitones
 from .lexicon import SyllableLexicon, _remove_tone_marks
 from .dataloader import AudioSample, SentenceDataset, parse_romanization
+from .augmentation import pitch_shift, formant_shift
 
 
 @dataclass
@@ -275,6 +276,8 @@ class AutoregressiveDataset:
         noise_snr_db: float | None = 30.0,
         speed_variation: float = 0.1,
         volume_variation_db: float = 12.0,
+        pitch_shift_semitones: float = 0.0,
+        formant_shift_percent: float = 0.0,
     ):
         """Initialize dataset.
 
@@ -286,8 +289,10 @@ class AutoregressiveDataset:
                       Ensures target is not cut off. Default 100ms.
             augment: Whether to apply augmentation (includes chunk position randomization)
             noise_snr_db: SNR for noise augmentation (None = no noise)
-            speed_variation: Speed variation fraction (0.1 = ±10%)
+            speed_variation: Speed variation fraction (0.1 = ±10%, 0.05 = ±5%)
             volume_variation_db: Volume variation in dB (12 = -12dB to +6dB range)
+            pitch_shift_semitones: Max pitch shift in semitones (±), 0 to disable
+            formant_shift_percent: Max formant shift in percent (±), 0 to disable
         """
         self.sentences = sentences
         self.sample_rate = sample_rate
@@ -297,6 +302,8 @@ class AutoregressiveDataset:
         self.noise_snr_db = noise_snr_db
         self.speed_variation = speed_variation
         self.volume_variation_db = volume_variation_db
+        self.pitch_shift_semitones = pitch_shift_semitones
+        self.formant_shift_percent = formant_shift_percent
 
         # Build index: list of (sentence_idx, syllable_idx) pairs
         self._index = []
@@ -364,18 +371,35 @@ class AutoregressiveDataset:
         return self._audio_cache[key]
 
     def _apply_augmentation(self, audio: NDArray[np.float32]) -> NDArray[np.float32]:
-        """Apply audio augmentation."""
+        """Apply audio augmentation.
+
+        Order of operations:
+        1. Pitch shift (preserves duration, high-quality phase vocoder)
+        2. Formant shift (preserves pitch, simulates vocal tract variation)
+        3. Speed variation (simple resampling - fast but changes pitch)
+        4. Volume variation
+        5. Additive noise
+        """
         if not self.augment:
             return audio
 
-        # Volume variation (critical for robustness to different recording levels)
-        # Random gain between -12dB and +6dB (covers typical TTS volume differences)
-        if self.volume_variation_db > 0:
-            gain_db = np.random.uniform(-self.volume_variation_db, self.volume_variation_db / 2)
-            gain_linear = 10 ** (gain_db / 20)
-            audio = audio * gain_linear
+        # 1. Pitch shift (high-quality, duration-preserving)
+        if self.pitch_shift_semitones > 0:
+            semitones = np.random.uniform(
+                -self.pitch_shift_semitones, self.pitch_shift_semitones
+            )
+            if abs(semitones) > 0.1:  # Skip very small shifts
+                audio = pitch_shift(audio, semitones, sr=self.sample_rate)
 
-        # Speed variation
+        # 2. Formant shift (simulates different vocal tract lengths)
+        if self.formant_shift_percent > 0:
+            shift_ratio = 1.0 + np.random.uniform(
+                -self.formant_shift_percent, self.formant_shift_percent
+            ) / 100.0
+            if abs(shift_ratio - 1.0) > 0.01:  # Skip very small shifts
+                audio = formant_shift(audio, shift_ratio, sr=self.sample_rate)
+
+        # 3. Speed variation (simple linear interpolation - fast)
         if self.speed_variation > 0:
             factor = 1.0 + np.random.uniform(-self.speed_variation, self.speed_variation)
             if abs(factor - 1.0) > 0.01:
@@ -384,7 +408,14 @@ class AutoregressiveDataset:
                     indices = np.linspace(0, len(audio) - 1, new_length)
                     audio = np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
 
-        # Noise
+        # 4. Volume variation (critical for robustness to different recording levels)
+        # Random gain between -volume_db and +volume_db/2
+        if self.volume_variation_db > 0:
+            gain_db = np.random.uniform(-self.volume_variation_db, self.volume_variation_db / 2)
+            gain_linear = 10 ** (gain_db / 20)
+            audio = audio * gain_linear
+
+        # 5. Additive noise
         if self.noise_snr_db is not None:
             signal_power = np.mean(audio ** 2)
             if signal_power > 1e-10:
