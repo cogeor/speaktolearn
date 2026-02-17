@@ -110,20 +110,28 @@ def infer_config_from_state_dict(state_dict: dict) -> dict:
     # Actually, check the norm1 or use default
     d_model = params["d_model"]
 
-    # n_heads: typically d_model / head_dim where head_dim is 32 or 64
+    # n_heads: typically d_model / head_dim where head_dim is 32, 64, or 80
     # For d_model=192, n_heads=6 (head_dim=32)
     # For d_model=384, n_heads=6 or 12 (head_dim=64 or 32)
+    # For d_model=480, n_heads=6 (head_dim=80) - used in 20M model
     if d_model == 192:
         params["n_heads"] = 6
     elif d_model == 384:
         params["n_heads"] = 6  # head_dim=64
     elif d_model == 256:
         params["n_heads"] = 8  # head_dim=32
+    elif d_model == 480:
+        params["n_heads"] = 6  # head_dim=80 (20M param model)
     elif d_model == 512:
         params["n_heads"] = 8  # head_dim=64
     else:
-        # Try to infer from head_dim=32 or 64
-        params["n_heads"] = max(4, d_model // 32)
+        # Try to infer: prefer 6 or 8 heads with head_dim >= 32
+        for n_heads in [6, 8, 4, 12, 16]:
+            if d_model % n_heads == 0 and d_model // n_heads >= 32:
+                params["n_heads"] = n_heads
+                break
+        else:
+            params["n_heads"] = max(4, d_model // 32)
 
     # Infer dim_feedforward from linear1.weight: [dim_ff, d_model]
     ff_key = "transformer_layers.0.linear1.weight"
@@ -208,15 +216,16 @@ def prepare_dummy_inputs(config: SyllablePredictorConfigV4, device: str) -> tupl
     Returns:
         Tuple of (mel, pinyin_ids, audio_mask, pinyin_mask)
     """
-    # Dummy mel spectrogram: [1, 80, 100] (1 second of audio at 10ms per frame)
-    mel = torch.randn(1, config.n_mels, 100, dtype=torch.float32, device=device)
+    # Dummy mel spectrogram: [1, 80, max_audio_frames]
+    mel = torch.randn(1, config.n_mels, config.max_audio_frames, dtype=torch.float32, device=device)
 
-    # Dummy pinyin_ids: [1, 5] (5 syllables context)
-    pinyin_ids = torch.randint(0, config.n_syllables, (1, 5), dtype=torch.long, device=device)
+    # Dummy pinyin_ids: [1, 2] for position-mode context [BOS, position_token]
+    # Position mode: pinyin_ids = [BOS=1, position=2+syllable_idx]
+    pinyin_ids = torch.tensor([[1, 2]], dtype=torch.long, device=device)  # [BOS, position_0]
 
-    # Dummy masks (all valid)
-    audio_mask = torch.zeros(1, 100, dtype=torch.bool, device=device)
-    pinyin_mask = torch.zeros(1, 5, dtype=torch.bool, device=device)
+    # Dummy masks (all valid) - must match input dimensions
+    audio_mask = torch.zeros(1, config.max_audio_frames, dtype=torch.bool, device=device)
+    pinyin_mask = torch.zeros(1, 2, dtype=torch.bool, device=device)  # 2 tokens for position mode
 
     return (mel, pinyin_ids, audio_mask, pinyin_mask)
 
