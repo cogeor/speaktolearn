@@ -63,6 +63,7 @@ class FullSentenceDataset:
         sentences: list[SyntheticSentenceInfo],
         sample_rate: int = 16000,
         max_duration_s: float = 10.0,
+        max_syllable_position: int | None = None,
         augment: bool = True,
         noise_snr_db: float | None = 30.0,
         speed_variation: float = 0.1,
@@ -76,6 +77,7 @@ class FullSentenceDataset:
             sentences: List of sentence info
             sample_rate: Audio sample rate
             max_duration_s: Maximum audio duration in seconds
+            max_syllable_position: Only train on syllables at positions < this value (None = all)
             augment: Whether to apply augmentation
             noise_snr_db: SNR for noise augmentation (None = no noise)
             speed_variation: Speed variation fraction (0.1 = ±10%)
@@ -84,6 +86,7 @@ class FullSentenceDataset:
             formant_shift_percent: Max formant shift in percent (±)
         """
         self.sentences = sentences
+        self.max_syllable_position = max_syllable_position
         self.sample_rate = sample_rate
         self.max_samples = int(max_duration_s * sample_rate)
         self.augment = augment
@@ -93,10 +96,13 @@ class FullSentenceDataset:
         self.pitch_shift_semitones = pitch_shift_semitones
         self.formant_shift_percent = formant_shift_percent
 
-        # Build index: list of (sentence_idx, syllable_idx) pairs
+        # Build index of (sent_idx, syl_idx) pairs - one sample per syllable like V4
         self._index = []
         for sent_idx, sent in enumerate(sentences):
-            for syl_idx in range(len(sent.syllables)):
+            max_syl = len(sent.syllables)
+            if max_syllable_position is not None:
+                max_syl = min(max_syl, max_syllable_position)
+            for syl_idx in range(max_syl):
                 self._index.append((sent_idx, syl_idx))
 
         # Audio cache
@@ -177,10 +183,10 @@ class FullSentenceDataset:
         """Get a training sample.
 
         Args:
-            idx: Sample index
+            idx: Sentence index
 
         Returns:
-            FullSentenceSample with full audio and position
+            FullSentenceSample with full audio and randomly selected position
         """
         sent_idx, syl_idx = self._index[idx]
         sentence = self.sentences[sent_idx]

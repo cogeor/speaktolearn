@@ -1,20 +1,20 @@
-"""Full-Sentence Syllable+Tone Predictor V6 - FlexAttention Transformer.
+"""Full-Sentence Syllable+Tone Predictor V6 - Sliding Window Attention Transformer.
 
-This model uses PyTorch FlexAttention for efficient O(n×w) sliding window attention,
-providing true sparse attention computation instead of masked full attention.
+This model uses SDPA with sliding window attention mask for efficient attention
+on full 10-second audio sequences.
 
 Architecture:
     Input: mel [bs, n_mels, time] + position [bs, 1]
-    - Audio: mel -> CNN (8x downsampling) -> [bs, time//8, d_model]
-    - Position: embedding -> [bs, 1, d_model] -> broadcast to audio
-    - FlexAttention Transformer with RoPE and sliding window + global attention
+    - Audio: mel -> CNN (4x downsampling) -> [bs, time//4, d_model]
+    - Position: token [BOS, pos] concatenated with audio (like V4)
+    - Transformer with RoPE and sliding window + global attention on position token
     - Attention pooling (PMA)
     - Output: syllable head (532 classes) + tone head (5 classes)
 
-Key differences from V5:
-- Uses FlexAttention instead of scaled_dot_product_attention
-- True O(n×w) complexity via block-sparse masks
-- Requires torch.compile for optimal performance
+Key differences from V4:
+- Uses sliding window attention (window=32) + global attention on position tokens
+- Trains on full 10s sentences instead of 1s chunks
+- Works on all platforms (no Triton dependency)
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ def load_syllable_vocab() -> list[str]:
 
 @dataclass
 class SyllablePredictorConfigV6:
-    """Configuration for FlexAttention transformer model V6."""
+    """Configuration for sliding window attention transformer model V6."""
 
     # Audio input - 10s max at 16kHz with hop=160 gives ~1000 frames
     n_mels: int = 80
@@ -52,26 +52,28 @@ class SyllablePredictorConfigV6:
     win_length: int = 400  # 25ms at 16kHz
     max_audio_frames: int = 1000  # ~10 seconds at 10ms per frame
 
-    # CNN front-end
+    # CNN front-end (4x downsampling like V4)
     cnn_kernel_size: int = 3
 
-    # Transformer architecture (same as V5)
+    # Transformer architecture
     d_model: int = 192
     n_heads: int = 6
     n_layers: int = 4
     dim_feedforward: int = 384
     dropout: float = 0.1
 
-    # FlexAttention sliding window
+    # Sliding window attention
     attention_window: int = 32  # Local attention window size (each side)
-    use_global_attention: bool = True  # Position 0 has global attention
+    use_global_attention: bool = True  # Position tokens have global attention
 
     # Vocabulary sizes
     n_syllables: int = 530
     n_tones: int = 5
     max_positions: int = 60  # Max syllables per sentence
 
+    # Special tokens (same as V4)
     pad_token: int = 0
+    bos_token: int = 1
 
     def __post_init__(self):
         vocab = load_syllable_vocab()
@@ -169,11 +171,11 @@ if TORCH_AVAILABLE:
         return mask_mod
 
 
-    class FlexAttentionLayer(nn.Module):
-        """Transformer layer using FlexAttention for efficient sparse attention.
+    class SlidingWindowAttentionLayer(nn.Module):
+        """Transformer layer using SDPA with sliding window attention mask.
 
-        Uses sliding window + optional global attention via FlexAttention,
-        which compiles into a fused kernel with true O(n×w) complexity.
+        Uses sliding window + global attention on last N tokens (position tokens).
+        This is efficient on all platforms (no Triton dependency).
         """
 
         def __init__(
@@ -183,14 +185,14 @@ if TORCH_AVAILABLE:
             dim_feedforward: int,
             dropout: float = 0.1,
             attention_window: int = 32,
-            use_global_attention: bool = True,
+            n_global_tokens: int = 2,  # Number of tokens at END with global attention
         ):
             super().__init__()
             self.d_model = d_model
             self.nhead = nhead
             self.head_dim = d_model // nhead
             self.attention_window = attention_window
-            self.use_global_attention = use_global_attention
+            self.n_global_tokens = n_global_tokens
             self.dropout_p = dropout
 
             # Projections
@@ -212,44 +214,59 @@ if TORCH_AVAILABLE:
 
             self.activation = nn.GELU()
 
-            # Cache for block masks (keyed by seq_len)
-            self._block_mask_cache = {}
+            # Cache for attention masks (keyed by seq_len)
+            self._attn_mask_cache = {}
 
-        def _get_block_mask(self, seq_len: int, device: torch.device):
-            """Get or create cached block mask for given sequence length."""
-            cache_key = (seq_len, str(device))
-            if cache_key not in self._block_mask_cache:
-                mask_mod = create_sliding_window_mask(
-                    self.attention_window,
-                    self.use_global_attention
-                )
-                # B=None, H=None means the mask is the same for all batches/heads
-                block_mask = create_block_mask(
-                    mask_mod,
-                    B=None,
-                    H=None,
-                    Q_LEN=seq_len,
-                    KV_LEN=seq_len,
-                    device=device,
-                )
-                self._block_mask_cache[cache_key] = block_mask
-            return self._block_mask_cache[cache_key]
+        def _get_attn_mask(self, seq_len: int, n_global: int, device: torch.device):
+            """Get or create cached sliding window attention mask.
+
+            Global attention tokens are the LAST n_global tokens in the sequence.
+            This matches V4 where [audio | BOS | pos_token] has position tokens at end.
+            """
+            cache_key = (seq_len, n_global, str(device))
+            if cache_key not in self._attn_mask_cache:
+                idx = torch.arange(seq_len, device=device)
+
+                # Sliding window: |q - kv| <= window_size
+                local_mask = (idx.unsqueeze(0) - idx.unsqueeze(1)).abs() <= self.attention_window
+
+                # Global attention: last n_global tokens attend everywhere and are attended by all
+                if n_global > 0:
+                    global_start = seq_len - n_global
+                    is_global_q = idx.unsqueeze(0) >= global_start
+                    is_global_kv = idx.unsqueeze(1) >= global_start
+                    global_mask = is_global_q | is_global_kv
+                    mask = local_mask | global_mask
+                else:
+                    mask = local_mask
+
+                # Convert to additive mask: 0 for allowed, -inf for masked
+                attn_mask = torch.zeros(seq_len, seq_len, device=device)
+                attn_mask.masked_fill_(~mask, float('-inf'))
+                self._attn_mask_cache[cache_key] = attn_mask
+            return self._attn_mask_cache[cache_key]
 
         def forward(
             self,
             src: torch.Tensor,
             cos: torch.Tensor,
             sin: torch.Tensor,
+            src_key_padding_mask: torch.Tensor | None = None,
+            n_global_tokens: int | None = None,
         ) -> torch.Tensor:
-            """Forward pass with FlexAttention.
+            """Forward pass with SDPA sliding window attention.
 
             Args:
                 src: Input tensor [batch, seq_len, d_model]
-                cos, sin: RoPE embeddings [1, seq_len, head_dim]
+                cos, sin: RoPE embeddings [1, seq_len, d_model]
+                src_key_padding_mask: Padding mask [batch, seq_len], True = masked
+                n_global_tokens: Number of tokens at end with global attention
             """
+            if n_global_tokens is None:
+                n_global_tokens = self.n_global_tokens
             # Pre-norm
             x = self.norm1(src)
-            x = src + self._sa_block(x, cos, sin)
+            x = src + self._sa_block(x, cos, sin, src_key_padding_mask, n_global_tokens)
             x = x + self._ff_block(self.norm2(x))
             return x
 
@@ -258,6 +275,8 @@ if TORCH_AVAILABLE:
             x: torch.Tensor,
             cos: torch.Tensor,
             sin: torch.Tensor,
+            key_padding_mask: torch.Tensor | None,
+            n_global_tokens: int,
         ) -> torch.Tensor:
             batch_size, seq_len, _ = x.shape
 
@@ -267,33 +286,32 @@ if TORCH_AVAILABLE:
             v = self.v_proj(x)
 
             # Reshape for multi-head attention: [batch, seq, heads, head_dim]
-            q = q.view(batch_size, seq_len, self.nhead, self.head_dim)
-            k = k.view(batch_size, seq_len, self.nhead, self.head_dim)
-            v = v.view(batch_size, seq_len, self.nhead, self.head_dim)
+            q = q.view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
+            k = k.view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
+            v = v.view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
 
-            # Apply RoPE
-            cos_head = cos.view(1, seq_len, 1, self.head_dim)
-            sin_head = sin.view(1, seq_len, 1, self.head_dim)
+            # Apply RoPE (cos/sin have shape [1, seq_len, d_model], reshape to [1, nhead, seq_len, head_dim])
+            cos_head = cos.view(1, seq_len, self.nhead, self.head_dim).transpose(1, 2)
+            sin_head = sin.view(1, seq_len, self.nhead, self.head_dim).transpose(1, 2)
             q = apply_rotary_pos_emb(q, cos_head, sin_head)
             k = apply_rotary_pos_emb(k, cos_head, sin_head)
 
-            # Transpose for FlexAttention: [batch, heads, seq, head_dim]
-            q = q.transpose(1, 2)
-            k = k.transpose(1, 2)
-            v = v.transpose(1, 2)
+            # Get sliding window attention mask with global tokens at end
+            attn_mask = self._get_attn_mask(seq_len, n_global_tokens, x.device)
 
-            # Get block mask for this sequence length
-            block_mask = self._get_block_mask(seq_len, x.device)
+            # Combine with padding mask if provided
+            if key_padding_mask is not None:
+                # key_padding_mask: [batch, seq_len] -> [batch, 1, 1, seq_len]
+                padding_mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
+                # Add to attention mask (masked positions get -inf)
+                attn_mask = attn_mask.unsqueeze(0) + padding_mask.float().masked_fill(padding_mask, float('-inf'))
 
-            # FlexAttention with sliding window + global attention
-            if FLEX_ATTENTION_AVAILABLE:
-                attn_output = flex_attention(q, k, v, block_mask=block_mask)
-            else:
-                # Fallback to scaled_dot_product_attention (full attention)
-                attn_output = F.scaled_dot_product_attention(
-                    q, k, v,
-                    dropout_p=self.dropout_p if self.training else 0.0,
-                )
+            # SDPA with combined mask
+            attn_output = F.scaled_dot_product_attention(
+                q, k, v,
+                attn_mask=attn_mask,
+                dropout_p=self.dropout_p if self.training else 0.0,
+            )
 
             # Reshape back
             attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
@@ -302,15 +320,18 @@ if TORCH_AVAILABLE:
         def _ff_block(self, x: torch.Tensor) -> torch.Tensor:
             return self.dropout2(self.linear2(self.activation(self.linear1(x))))
 
+    # Alias for backwards compatibility
+    FlexAttentionLayer = SlidingWindowAttentionLayer
+
 
     class SyllablePredictorV6(nn.Module):
-        """FlexAttention transformer for syllable+tone prediction.
+        """Sliding window attention transformer for syllable+tone prediction.
 
-        Architecture:
-        1. Audio CNN: mel frames -> d_model (8x sequence reduction)
-        2. Position embedding: broadcast to all audio frames
-        3. FlexAttention Transformer with sliding window + global attention
-        4. Attention pooling (PMA)
+        Architecture (matches V4 with sliding window attention):
+        1. Audio CNN: mel frames -> d_model (4x sequence reduction, like V4)
+        2. Position as TOKEN: [audio | BOS | pos_token] concatenated (like V4)
+        3. Transformer with RoPE and sliding window + global attention on position tokens
+        4. Attention pooling (PMA) with padding mask
         5. Dual output heads (syllable + tone)
         """
 
@@ -322,8 +343,9 @@ if TORCH_AVAILABLE:
             self.config = config
 
             self.vocab = SyllableVocab()
+            vocab_size = len(self.vocab)
 
-            # CNN front-end: [n_mels, time] -> [d_model, time//8]
+            # CNN front-end: [n_mels, time] -> [d_model, time//4] (4x like V4)
             self.audio_cnn = nn.Sequential(
                 nn.Conv1d(
                     config.n_mels,
@@ -343,37 +365,29 @@ if TORCH_AVAILABLE:
                 ),
                 nn.BatchNorm1d(config.d_model),
                 nn.GELU(),
-                nn.Conv1d(
-                    config.d_model,
-                    config.d_model,
-                    kernel_size=config.cnn_kernel_size,
-                    stride=2,
-                    padding=config.cnn_kernel_size // 2,
-                ),
-                nn.BatchNorm1d(config.d_model),
-                nn.GELU(),
             )
 
-            # Position embedding
-            self.position_embed = nn.Embedding(config.max_positions, config.d_model)
+            # Position token embedding (reuse vocab embedding like V4)
+            # Tokens: 0=PAD, 1=BOS, 2+=position indices
+            self.position_embed = nn.Embedding(vocab_size, config.d_model, padding_idx=0)
 
-            # Audio type embedding
+            # Modality embeddings (like V4)
             self.audio_type_embed = nn.Parameter(torch.randn(1, 1, config.d_model) * 0.02)
+            self.position_type_embed = nn.Parameter(torch.randn(1, 1, config.d_model) * 0.02)
 
-            # RoPE for transformer (uses head_dim, not d_model)
-            max_seq_len = config.max_audio_frames // 8 + 1
-            head_dim = config.d_model // config.n_heads
-            self.rope = RotaryPositionalEmbedding(dim=head_dim, max_len=max_seq_len)
+            # RoPE for transformer (dim=d_model like V4)
+            max_seq_len = config.max_audio_frames // 4 + config.max_positions + 2
+            self.rope = RotaryPositionalEmbedding(dim=config.d_model, max_len=max_seq_len)
 
-            # FlexAttention transformer layers
+            # Sliding window transformer layers
             self.transformer_layers = nn.ModuleList([
-                FlexAttentionLayer(
+                SlidingWindowAttentionLayer(
                     d_model=config.d_model,
                     nhead=config.n_heads,
                     dim_feedforward=config.dim_feedforward,
                     dropout=config.dropout,
                     attention_window=config.attention_window,
-                    use_global_attention=config.use_global_attention,
+                    n_global_tokens=2,  # BOS + position token have global attention
                 )
                 for _ in range(config.n_layers)
             ])
@@ -414,6 +428,8 @@ if TORCH_AVAILABLE:
                         nn.init.zeros_(module.bias)
                 elif isinstance(module, nn.Embedding):
                     nn.init.normal_(module.weight, std=0.02)
+                    if module.padding_idx is not None:
+                        module.weight.data[module.padding_idx].zero_()
                 elif isinstance(module, nn.Conv1d):
                     nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
                     if module.bias is not None:
@@ -430,7 +446,7 @@ if TORCH_AVAILABLE:
             Args:
                 mel: Mel spectrogram [batch, n_mels, time]
                 position: Position index [batch, 1] or [batch]
-                audio_mask: Optional mask (currently unused with FlexAttention)
+                audio_mask: Padding mask [batch, time], True = padded
 
             Returns:
                 Tuple of (syllable_logits, tone_logits)
@@ -448,32 +464,70 @@ if TORCH_AVAILABLE:
                 position = position.unsqueeze(1)
 
             batch_size = mel.shape[0]
+            original_audio_len = mel.shape[2]
 
-            # CNN front-end: [batch, n_mels, time] -> [batch, d_model, time//8]
+            # CNN front-end: [batch, n_mels, time] -> [batch, d_model, time//4]
             audio_embed = self.audio_cnn(mel)
-            audio_embed = audio_embed.transpose(1, 2)  # [batch, time//8, d_model]
+            audio_embed = audio_embed.transpose(1, 2)  # [batch, time//4, d_model]
+            downsampled_len = audio_embed.shape[1]
 
             # Add audio type embedding
             audio_embed = audio_embed + self.audio_type_embed
 
-            # Position embedding: broadcast to all frames
-            pos_embed = self.position_embed(position)  # [batch, 1, d_model]
-            audio_embed = audio_embed + pos_embed
+            # Create position tokens: [BOS, position_index]
+            # Position token = 2 + syllable_idx (0=PAD, 1=BOS, 2+=positions)
+            bos_token = torch.full((batch_size, 1), self.config.bos_token, dtype=torch.long, device=device)
+            pos_token = position + 2  # offset by special tokens
+            position_ids = torch.cat([bos_token, pos_token], dim=1)  # [batch, 2]
+
+            # Embed position tokens
+            pos_embed = self.position_embed(position_ids)  # [batch, 2, d_model]
+            pos_embed = pos_embed + self.position_type_embed
+
+            # Concatenate: [audio | BOS | pos_token] like V4
+            combined = torch.cat([audio_embed, pos_embed], dim=1)  # [batch, audio_len + 2, d_model]
+
+            # Create combined padding mask
+            if audio_mask is not None:
+                audio_mask = audio_mask.to(device)
+                # Downsample audio mask (4x)
+                ds_len = (audio_mask.shape[1] + 3) // 4
+                downsampled_mask = torch.zeros(batch_size, ds_len, dtype=torch.bool, device=device)
+                for i in range(ds_len):
+                    start_idx = i * 4
+                    end_idx = min(start_idx + 4, audio_mask.shape[1])
+                    downsampled_mask[:, i] = audio_mask[:, start_idx:end_idx].all(dim=1)
+
+                # Truncate/pad to match actual downsampled length
+                if downsampled_mask.shape[1] > downsampled_len:
+                    downsampled_mask = downsampled_mask[:, :downsampled_len]
+                elif downsampled_mask.shape[1] < downsampled_len:
+                    pad = torch.ones(batch_size, downsampled_len - downsampled_mask.shape[1],
+                                     dtype=torch.bool, device=device)
+                    downsampled_mask = torch.cat([downsampled_mask, pad], dim=1)
+            else:
+                # No padding in audio
+                downsampled_mask = torch.zeros(batch_size, downsampled_len, dtype=torch.bool, device=device)
+
+            # Position tokens are never masked
+            pos_mask = torch.zeros(batch_size, 2, dtype=torch.bool, device=device)
+            combined_mask = torch.cat([downsampled_mask, pos_mask], dim=1)
 
             # Get RoPE
-            cos, sin = self.rope(audio_embed)
+            cos, sin = self.rope(combined)
 
-            # FlexAttention transformer
-            encoded = audio_embed
+            # Transformer with sliding window + global attention on last 2 tokens
+            encoded = combined
             for layer in self.transformer_layers:
-                encoded = layer(encoded, cos, sin)
+                encoded = layer(encoded, cos, sin, src_key_padding_mask=combined_mask, n_global_tokens=2)
 
-            # Attention pooling (PMA)
+            # Attention pooling (PMA) with mask
             query = self.pool_query.expand(batch_size, -1, -1)
             pooled, _ = self.pool_attention(
                 query=query,
                 key=encoded,
                 value=encoded,
+                key_padding_mask=combined_mask,
             )
             pooled = pooled.squeeze(1)
 
@@ -489,12 +543,15 @@ if TORCH_AVAILABLE:
             self,
             mel: torch.Tensor | np.ndarray,
             position: torch.Tensor | np.ndarray,
+            audio_mask: torch.Tensor | np.ndarray | None = None,
         ) -> PredictorOutput:
             """Make predictions."""
             if isinstance(mel, np.ndarray):
                 mel = torch.from_numpy(mel).float()
             if isinstance(position, np.ndarray):
                 position = torch.from_numpy(position).long()
+            if isinstance(audio_mask, np.ndarray):
+                audio_mask = torch.from_numpy(audio_mask).bool()
 
             if mel.dim() == 2:
                 mel = mel.unsqueeze(0)
@@ -502,9 +559,11 @@ if TORCH_AVAILABLE:
                 position = position.unsqueeze(0).unsqueeze(0)
             elif position.dim() == 1:
                 position = position.unsqueeze(1)
+            if audio_mask is not None and audio_mask.dim() == 1:
+                audio_mask = audio_mask.unsqueeze(0)
 
             with torch.no_grad():
-                syllable_logits, tone_logits = self.forward(mel, position)
+                syllable_logits, tone_logits = self.forward(mel, position, audio_mask)
 
             syllable_pred = syllable_logits[0].argmax().item()
             tone_pred = tone_logits[0].argmax().item()

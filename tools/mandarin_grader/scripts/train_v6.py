@@ -158,6 +158,7 @@ def create_dataloader(
     logger=None,
     mel_cache: dict | None = None,
     max_duration_s: float = 10.0,
+    max_syllable_position: int | None = None,
     speed_variation: float = 0.1,
     pitch_shift_semitones: float = 0.0,
     formant_shift_percent: float = 0.0,
@@ -177,6 +178,7 @@ def create_dataloader(
         sentences=sentences,
         sample_rate=config.sample_rate,
         max_duration_s=max_duration_s,
+        max_syllable_position=max_syllable_position,
         augment=augment,
         speed_variation=speed_variation,
         pitch_shift_semitones=pitch_shift_semitones,
@@ -200,6 +202,7 @@ def create_dataloader(
 
     def collate_fn(batch):
         mels, positions, target_syls, target_tones = [], [], [], []
+        mel_lengths = []
 
         for sample in batch:
             if sample.mel_full is not None:
@@ -215,18 +218,22 @@ def create_dataloader(
                 mel = mel[:, :max_frames]
 
             mels.append(mel)
+            mel_lengths.append(mel.shape[1])
             positions.append(sample.position)
             target_syls.append(vocab.encode(sample.target_syllable))
             target_tones.append(sample.target_tone)
 
         n_mels = mels[0].shape[0]
         padded_mels = np.zeros((len(batch), n_mels, max_frames), dtype=np.float32)
+        audio_masks = np.zeros((len(batch), max_frames), dtype=bool)
         for i, mel in enumerate(mels):
             padded_mels[i, :, :mel.shape[1]] = mel
+            audio_masks[i, mel.shape[1]:] = True  # True = padded (masked)
 
         return {
             "mel": torch.tensor(padded_mels, dtype=torch.float32),
             "position": torch.tensor(positions, dtype=torch.long),
+            "audio_mask": torch.tensor(audio_masks, dtype=torch.bool),
             "target_syllable": torch.tensor(target_syls, dtype=torch.long),
             "target_tone": torch.tensor(target_tones, dtype=torch.long),
         }
@@ -244,8 +251,9 @@ def evaluate(model, dataloader, device: str) -> tuple[float, float]:
         for batch in dataloader:
             mel = batch["mel"].to(device)
             position = batch["position"].to(device)
+            audio_mask = batch["audio_mask"].to(device)
 
-            syl_logits, tone_logits = model(mel, position)
+            syl_logits, tone_logits = model(mel, position, audio_mask)
 
             syl_correct += (syl_logits.argmax(-1).cpu() == batch["target_syllable"]).sum().item()
             tone_correct += (tone_logits.argmax(-1).cpu() == batch["target_tone"]).sum().item()
@@ -277,11 +285,12 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
         for batch in train_loader:
             mel = batch["mel"].to(config.device)
             position = batch["position"].to(config.device)
+            audio_mask = batch["audio_mask"].to(config.device)
             target_syl = batch["target_syllable"].to(config.device)
             target_tone = batch["target_tone"].to(config.device)
 
             optimizer.zero_grad()
-            syl_logits, tone_logits = model(mel, position)
+            syl_logits, tone_logits = model(mel, position, audio_mask)
             syl_loss = syl_criterion(syl_logits, target_syl)
             tone_loss = tone_criterion(tone_logits, target_tone)
             loss = 0.7 * syl_loss + 0.3 * tone_loss
@@ -346,6 +355,8 @@ def main():
     parser.add_argument("--data-dir", type=str, default=None)
     parser.add_argument("--max-sentences", type=int, default=None)
     parser.add_argument("--max-duration-s", type=float, default=10.0)
+    parser.add_argument("--max-syllable-position", type=int, default=None,
+                        help="Only train on syllables at positions < this value (for short audio tests)")
 
     parser.add_argument("--resume", type=str, default=None)
     parser.add_argument("--overfit-test", action="store_true")
@@ -354,6 +365,7 @@ def main():
     parser.add_argument("--d-model", type=int, default=192)
     parser.add_argument("--n-heads", type=int, default=6)
     parser.add_argument("--n-layers", type=int, default=4)
+    parser.add_argument("--dim-feedforward", type=int, default=384)
     parser.add_argument("--attention-window", type=int, default=32)
 
     parser.add_argument("--speed-variation", type=float, default=0.1)
@@ -413,6 +425,7 @@ def main():
         d_model=args.d_model,
         n_heads=args.n_heads,
         n_layers=args.n_layers,
+        dim_feedforward=args.dim_feedforward,
         attention_window=args.attention_window,
         max_audio_frames=int(args.max_duration_s * 100),
     )
@@ -425,8 +438,11 @@ def main():
 
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
-    logger.info(f"Architecture: d_model={args.d_model}, n_heads={args.n_heads}, n_layers={args.n_layers}")
-    logger.info(f"Attention window: {args.attention_window}")
+    logger.info(f"Architecture: d_model={args.d_model}, n_heads={args.n_heads}, n_layers={args.n_layers}, dim_ff={args.dim_feedforward}")
+    logger.info(f"Audio duration: {args.max_duration_s}s ({int(args.max_duration_s * 100)} frames, {int(args.max_duration_s * 100) // 4} after CNN)")
+    if args.max_syllable_position:
+        logger.info(f"Max syllable position: {args.max_syllable_position} (only training on first {args.max_syllable_position} syllables)")
+    logger.info(f"Attention window: {args.attention_window} (sliding window + global on pos 0)")
     logger.info(f"FlexAttention available: {FLEX_ATTENTION_AVAILABLE}")
     logger.info(f"Device: {config.device}")
     logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%")
@@ -437,6 +453,7 @@ def main():
         train_sentences, config.batch_size, shuffle=True, augment=True,
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
+        max_syllable_position=args.max_syllable_position,
         speed_variation=args.speed_variation,
         pitch_shift_semitones=args.pitch_shift,
         formant_shift_percent=args.formant_shift,
@@ -445,6 +462,7 @@ def main():
         val_sentences, config.batch_size, shuffle=False, augment=False,
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
+        max_syllable_position=args.max_syllable_position,
     )
     logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
