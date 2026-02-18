@@ -23,6 +23,7 @@ classifiers = [
     "Topic :: Multimedia :: Sound/Audio :: Analysis",
 ]
 dependencies = [
+    "mutagen>=1.47.0",
     "numpy<2.4",
     "onnxconverter-common>=1.16.0",
     "scipy>=1.10.0",
