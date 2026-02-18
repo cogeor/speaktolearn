@@ -2,6 +2,7 @@ import '../domain/ml_scorer.dart';
 import 'onnx_ml_scorer_v4.dart';
 import 'onnx_ml_scorer_v5.dart';
 import 'onnx_ml_scorer_v6.dart';
+import 'onnx_ml_scorer_v7.dart';
 
 /// Model version enum for scorer selection.
 enum ModelVersion {
@@ -13,6 +14,9 @@ enum ModelVersion {
 
   /// V6 architecture: full sentence audio with sliding window attention
   v6,
+
+  /// V7 architecture: CTC-based per-frame predictions, single pass inference
+  v7,
 }
 
 /// Factory for creating ML scorers based on model version.
@@ -40,6 +44,8 @@ class MlScorerFactory {
         return OnnxMlScorerV5();
       case ModelVersion.v6:
         return OnnxMlScorerV6();
+      case ModelVersion.v7:
+        return OnnxMlScorerV7();
     }
   }
 
