@@ -317,6 +317,90 @@ if TORCH_AVAILABLE:
 
             return decoded_seqs, decoded_probs
 
+        def score_against_targets(
+            self,
+            logits: torch.Tensor,
+            target_ids: List[int],
+        ) -> List[float]:
+            """Score pronunciation by finding max probability for each target syllable.
+
+            This is the core grading logic for pronunciation assessment:
+            1. Apply softmax to get per-frame probabilities
+            2. For each target syllable, find frames where that syllable has highest prob
+            3. Take the max probability across those frames as the score
+
+            Args:
+                logits: [time, vocab_size] frame-level logits (single sample)
+                target_ids: List of target syllable/tone IDs to match
+
+            Returns:
+                List of per-target scores (0.0 to 1.0)
+            """
+            probs = F.softmax(logits, dim=-1)  # [time, vocab]
+
+            scores = []
+            for target_id in target_ids:
+                # Get probability of target at each frame
+                target_probs = probs[:, target_id]  # [time]
+
+                # Find max probability for this target
+                max_prob = target_probs.max().item()
+                scores.append(max_prob)
+
+            return scores
+
+        def score_with_alignment(
+            self,
+            logits: torch.Tensor,
+            target_ids: List[int],
+        ) -> Tuple[List[float], List[int]]:
+            """Score with frame alignment - assigns frames to target syllables.
+
+            More sophisticated grading that considers temporal order:
+            1. Find best frame for each target syllable in sequence
+            2. Ensure frames are monotonically increasing (respects time)
+            3. Return scores and aligned frame indices
+
+            Args:
+                logits: [time, vocab_size] frame-level logits
+                target_ids: List of target syllable/tone IDs
+
+            Returns:
+                Tuple of (per_target_scores, aligned_frame_indices)
+            """
+            probs = F.softmax(logits, dim=-1)  # [time, vocab]
+            n_frames = probs.shape[0]
+            n_targets = len(target_ids)
+
+            if n_targets == 0:
+                return [], []
+
+            scores = []
+            aligned_frames = []
+            min_frame = 0
+
+            for i, target_id in enumerate(target_ids):
+                # Search from min_frame to end (or proportional window)
+                # Allow some flexibility but maintain order
+                max_search_frame = min(n_frames, min_frame + (n_frames - min_frame) // max(1, n_targets - i))
+                max_search_frame = max(max_search_frame, min_frame + 1)
+
+                target_probs = probs[min_frame:max_search_frame, target_id]
+
+                if len(target_probs) > 0:
+                    best_rel_frame = target_probs.argmax().item()
+                    best_frame = min_frame + best_rel_frame
+                    score = target_probs[best_rel_frame].item()
+                else:
+                    best_frame = min_frame
+                    score = 0.0
+
+                scores.append(score)
+                aligned_frames.append(best_frame)
+                min_frame = best_frame + 1  # Next target must come after
+
+            return scores, aligned_frames
+
 
     class SyllablePredictorV7(nn.Module):
         """CTC-based transformer for syllable+tone prediction.
