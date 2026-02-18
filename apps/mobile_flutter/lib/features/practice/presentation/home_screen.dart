@@ -231,6 +231,13 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen for sentence changes and reset recording state (clears syllable coloring)
+    ref.listen<HomeState>(homeControllerProvider, (previous, next) {
+      if (previous?.current?.id != next.current?.id) {
+        ref.read(recordingControllerProvider.notifier).resetPlaybackState();
+      }
+    });
+
     final sequence = widget.state.current!;
     final hasPinyin =
         sequence.romanization != null && sequence.romanization!.isNotEmpty;
