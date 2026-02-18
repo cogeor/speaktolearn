@@ -65,7 +65,7 @@ class FullSentenceDataset:
         max_duration_s: float = 10.0,
         max_syllable_position: int | None = None,
         augment: bool = True,
-        noise_snr_db: float | None = 30.0,
+        noise_snr_db: tuple[float, float] | float | None = 30.0,
         speed_variation: float = 0.1,
         volume_variation_db: float = 12.0,
         pitch_shift_semitones: float = 0.0,
@@ -79,7 +79,10 @@ class FullSentenceDataset:
             max_duration_s: Maximum audio duration in seconds
             max_syllable_position: Only train on syllables at positions < this value (None = all)
             augment: Whether to apply augmentation
-            noise_snr_db: SNR for noise augmentation (None = no noise)
+            noise_snr_db: SNR for noise augmentation. Can be:
+                - None: no noise
+                - float: fixed SNR in dB
+                - tuple[float, float]: (min_snr, max_snr) range to sample from
             speed_variation: Speed variation fraction (0.1 = ±10%)
             volume_variation_db: Volume variation in dB
             pitch_shift_semitones: Max pitch shift in semitones (±)
@@ -172,7 +175,12 @@ class FullSentenceDataset:
         if self.noise_snr_db is not None:
             signal_power = np.mean(audio ** 2)
             if signal_power > 1e-10:
-                snr_linear = 10 ** (self.noise_snr_db / 10)
+                # Support both fixed SNR and range
+                if isinstance(self.noise_snr_db, tuple):
+                    snr_db = np.random.uniform(self.noise_snr_db[0], self.noise_snr_db[1])
+                else:
+                    snr_db = self.noise_snr_db
+                snr_linear = 10 ** (snr_db / 10)
                 noise_power = signal_power / snr_linear
                 noise = np.random.randn(len(audio)).astype(np.float32) * np.sqrt(noise_power)
                 audio = audio + noise

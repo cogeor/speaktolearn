@@ -162,6 +162,8 @@ def create_dataloader(
     speed_variation: float = 0.1,
     pitch_shift_semitones: float = 0.0,
     formant_shift_percent: float = 0.0,
+    noise_snr_db: tuple[float, float] | float | None = (10.0, 30.0),
+    random_padding: bool = True,
 ):
     import torch
     from torch.utils.data import DataLoader
@@ -180,6 +182,7 @@ def create_dataloader(
         max_duration_s=max_duration_s,
         max_syllable_position=max_syllable_position,
         augment=augment,
+        noise_snr_db=noise_snr_db if augment else None,
         speed_variation=speed_variation,
         pitch_shift_semitones=pitch_shift_semitones,
         formant_shift_percent=formant_shift_percent,
@@ -225,10 +228,18 @@ def create_dataloader(
 
         n_mels = mels[0].shape[0]
         padded_mels = np.zeros((len(batch), n_mels, max_frames), dtype=np.float32)
-        audio_masks = np.zeros((len(batch), max_frames), dtype=bool)
+        audio_masks = np.ones((len(batch), max_frames), dtype=bool)  # Start all masked
         for i, mel in enumerate(mels):
-            padded_mels[i, :, :mel.shape[1]] = mel
-            audio_masks[i, mel.shape[1]:] = True  # True = padded (masked)
+            mel_len = mel.shape[1]
+            if random_padding and augment and mel_len < max_frames:
+                # Random offset: distribute padding between start and end
+                max_offset = max_frames - mel_len
+                start_offset = np.random.randint(0, max_offset + 1)
+            else:
+                start_offset = 0
+            end_offset = start_offset + mel_len
+            padded_mels[i, :, start_offset:end_offset] = mel
+            audio_masks[i, start_offset:end_offset] = False  # False = real audio (not masked)
 
         return {
             "mel": torch.tensor(padded_mels, dtype=torch.float32),
@@ -371,6 +382,14 @@ def main():
     parser.add_argument("--speed-variation", type=float, default=0.1)
     parser.add_argument("--pitch-shift", type=float, default=0.0)
     parser.add_argument("--formant-shift", type=float, default=0.0)
+    parser.add_argument("--noise-snr-min", type=float, default=10.0,
+                        help="Minimum SNR for noise augmentation (dB)")
+    parser.add_argument("--noise-snr-max", type=float, default=30.0,
+                        help="Maximum SNR for noise augmentation (dB)")
+    parser.add_argument("--no-noise", action="store_true",
+                        help="Disable noise augmentation")
+    parser.add_argument("--no-random-padding", action="store_true",
+                        help="Disable random start/end padding (always pad at end)")
     parser.add_argument("--compile", action="store_true", help="Use torch.compile for FlexAttention optimization")
 
     args = parser.parse_args()
@@ -445,7 +464,17 @@ def main():
     logger.info(f"Attention window: {args.attention_window} (sliding window + global on pos 0)")
     logger.info(f"FlexAttention available: {FLEX_ATTENTION_AVAILABLE}")
     logger.info(f"Device: {config.device}")
-    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%")
+    # Determine noise config
+    if args.no_noise:
+        noise_snr_db = None
+        noise_str = "disabled"
+    else:
+        noise_snr_db = (args.noise_snr_min, args.noise_snr_max)
+        noise_str = f"SNR {args.noise_snr_min}-{args.noise_snr_max}dB"
+
+    random_padding = not args.no_random_padding
+    padding_str = "random start/end" if random_padding else "end only"
+    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%, noise={noise_str}, padding={padding_str}")
 
     preload = not mel_cache
 
@@ -457,12 +486,15 @@ def main():
         speed_variation=args.speed_variation,
         pitch_shift_semitones=args.pitch_shift,
         formant_shift_percent=args.formant_shift,
+        noise_snr_db=noise_snr_db,
+        random_padding=random_padding,
     )
     val_loader = create_dataloader(
         val_sentences, config.batch_size, shuffle=False, augment=False,
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
         max_syllable_position=args.max_syllable_position,
+        random_padding=False,  # Validation always pads at end for consistency
     )
     logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
