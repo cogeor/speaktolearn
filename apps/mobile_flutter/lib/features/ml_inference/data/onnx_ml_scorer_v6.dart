@@ -33,8 +33,8 @@ import 'syllable_vocab.dart';
 class OnnxMlScorerV6 implements MlScorer {
   OrtSession? _session;
   SyllableVocab? _vocab;
-  // nFft must be 512 to match training preprocessing
-  final MelExtractor _melExtractor = MelExtractor(nFft: 512);
+  // nFft must equal win_length=400 to match training (syllable_predictor_v4.py)
+  final MelExtractor _melExtractor = MelExtractor();
   bool _isReady = false;
 
   static const _method = 'onnx_v6';

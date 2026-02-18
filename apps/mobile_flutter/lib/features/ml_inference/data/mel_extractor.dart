@@ -178,9 +178,13 @@ class MelExtractor {
   }
 
   /// Create Hanning window of given length.
+  ///
+  /// Uses numpy.hanning formula: 0.5 - 0.5 * cos(2*pi*n/(N-1))
+  /// This produces a symmetric window with endpoints at 0.
   static List<double> createHanningWindow(int length) {
+    if (length == 1) return [1.0];
     return List.generate(length, (n) {
-      return 0.5 - 0.5 * math.cos(2.0 * math.pi * n / length);
+      return 0.5 - 0.5 * math.cos(2.0 * math.pi * n / (length - 1));
     });
   }
 
