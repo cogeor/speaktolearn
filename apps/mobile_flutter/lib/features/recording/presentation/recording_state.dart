@@ -49,6 +49,10 @@ class RecordingState with _$RecordingState {
     /// Latest pronunciation grade from ML scorer.
     /// Contains character-level scores for ColoredText visualization.
     Grade? latestGrade,
+
+    /// ID of the sentence that [latestGrade] belongs to.
+    /// Used to prevent stale grades from being displayed for different sentences.
+    String? latestGradeSequenceId,
   }) = _RecordingState;
 
   /// Whether the recorder is actively recording audio.

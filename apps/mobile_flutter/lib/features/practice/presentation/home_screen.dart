@@ -277,7 +277,10 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                         },
                         child: ColoredText(
                           text: sequence.text,
-                          scores: recordingState.latestGrade?.characterScores,
+                          // Only show scores if they belong to the current sentence
+                          scores: recordingState.latestGradeSequenceId == sequence.id
+                              ? recordingState.latestGrade?.characterScores
+                              : null,
                           style: Theme.of(context).textTheme.displayLarge,
                           textAlign: TextAlign.center,
                         ),

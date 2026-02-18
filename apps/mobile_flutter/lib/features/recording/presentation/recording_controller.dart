@@ -222,6 +222,7 @@ class RecordingController extends StateNotifier<RecordingState> {
         hasLatestRecording: true,
         hasPlayedBack: false,
         latestGrade: grade,
+        latestGradeSequenceId: textSequence.id,
       );
     } catch (e) {
       HapticFeedback.heavyImpact();
@@ -241,6 +242,7 @@ class RecordingController extends StateNotifier<RecordingState> {
     state = state.copyWith(
       hasLatestRecording: recording != null,
       latestGrade: null,
+      latestGradeSequenceId: null,
     );
   }
 
@@ -293,6 +295,7 @@ class RecordingController extends StateNotifier<RecordingState> {
       hasPlayedBack: false,
       hasLatestRecording: false,
       latestGrade: null,
+      latestGradeSequenceId: null,
     );
   }
 

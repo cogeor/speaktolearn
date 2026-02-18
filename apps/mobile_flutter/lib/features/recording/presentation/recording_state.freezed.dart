@@ -37,6 +37,10 @@ mixin _$RecordingState {
   /// Contains character-level scores for ColoredText visualization.
   Grade? get latestGrade => throw _privateConstructorUsedError;
 
+  /// ID of the sentence that [latestGrade] belongs to.
+  /// Used to prevent stale grades from being displayed for different sentences.
+  String? get latestGradeSequenceId => throw _privateConstructorUsedError;
+
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -60,6 +64,7 @@ abstract class $RecordingStateCopyWith<$Res> {
     int? remainingSeconds,
     int? totalDurationSeconds,
     Grade? latestGrade,
+    String? latestGradeSequenceId,
   });
 
   $GradeCopyWith<$Res>? get latestGrade;
@@ -88,6 +93,7 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
     Object? remainingSeconds = freezed,
     Object? totalDurationSeconds = freezed,
     Object? latestGrade = freezed,
+    Object? latestGradeSequenceId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -123,6 +129,10 @@ class _$RecordingStateCopyWithImpl<$Res, $Val extends RecordingState>
                 ? _value.latestGrade
                 : latestGrade // ignore: cast_nullable_to_non_nullable
                       as Grade?,
+            latestGradeSequenceId: freezed == latestGradeSequenceId
+                ? _value.latestGradeSequenceId
+                : latestGradeSequenceId // ignore: cast_nullable_to_non_nullable
+                      as String?,
           )
           as $Val,
     );
@@ -161,6 +171,7 @@ abstract class _$$RecordingStateImplCopyWith<$Res>
     int? remainingSeconds,
     int? totalDurationSeconds,
     Grade? latestGrade,
+    String? latestGradeSequenceId,
   });
 
   @override
@@ -189,6 +200,7 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
     Object? remainingSeconds = freezed,
     Object? totalDurationSeconds = freezed,
     Object? latestGrade = freezed,
+    Object? latestGradeSequenceId = freezed,
   }) {
     return _then(
       _$RecordingStateImpl(
@@ -224,6 +236,10 @@ class __$$RecordingStateImplCopyWithImpl<$Res>
             ? _value.latestGrade
             : latestGrade // ignore: cast_nullable_to_non_nullable
                   as Grade?,
+        latestGradeSequenceId: freezed == latestGradeSequenceId
+            ? _value.latestGradeSequenceId
+            : latestGradeSequenceId // ignore: cast_nullable_to_non_nullable
+                  as String?,
       ),
     );
   }
@@ -241,6 +257,7 @@ class _$RecordingStateImpl extends _RecordingState {
     this.remainingSeconds,
     this.totalDurationSeconds,
     this.latestGrade,
+    this.latestGradeSequenceId,
   }) : super._();
 
   /// The current phase in the recording state machine.
@@ -275,9 +292,14 @@ class _$RecordingStateImpl extends _RecordingState {
   @override
   final Grade? latestGrade;
 
+  /// ID of the sentence that [latestGrade] belongs to.
+  /// Used to prevent stale grades from being displayed for different sentences.
+  @override
+  final String? latestGradeSequenceId;
+
   @override
   String toString() {
-    return 'RecordingState(phase: $phase, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, hasPlayedBack: $hasPlayedBack, error: $error, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds, latestGrade: $latestGrade)';
+    return 'RecordingState(phase: $phase, isPlaying: $isPlaying, hasLatestRecording: $hasLatestRecording, hasPlayedBack: $hasPlayedBack, error: $error, remainingSeconds: $remainingSeconds, totalDurationSeconds: $totalDurationSeconds, latestGrade: $latestGrade, latestGradeSequenceId: $latestGradeSequenceId)';
   }
 
   @override
@@ -298,7 +320,9 @@ class _$RecordingStateImpl extends _RecordingState {
             (identical(other.totalDurationSeconds, totalDurationSeconds) ||
                 other.totalDurationSeconds == totalDurationSeconds) &&
             (identical(other.latestGrade, latestGrade) ||
-                other.latestGrade == latestGrade));
+                other.latestGrade == latestGrade) &&
+            (identical(other.latestGradeSequenceId, latestGradeSequenceId) ||
+                other.latestGradeSequenceId == latestGradeSequenceId));
   }
 
   @override
@@ -312,6 +336,7 @@ class _$RecordingStateImpl extends _RecordingState {
     remainingSeconds,
     totalDurationSeconds,
     latestGrade,
+    latestGradeSequenceId,
   );
 
   /// Create a copy of RecordingState
@@ -336,6 +361,7 @@ abstract class _RecordingState extends RecordingState {
     final int? remainingSeconds,
     final int? totalDurationSeconds,
     final Grade? latestGrade,
+    final String? latestGradeSequenceId,
   }) = _$RecordingStateImpl;
   const _RecordingState._() : super._();
 
@@ -366,6 +392,11 @@ abstract class _RecordingState extends RecordingState {
   /// Contains character-level scores for ColoredText visualization.
   @override
   Grade? get latestGrade;
+
+  /// ID of the sentence that [latestGrade] belongs to.
+  /// Used to prevent stale grades from being displayed for different sentences.
+  @override
+  String? get latestGradeSequenceId;
 
   /// Create a copy of RecordingState
   /// with the given fields replaced by the non-null parameter values.
