@@ -1,14 +1,14 @@
 {
   "model_info": {
-    "name": "SyllablePredictorV4",
-    "version": "4.0",
-    "architecture": "CNN + RoPE Transformer + Attention Pooling",
-    "created_at": "2026-02-15T22:06:03.138758Z",
+    "name": "SyllablePredictorV6",
+    "version": "6.0",
+    "architecture": "CNN (4x downsampling) + Position Tokens + RoPE Transformer + Sliding Window Attention + PMA Pooling",
+    "created_at": "2026-02-18T12:43:22.931217Z",
     "checkpoint_source": "best_model.pt",
-    "precision": "fp32",
+    "precision": "fp16",
     "opset_version": 17,
-    "model_size_bytes": 83286651,
-    "model_size_mb": 79.43
+    "model_size_bytes": 45013755,
+    "model_size_mb": 42.93
   },
   "input_specs": {
     "mel": {
@@ -18,17 +18,17 @@
         "time"
       ],
       "dtype": "float32",
-      "description": "Log-mel spectrogram features",
-      "notes": "time dimension is variable (typically ~100 frames for 1s audio)"
+      "description": "Full sentence log-mel spectrogram",
+      "notes": "time up to ~1000 frames (10s audio at 10ms/frame)"
     },
-    "pinyin_ids": {
+    "position": {
       "shape": [
         "batch",
-        "seq_len"
+        1
       ],
       "dtype": "int64",
-      "description": "Pinyin token IDs for context (previous syllables)",
-      "notes": "seq_len is variable, typically 1-50 tokens"
+      "description": "Syllable position index to predict (0-indexed)",
+      "notes": "Single integer indicating which syllable to score"
     },
     "audio_mask": {
       "shape": [
@@ -38,15 +38,6 @@
       "dtype": "bool",
       "description": "Padding mask for audio frames (True = padded/ignored)",
       "notes": "Must match time dimension of mel input"
-    },
-    "pinyin_mask": {
-      "shape": [
-        "batch",
-        "seq_len"
-      ],
-      "dtype": "bool",
-      "description": "Padding mask for pinyin tokens (True = padded/ignored)",
-      "notes": "Must match seq_len dimension of pinyin_ids input"
     }
   },
   "output_specs": {
@@ -56,7 +47,7 @@
         532
       ],
       "dtype": "float32",
-      "description": "Logits for syllable prediction (apply softmax for probabilities)",
+      "description": "Logits for syllable prediction",
       "num_classes": 532
     },
     "tone_logits": {
@@ -65,7 +56,7 @@
         5
       ],
       "dtype": "float32",
-      "description": "Logits for tone prediction (apply softmax for probabilities)",
+      "description": "Logits for tone prediction",
       "num_classes": 5
     }
   },
@@ -77,8 +68,7 @@
       "win_length": 400,
       "n_fft": 512,
       "fmin": 0,
-      "fmax": 8000,
-      "notes": "Use librosa.feature.melspectrogram or equivalent with these params"
+      "fmax": 8000
     },
     "normalization": {
       "method": "log_mel",
@@ -88,34 +78,19 @@
   "vocabulary": {
     "n_syllables": 532,
     "n_tones": 5,
-    "special_tokens": {
-      "PAD": 0,
-      "BOS": 1
-    },
-    "notes": "Syllable vocab includes special tokens. Valid token range: [0, n_syllables-1]"
+    "max_positions": 532
   },
   "model_architecture": {
     "d_model": 480,
     "n_layers": 8,
     "n_heads": 6,
     "dim_feedforward": 1440,
-    "cnn_kernel_size": 3,
-    "max_audio_frames": 100,
-    "max_pinyin_len": 50
-  },
-  "grade_thresholds": {
-    "description": "Probability thresholds for mapping model confidence to user-facing grades",
-    "thresholds": {
-      "bad": 0.0,
-      "almost": 0.2,
-      "good": 0.4,
-      "easy": 0.6
-    },
-    "mapping": {
-      "bad": "prob < 0.2",
-      "almost": "0.2 <= prob < 0.4",
-      "good": "0.4 <= prob < 0.6",
-      "easy": "prob >= 0.6"
-    }
+    "max_audio_frames": 1000,
+    "max_positions": 532,
+    "cnn_downsampling_factor": 4,
+    "attention_window": 32,
+    "use_global_attention": true,
+    "attention_type": "sliding_window_global",
+    "attention_notes": "Local sliding window (size=2*window+1) with global attention on last 2 tokens (BOS + position)"
   }
 }
