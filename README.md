@@ -1,6 +1,16 @@
 # SpeakToLearn
 
-A language learning app focused on pronunciation practice. Users listen to native speaker audio, record their own pronunciation, and receive feedback based on speech recognition accuracy.
+A language learning app focused on pronunciation practice.
+
+<p align="center">
+  <img src="images/speaktolearn.png" width="60%" alt="SpeakToLearn App">
+</p>
+
+Users listen to native speaker audio, record their own pronunciation, and receive feedback based on speech recognition accuracy.
+
+## How We Grade Pronunciations
+
+Standard speech-to-text APIs are optimized for transcription, not pronunciation assessment, and often accept poor pronunciations as correct. We developed a custom deep learning model for Mandarin Chinese trained on the AISHELL dataset, specifically architected to evaluate syllable-level pronunciation accuracy rather than just recognize speech.
 
 ## Quick Start
 
