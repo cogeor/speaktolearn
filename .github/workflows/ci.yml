@@ -40,7 +40,9 @@ jobs:
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Run analyzer
-        run: flutter analyze --fatal-warnings
+        # Note: --no-fatal-infos ignores info-level issues (like avoid_print)
+        # Must match .githooks/pre-commit analyzer flags
+        run: flutter analyze --no-fatal-infos
 
       - name: Run tests
         run: flutter test --coverage

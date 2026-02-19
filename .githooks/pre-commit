@@ -31,6 +31,7 @@ fi
 echo "pre-commit: Dart formatting OK"
 
 # Run analyzer (fail on warnings, ignore infos)
+# Note: Must match .github/workflows/ci.yml analyzer flags
 echo "pre-commit: running Flutter analyzer..."
 if ! flutter analyze --no-fatal-infos 2>/dev/null; then
   echo ""
