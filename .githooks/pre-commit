@@ -20,11 +20,24 @@ fi
 
 cd "$repo_root/apps/mobile_flutter"
 
-echo "pre-commit: formatting staged Dart files..."
-while IFS= read -r file; do
-  rel_path="${file#apps/mobile_flutter/}"
-  dart format --output=none "$rel_path"
-  git -C "$repo_root" add "apps/mobile_flutter/$rel_path"
-done <<< "$staged_dart_files"
+# Check formatting (don't auto-fix, just verify)
+echo "pre-commit: checking Dart formatting..."
+if ! dart format --output=none --set-exit-if-changed . 2>/dev/null; then
+  echo ""
+  echo "pre-commit: Formatting issues found!"
+  echo "pre-commit: Run 'dart format .' in apps/mobile_flutter to fix."
+  exit 1
+fi
+echo "pre-commit: Dart formatting OK"
 
-echo "pre-commit: Dart formatting checks passed."
+# Run analyzer (fail on warnings, ignore infos)
+echo "pre-commit: running Flutter analyzer..."
+if ! flutter analyze --no-fatal-infos 2>/dev/null; then
+  echo ""
+  echo "pre-commit: Analyzer found warnings!"
+  echo "pre-commit: Fix the issues above before committing."
+  exit 1
+fi
+echo "pre-commit: Analyzer OK"
+
+echo "pre-commit: All checks passed."
