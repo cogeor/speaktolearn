@@ -166,12 +166,30 @@ List<double> _softmax(List<double> logits) {
 
 int _extractTone(String syllable) {
   const toneMap = {
-    'ā': 1, 'á': 2, 'ǎ': 3, 'à': 4,
-    'ē': 1, 'é': 2, 'ě': 3, 'è': 4,
-    'ī': 1, 'í': 2, 'ǐ': 3, 'ì': 4,
-    'ō': 1, 'ó': 2, 'ǒ': 3, 'ò': 4,
-    'ū': 1, 'ú': 2, 'ǔ': 3, 'ù': 4,
-    'ǖ': 1, 'ǘ': 2, 'ǚ': 3, 'ǜ': 4,
+    'ā': 1,
+    'á': 2,
+    'ǎ': 3,
+    'à': 4,
+    'ē': 1,
+    'é': 2,
+    'ě': 3,
+    'è': 4,
+    'ī': 1,
+    'í': 2,
+    'ǐ': 3,
+    'ì': 4,
+    'ō': 1,
+    'ó': 2,
+    'ǒ': 3,
+    'ò': 4,
+    'ū': 1,
+    'ú': 2,
+    'ǔ': 3,
+    'ù': 4,
+    'ǖ': 1,
+    'ǘ': 2,
+    'ǚ': 3,
+    'ǜ': 4,
   };
   for (final c in syllable.split('')) {
     if (toneMap.containsKey(c)) {
@@ -222,7 +240,8 @@ List<double> _scoreWithAlignment(
 
   for (int i = 0; i < nTargets; i++) {
     final targetId = targetIds[i];
-    final maxSearchFrame = minFrame + ((nFrames - minFrame) ~/ (nTargets - i).clamp(1, nTargets));
+    final maxSearchFrame =
+        minFrame + ((nFrames - minFrame) ~/ (nTargets - i).clamp(1, nTargets));
     final searchEnd = maxSearchFrame.clamp(minFrame + 1, nFrames);
 
     double bestScore = 0.0;
@@ -264,7 +283,8 @@ _AlignmentResult _scoreWithAlignmentWithFrames(
 
   for (int i = 0; i < nTargets; i++) {
     final targetId = targetIds[i];
-    final maxSearchFrame = minFrame + ((nFrames - minFrame) ~/ (nTargets - i).clamp(1, nTargets));
+    final maxSearchFrame =
+        minFrame + ((nFrames - minFrame) ~/ (nTargets - i).clamp(1, nTargets));
     final searchEnd = maxSearchFrame.clamp(minFrame + 1, nFrames);
 
     double bestScore = 0.0;

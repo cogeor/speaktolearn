@@ -25,8 +25,8 @@ class MelExtractor {
     int? nFft,
     this.fmin = 0.0,
     double? fmax,
-  })  : nFft = nFft ?? winLength,
-        fmax = fmax ?? sampleRate / 2.0 {
+  }) : nFft = nFft ?? winLength,
+       fmax = fmax ?? sampleRate / 2.0 {
     _hanningWindow = createHanningWindow(this.nFft);
     _melFilterbank = createMelFilterbank(
       sampleRate,
@@ -93,10 +93,7 @@ class MelExtractor {
     }
 
     var nFreqs = nFft ~/ 2 + 1;
-    var spec = List.generate(
-      nFreqs,
-      (_) => List<double>.filled(nFrames, 0.0),
-    );
+    var spec = List.generate(nFreqs, (_) => List<double>.filled(nFrames, 0.0));
 
     // Create FFT instance for real FFT
     var fft = FFT(nFft);

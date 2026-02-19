@@ -88,7 +88,9 @@ class OnnxMlScorerV6 implements MlScorer {
       final audioFile = File(recording.filePath);
       final audioBytes = await audioFile.readAsBytes();
       final audioSamples = _parseWavToSamples(audioBytes);
-      print('⏱️ [V6] Audio load: ${stepWatch.elapsedMilliseconds}ms (${audioSamples.length} samples)');
+      print(
+        '⏱️ [V6] Audio load: ${stepWatch.elapsedMilliseconds}ms (${audioSamples.length} samples)',
+      );
 
       // 2. Get pinyin syllables from sequence
       var syllables = _parsePinyin(sequence.romanization ?? '');
@@ -99,7 +101,9 @@ class OnnxMlScorerV6 implements MlScorer {
 
       // 3. Clamp syllables to max (V6 supports up to 28)
       if (syllables.length > _maxSyllables) {
-        print('⚠️ [V6] Clamping syllables from ${syllables.length} to $_maxSyllables');
+        print(
+          '⚠️ [V6] Clamping syllables from ${syllables.length} to $_maxSyllables',
+        );
         syllables = syllables.sublist(0, _maxSyllables);
       }
 
@@ -107,7 +111,9 @@ class OnnxMlScorerV6 implements MlScorer {
       stepWatch.reset();
       stepWatch.start();
       final mel = _melExtractor.extract(audioSamples);
-      print('⏱️ [V6] Mel extraction: ${stepWatch.elapsedMilliseconds}ms (${mel[0].length} frames)');
+      print(
+        '⏱️ [V6] Mel extraction: ${stepWatch.elapsedMilliseconds}ms (${mel[0].length} frames)',
+      );
 
       // 5. For each syllable position, run inference with position index
       stepWatch.reset();
@@ -117,7 +123,9 @@ class OnnxMlScorerV6 implements MlScorer {
         final prob = await _runInference(mel, i, syllables[i]);
         scores.add(prob);
       }
-      print('⏱️ [V6] Inference (${syllables.length} syllables): ${stepWatch.elapsedMilliseconds}ms (${(stepWatch.elapsedMilliseconds / syllables.length).toStringAsFixed(1)}ms/syllable)');
+      print(
+        '⏱️ [V6] Inference (${syllables.length} syllables): ${stepWatch.elapsedMilliseconds}ms (${(stepWatch.elapsedMilliseconds / syllables.length).toStringAsFixed(1)}ms/syllable)',
+      );
 
       // 6. Map syllable scores to character scores
       final characters = sequence.text.characters.toList();
@@ -134,7 +142,9 @@ class OnnxMlScorerV6 implements MlScorer {
 
       totalStopwatch.stop();
       print('⏱️ [V6] TOTAL scoring: ${totalStopwatch.elapsedMilliseconds}ms');
-      print('📊 [V6] Scores: ${scores.map((s) => s.toStringAsFixed(3)).join(", ")}');
+      print(
+        '📊 [V6] Scores: ${scores.map((s) => s.toStringAsFixed(3)).join(", ")}',
+      );
 
       return Grade(
         overall: (avgScore * 100).round(),
@@ -189,23 +199,21 @@ class OnnxMlScorerV6 implements MlScorer {
     final positionList = Int64List.fromList([position]);
 
     // Audio mask: true for padded frames, false for real audio frames
-    final audioMask = List<bool>.generate(
-      timeFrames,
-      (t) => t >= actualFrames,
-    );
+    final audioMask = List<bool>.generate(timeFrames, (t) => t >= actualFrames);
 
-    final melTensor = OrtValueTensor.createTensorWithDataList(
-      melFlat,
-      [1, 80, timeFrames],
-    );
+    final melTensor = OrtValueTensor.createTensorWithDataList(melFlat, [
+      1,
+      80,
+      timeFrames,
+    ]);
     final positionTensor = OrtValueTensor.createTensorWithDataList(
       positionList,
       [1, 1],
     );
-    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(
-      audioMask,
-      [1, timeFrames],
-    );
+    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(audioMask, [
+      1,
+      timeFrames,
+    ]);
 
     List<OrtValue?>? outputs;
     OrtRunOptions? runOptions;
@@ -218,11 +226,10 @@ class OnnxMlScorerV6 implements MlScorer {
       };
 
       runOptions = OrtRunOptions();
-      outputs = await _session!.runAsync(
-        runOptions,
-        inputs,
-        ['syllable_logits', 'tone_logits'],
-      );
+      outputs = await _session!.runAsync(runOptions, inputs, [
+        'syllable_logits',
+        'tone_logits',
+      ]);
 
       if (outputs == null || outputs.length < 2) {
         throw StateError('Model did not return expected outputs');
@@ -261,12 +268,30 @@ class OnnxMlScorerV6 implements MlScorer {
   /// Extract tone number from pinyin syllable.
   static int _extractTone(String syllable) {
     const toneMap = {
-      'ā': 1, 'á': 2, 'ǎ': 3, 'à': 4,
-      'ē': 1, 'é': 2, 'ě': 3, 'è': 4,
-      'ī': 1, 'í': 2, 'ǐ': 3, 'ì': 4,
-      'ō': 1, 'ó': 2, 'ǒ': 3, 'ò': 4,
-      'ū': 1, 'ú': 2, 'ǔ': 3, 'ù': 4,
-      'ǖ': 1, 'ǘ': 2, 'ǚ': 3, 'ǜ': 4,
+      'ā': 1,
+      'á': 2,
+      'ǎ': 3,
+      'à': 4,
+      'ē': 1,
+      'é': 2,
+      'ě': 3,
+      'è': 4,
+      'ī': 1,
+      'í': 2,
+      'ǐ': 3,
+      'ì': 4,
+      'ō': 1,
+      'ó': 2,
+      'ǒ': 3,
+      'ò': 4,
+      'ū': 1,
+      'ú': 2,
+      'ǔ': 3,
+      'ù': 4,
+      'ǖ': 1,
+      'ǘ': 2,
+      'ǚ': 3,
+      'ǜ': 4,
     };
     for (final c in syllable.split('')) {
       if (toneMap.containsKey(c)) {
@@ -302,11 +327,7 @@ class OnnxMlScorerV6 implements MlScorer {
   }
 
   List<String> _parsePinyin(String romanization) {
-    return romanization
-        .trim()
-        .split(' ')
-        .where((s) => s.isNotEmpty)
-        .toList();
+    return romanization.trim().split(' ').where((s) => s.isNotEmpty).toList();
   }
 
   List<double> _mapSyllablesToCharacters(

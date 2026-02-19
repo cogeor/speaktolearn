@@ -60,10 +60,7 @@ class MockMlScorer implements MlScorer {
       overall: overall,
       method: _method,
       characterScores: characterScores,
-      details: {
-        'charCount': charCount,
-        'avgScore': avgScore,
-      },
+      details: {'charCount': charCount, 'avgScore': avgScore},
     );
   }
 }

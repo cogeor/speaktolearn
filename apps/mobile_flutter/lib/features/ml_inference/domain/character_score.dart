@@ -5,12 +5,7 @@
 /// - almost: 0.2 - 0.4
 /// - good: 0.4 - 0.6
 /// - easy: >= 0.6
-enum CharacterGrade {
-  bad,
-  almost,
-  good,
-  easy,
-}
+enum CharacterGrade { bad, almost, good, easy }
 
 /// Extension to convert ML probability to grade.
 extension ProbabilityToGrade on double {

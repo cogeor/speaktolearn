@@ -245,8 +245,8 @@ class _EmptyState extends StatelessWidget {
             Text(
               'Complete some practice sessions to see your statistics here.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
+                color: Theme.of(context).colorScheme.outline,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

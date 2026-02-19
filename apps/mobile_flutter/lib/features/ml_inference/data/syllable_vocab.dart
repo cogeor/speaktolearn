@@ -28,7 +28,9 @@ class SyllableVocab {
 
   /// Load vocabulary from assets
   static Future<SyllableVocab> load() async {
-    final jsonStr = await rootBundle.loadString('assets/ml/syllable_vocab.json');
+    final jsonStr = await rootBundle.loadString(
+      'assets/ml/syllable_vocab.json',
+    );
     final data = json.decode(jsonStr) as Map<String, dynamic>;
     final syllables = (data['syllables'] as List).cast<String>();
 
@@ -61,12 +63,31 @@ class SyllableVocab {
   /// Strip tone marks from pinyin syllable.
   static String _stripTones(String syllable) {
     const toneMap = {
-      'ā': 'a', 'á': 'a', 'ǎ': 'a', 'à': 'a',
-      'ē': 'e', 'é': 'e', 'ě': 'e', 'è': 'e',
-      'ī': 'i', 'í': 'i', 'ǐ': 'i', 'ì': 'i',
-      'ō': 'o', 'ó': 'o', 'ǒ': 'o', 'ò': 'o',
-      'ū': 'u', 'ú': 'u', 'ǔ': 'u', 'ù': 'u',
-      'ǖ': 'v', 'ǘ': 'v', 'ǚ': 'v', 'ǜ': 'v', 'ü': 'v',
+      'ā': 'a',
+      'á': 'a',
+      'ǎ': 'a',
+      'à': 'a',
+      'ē': 'e',
+      'é': 'e',
+      'ě': 'e',
+      'è': 'e',
+      'ī': 'i',
+      'í': 'i',
+      'ǐ': 'i',
+      'ì': 'i',
+      'ō': 'o',
+      'ó': 'o',
+      'ǒ': 'o',
+      'ò': 'o',
+      'ū': 'u',
+      'ú': 'u',
+      'ǔ': 'u',
+      'ù': 'u',
+      'ǖ': 'v',
+      'ǘ': 'v',
+      'ǚ': 'v',
+      'ǜ': 'v',
+      'ü': 'v',
     };
     return syllable.split('').map((c) => toneMap[c] ?? c).join();
   }

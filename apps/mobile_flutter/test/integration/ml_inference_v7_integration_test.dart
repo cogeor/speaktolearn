@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math' show exp, max;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -17,8 +16,11 @@ void main() {
         final result = _softmax(input);
 
         for (int i = 0; i < result.length; i++) {
-          expect(result[i], closeTo(expected[i], 1e-5),
-              reason: 'Softmax element $i mismatch');
+          expect(
+            result[i],
+            closeTo(expected[i], 1e-5),
+            reason: 'Softmax element $i mismatch',
+          );
         }
       });
 
@@ -189,9 +191,12 @@ void main() {
 
         for (final (sylScore, toneScore, expected) in testCases) {
           final result = 0.7 * sylScore + 0.3 * toneScore;
-          expect(result, closeTo(expected, 1e-6),
-              reason:
-                  'Combined($sylScore, $toneScore) should be $expected, got $result');
+          expect(
+            result,
+            closeTo(expected, 1e-6),
+            reason:
+                'Combined($sylScore, $toneScore) should be $expected, got $result',
+          );
         }
       });
     });
@@ -222,10 +227,8 @@ void main() {
         final toneProbs = toneLogits.map(_softmax).toList();
 
         // Score with alignment
-        final sylResult =
-            _scoreWithAlignmentFromProbs(sylProbs, [1, 2, 3]);
-        final toneResult =
-            _scoreWithAlignmentFromProbs(toneProbs, [1, 2, 3]);
+        final sylResult = _scoreWithAlignmentFromProbs(sylProbs, [1, 2, 3]);
+        final toneResult = _scoreWithAlignmentFromProbs(toneProbs, [1, 2, 3]);
 
         // Combine scores
         final combined = <double>[];

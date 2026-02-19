@@ -178,10 +178,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
 
     return Text(
       text,
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            color: color,
-            fontStyle: fontStyle,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(color: color, fontStyle: fontStyle),
       textAlign: TextAlign.center,
     );
   }
@@ -242,7 +241,8 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
     final hasPinyin =
         sequence.romanization != null && sequence.romanization!.isNotEmpty;
     final englishTranslation = sequence.gloss?['en'];
-    final hasTranslation = englishTranslation != null && englishTranslation.isNotEmpty;
+    final hasTranslation =
+        englishTranslation != null && englishTranslation.isNotEmpty;
     final hasAudio = sequence.voices != null && sequence.voices!.isNotEmpty;
     final audioState = ref.watch(exampleAudioControllerProvider);
 
@@ -278,7 +278,9 @@ class _HomeContentState extends ConsumerState<_HomeContent> {
                         child: ColoredText(
                           text: sequence.text,
                           // Only show scores if they belong to the current sentence
-                          scores: recordingState.latestGradeSequenceId == sequence.id
+                          scores:
+                              recordingState.latestGradeSequenceId ==
+                                  sequence.id
                               ? recordingState.latestGrade?.characterScores
                               : null,
                           style: Theme.of(context).textTheme.displayLarge,

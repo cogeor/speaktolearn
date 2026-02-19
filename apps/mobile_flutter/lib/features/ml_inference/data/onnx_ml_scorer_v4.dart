@@ -69,7 +69,9 @@ class OnnxMlScorerV4 implements MlScorer {
       final audioFile = File(recording.filePath);
       final audioBytes = await audioFile.readAsBytes();
       final audioSamples = _parseWavToSamples(audioBytes);
-      print('⏱️ Audio load: ${stepWatch.elapsedMilliseconds}ms (${audioSamples.length} samples)');
+      print(
+        '⏱️ Audio load: ${stepWatch.elapsedMilliseconds}ms (${audioSamples.length} samples)',
+      );
 
       // 2. Get pinyin syllables from sequence
       final syllables = _parsePinyin(sequence.romanization ?? '');
@@ -83,7 +85,9 @@ class OnnxMlScorerV4 implements MlScorer {
       stepWatch.reset();
       stepWatch.start();
       final mel = _melExtractor.extract(audioSamples);
-      print('⏱️ Mel extraction: ${stepWatch.elapsedMilliseconds}ms (${mel[0].length} frames)');
+      print(
+        '⏱️ Mel extraction: ${stepWatch.elapsedMilliseconds}ms (${mel[0].length} frames)',
+      );
 
       // 4. For each syllable, run inference with position encoding
       stepWatch.reset();
@@ -96,7 +100,9 @@ class OnnxMlScorerV4 implements MlScorer {
         final prob = await _runInference(mel, pinyinIds, syllables[i]);
         scores.add(prob);
       }
-      print('⏱️ Inference (${syllables.length} syllables): ${stepWatch.elapsedMilliseconds}ms (${(stepWatch.elapsedMilliseconds / syllables.length).toStringAsFixed(1)}ms/syllable)');
+      print(
+        '⏱️ Inference (${syllables.length} syllables): ${stepWatch.elapsedMilliseconds}ms (${(stepWatch.elapsedMilliseconds / syllables.length).toStringAsFixed(1)}ms/syllable)',
+      );
 
       // 5. Map syllable scores to character scores
       final characters = sequence.text.characters.toList();
@@ -167,24 +173,22 @@ class OnnxMlScorerV4 implements MlScorer {
     }
 
     final pinyinFlat = Int64List.fromList(pinyinIds);
-    final audioMask = List<bool>.generate(
-      timeFrames,
-      (t) => t >= actualFrames,
-    );
+    final audioMask = List<bool>.generate(timeFrames, (t) => t >= actualFrames);
     final pinyinMask = List<bool>.filled(pinyinIds.length, false);
 
-    final melTensor = OrtValueTensor.createTensorWithDataList(
-      melFlat,
-      [1, 80, timeFrames],
-    );
-    final pinyinTensor = OrtValueTensor.createTensorWithDataList(
-      pinyinFlat,
-      [1, pinyinIds.length],
-    );
-    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(
-      audioMask,
-      [1, timeFrames],
-    );
+    final melTensor = OrtValueTensor.createTensorWithDataList(melFlat, [
+      1,
+      80,
+      timeFrames,
+    ]);
+    final pinyinTensor = OrtValueTensor.createTensorWithDataList(pinyinFlat, [
+      1,
+      pinyinIds.length,
+    ]);
+    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(audioMask, [
+      1,
+      timeFrames,
+    ]);
     final pinyinMaskTensor = OrtValueTensor.createTensorWithDataList(
       pinyinMask,
       [1, pinyinIds.length],
@@ -203,11 +207,10 @@ class OnnxMlScorerV4 implements MlScorer {
 
       runOptions = OrtRunOptions();
       // Request both syllable and tone outputs
-      outputs = await _session!.runAsync(
-        runOptions,
-        inputs,
-        ['syllable_logits', 'tone_logits'],
-      );
+      outputs = await _session!.runAsync(runOptions, inputs, [
+        'syllable_logits',
+        'tone_logits',
+      ]);
 
       if (outputs == null || outputs.length < 2) {
         throw StateError('Model did not return expected outputs');
@@ -250,12 +253,30 @@ class OnnxMlScorerV4 implements MlScorer {
   /// Returns 1-4 for tones, 0 for neutral/unknown.
   static int _extractTone(String syllable) {
     const toneMap = {
-      'ā': 1, 'á': 2, 'ǎ': 3, 'à': 4,
-      'ē': 1, 'é': 2, 'ě': 3, 'è': 4,
-      'ī': 1, 'í': 2, 'ǐ': 3, 'ì': 4,
-      'ō': 1, 'ó': 2, 'ǒ': 3, 'ò': 4,
-      'ū': 1, 'ú': 2, 'ǔ': 3, 'ù': 4,
-      'ǖ': 1, 'ǘ': 2, 'ǚ': 3, 'ǜ': 4,
+      'ā': 1,
+      'á': 2,
+      'ǎ': 3,
+      'à': 4,
+      'ē': 1,
+      'é': 2,
+      'ě': 3,
+      'è': 4,
+      'ī': 1,
+      'í': 2,
+      'ǐ': 3,
+      'ì': 4,
+      'ō': 1,
+      'ó': 2,
+      'ǒ': 3,
+      'ò': 4,
+      'ū': 1,
+      'ú': 2,
+      'ǔ': 3,
+      'ù': 4,
+      'ǖ': 1,
+      'ǘ': 2,
+      'ǚ': 3,
+      'ǜ': 4,
     };
     for (final c in syllable.split('')) {
       if (toneMap.containsKey(c)) {
@@ -302,11 +323,7 @@ class OnnxMlScorerV4 implements MlScorer {
   ///
   /// Expected format: space-separated pinyin syllables (e.g., "nǐ hǎo").
   List<String> _parsePinyin(String romanization) {
-    return romanization
-        .trim()
-        .split(' ')
-        .where((s) => s.isNotEmpty)
-        .toList();
+    return romanization.trim().split(' ').where((s) => s.isNotEmpty).toList();
   }
 
   /// Map syllable scores to character scores.

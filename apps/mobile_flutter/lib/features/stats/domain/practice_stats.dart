@@ -11,6 +11,7 @@ class CumulativeDataPoint {
   });
 
   final DateTime date;
+
   /// Counts per HSK level (1-6)
   final Map<int, int> countsByLevel;
   final int total;
@@ -30,6 +31,7 @@ class PracticeStats with _$PracticeStats {
     @Default(0) int longestStreak,
     DateTime? lastPracticeDate,
     @Default({}) Map<DateTime, int> dailyAttempts,
+
     /// Cumulative mastered sentences over time by HSK level.
     /// Each data point contains counts per HSK level and total.
     @Default([]) List<CumulativeDataPoint> cumulativeProgress,
@@ -122,11 +124,13 @@ class PracticeStats with _$PracticeStats {
         total += count;
       }
 
-      dataPoints.add(CumulativeDataPoint(
-        date: date,
-        countsByLevel: countsByLevel,
-        total: total,
-      ));
+      dataPoints.add(
+        CumulativeDataPoint(
+          date: date,
+          countsByLevel: countsByLevel,
+          total: total,
+        ),
+      );
     }
 
     return dataPoints;

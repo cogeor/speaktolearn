@@ -13,11 +13,7 @@ void main() {
       theme: AppTheme.darkTheme,
       home: Scaffold(
         body: Center(
-          child: ColoredText(
-            text: text,
-            scores: scores,
-            style: style,
-          ),
+          child: ColoredText(text: text, scores: scores, style: style),
         ),
       ),
     );
@@ -40,10 +36,7 @@ void main() {
 
     group('color mapping', () {
       testWidgets('maps score < 0.2 to ratingHard (red)', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'A',
-          scores: [0.1],
-        ));
+        await tester.pumpWidget(buildTestWidget(text: 'A', scores: [0.1]));
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -52,11 +45,10 @@ void main() {
         expect(spans[0].style?.color, AppTheme.ratingHard);
       });
 
-      testWidgets('maps score 0.2-0.4 to ratingAlmost (yellow)', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'A',
-          scores: [0.3],
-        ));
+      testWidgets('maps score 0.2-0.4 to ratingAlmost (yellow)', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildTestWidget(text: 'A', scores: [0.3]));
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -66,10 +58,7 @@ void main() {
       });
 
       testWidgets('maps score 0.4-0.6 to ratingGood (green)', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'A',
-          scores: [0.5],
-        ));
+        await tester.pumpWidget(buildTestWidget(text: 'A', scores: [0.5]));
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -79,10 +68,7 @@ void main() {
       });
 
       testWidgets('maps score >= 0.6 to ratingEasy (blue)', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'A',
-          scores: [0.8],
-        ));
+        await tester.pumpWidget(buildTestWidget(text: 'A', scores: [0.8]));
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -92,10 +78,12 @@ void main() {
       });
 
       testWidgets('threshold boundary at 0.2', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'A',
-          scores: [0.2], // Exactly 0.2 should be almost, not bad
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(
+            text: 'A',
+            scores: [0.2], // Exactly 0.2 should be almost, not bad
+          ),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -105,10 +93,12 @@ void main() {
       });
 
       testWidgets('threshold boundary at 0.4', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'A',
-          scores: [0.4], // Exactly 0.4 should be good, not almost
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(
+            text: 'A',
+            scores: [0.4], // Exactly 0.4 should be good, not almost
+          ),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -118,10 +108,12 @@ void main() {
       });
 
       testWidgets('threshold boundary at 0.6', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'A',
-          scores: [0.6], // Exactly 0.6 should be easy, not good
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(
+            text: 'A',
+            scores: [0.6], // Exactly 0.6 should be easy, not good
+          ),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -133,10 +125,9 @@ void main() {
 
     group('character handling', () {
       testWidgets('creates one span per character', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'ABC',
-          scores: [0.1, 0.3, 0.8],
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(text: 'ABC', scores: [0.1, 0.3, 0.8]),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -149,10 +140,12 @@ void main() {
       });
 
       testWidgets('handles Chinese characters', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: '\u4f60\u597d', // "ni hao" in Chinese (2 chars)
-          scores: [0.8, 0.3],
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(
+            text: '\u4f60\u597d', // "ni hao" in Chinese (2 chars)
+            scores: [0.8, 0.3],
+          ),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -165,10 +158,12 @@ void main() {
 
       testWidgets('handles emoji as single grapheme', (tester) async {
         // Family emoji is a single grapheme cluster but multiple code points
-        await tester.pumpWidget(buildTestWidget(
-          text: '\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}', // family emoji
-          scores: [0.9],
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(
+            text: '\u{1F468}\u{200D}\u{1F469}\u{200D}\u{1F467}', // family emoji
+            scores: [0.9],
+          ),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -181,10 +176,12 @@ void main() {
 
     group('mismatched scores', () {
       testWidgets('handles fewer scores than characters', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'ABC',
-          scores: [0.8], // Only one score for 3 chars
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(
+            text: 'ABC',
+            scores: [0.8], // Only one score for 3 chars
+          ),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;
@@ -197,10 +194,12 @@ void main() {
       });
 
       testWidgets('handles more scores than characters', (tester) async {
-        await tester.pumpWidget(buildTestWidget(
-          text: 'AB',
-          scores: [0.8, 0.3, 0.1, 0.5], // 4 scores for 2 chars
-        ));
+        await tester.pumpWidget(
+          buildTestWidget(
+            text: 'AB',
+            scores: [0.8, 0.3, 0.1, 0.5], // 4 scores for 2 chars
+          ),
+        );
 
         final richText = tester.widget<RichText>(find.byType(RichText));
         final textSpan = richText.text as TextSpan;

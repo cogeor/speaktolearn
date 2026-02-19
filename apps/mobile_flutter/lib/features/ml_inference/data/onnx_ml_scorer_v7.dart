@@ -40,9 +40,6 @@ class OnnxMlScorerV7 implements MlScorer {
   static const _method = 'onnx_v7';
   static const _modelPath = 'assets/models/model_v7.onnx';
 
-  // CTC blank token index
-  static const _blankIndex = 0;
-
   // V7 supports variable length, but cap for safety
   static const _maxMelFrames = 1500;
 
@@ -87,7 +84,8 @@ class OnnxMlScorerV7 implements MlScorer {
       final audioBytes = await audioFile.readAsBytes();
       final audioSamples = _parseWavToSamples(audioBytes);
       print(
-          '⏱️ [V7] Audio load: ${stepWatch.elapsedMilliseconds}ms (${audioSamples.length} samples)');
+        '⏱️ [V7] Audio load: ${stepWatch.elapsedMilliseconds}ms (${audioSamples.length} samples)',
+      );
 
       // 2. Get pinyin syllables from sequence
       var syllables = _parsePinyin(sequence.romanization ?? '');
@@ -102,14 +100,16 @@ class OnnxMlScorerV7 implements MlScorer {
       final mel = _melExtractor.extract(audioSamples);
       final melFrames = mel[0].length;
       print(
-          '⏱️ [V7] Mel extraction: ${stepWatch.elapsedMilliseconds}ms ($melFrames frames)');
+        '⏱️ [V7] Mel extraction: ${stepWatch.elapsedMilliseconds}ms ($melFrames frames)',
+      );
 
       // 4. Run SINGLE inference pass
       stepWatch.reset();
       stepWatch.start();
       final inferenceResult = await _runInference(mel, syllables);
       print(
-          '⏱️ [V7] Inference: ${stepWatch.elapsedMilliseconds}ms (single pass for ${syllables.length} syllables)');
+        '⏱️ [V7] Inference: ${stepWatch.elapsedMilliseconds}ms (single pass for ${syllables.length} syllables)',
+      );
 
       // 5. Score each syllable using alignment-based scoring
       final syllableScores = inferenceResult.syllableScores;
@@ -139,7 +139,8 @@ class OnnxMlScorerV7 implements MlScorer {
       totalStopwatch.stop();
       print('⏱️ [V7] TOTAL scoring: ${totalStopwatch.elapsedMilliseconds}ms');
       print(
-          '📊 [V7] Scores: ${combinedScores.map((s) => s.toStringAsFixed(3)).join(", ")}');
+        '📊 [V7] Scores: ${combinedScores.map((s) => s.toStringAsFixed(3)).join(", ")}',
+      );
 
       return Grade(
         overall: (avgScore * 100).round(),
@@ -182,30 +183,27 @@ class OnnxMlScorerV7 implements MlScorer {
     // Audio mask: false for all frames (no padding in input)
     final audioMask = List<bool>.filled(timeFrames, false);
 
-    final melTensor = OrtValueTensor.createTensorWithDataList(
-      melFlat,
-      [1, 80, timeFrames],
-    );
-    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(
-      audioMask,
-      [1, timeFrames],
-    );
+    final melTensor = OrtValueTensor.createTensorWithDataList(melFlat, [
+      1,
+      80,
+      timeFrames,
+    ]);
+    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(audioMask, [
+      1,
+      timeFrames,
+    ]);
 
     List<OrtValue?>? outputs;
     OrtRunOptions? runOptions;
 
     try {
-      final inputs = {
-        'mel': melTensor,
-        'audio_mask': audioMaskTensor,
-      };
+      final inputs = {'mel': melTensor, 'audio_mask': audioMaskTensor};
 
       runOptions = OrtRunOptions();
-      outputs = await _session!.runAsync(
-        runOptions,
-        inputs,
-        ['syllable_logits', 'tone_logits'],
-      );
+      outputs = await _session!.runAsync(runOptions, inputs, [
+        'syllable_logits',
+        'tone_logits',
+      ]);
 
       if (outputs == null || outputs.length < 2) {
         throw StateError('Model did not return expected outputs');
@@ -231,10 +229,16 @@ class OnnxMlScorerV7 implements MlScorer {
       }
 
       // Score using alignment-based method
-      final syllableScores =
-          _scoreWithAlignment(sylLogits, targetSyllables, isForSyllables: true);
-      final toneScores = _scoreWithAlignment(toneLogits, targetSyllables,
-          isForSyllables: false);
+      final syllableScores = _scoreWithAlignment(
+        sylLogits,
+        targetSyllables,
+        isForSyllables: true,
+      );
+      final toneScores = _scoreWithAlignment(
+        toneLogits,
+        targetSyllables,
+        isForSyllables: false,
+      );
 
       return _InferenceResult(
         syllableScores: syllableScores,
@@ -263,8 +267,7 @@ class OnnxMlScorerV7 implements MlScorer {
     }
 
     // Apply softmax to each frame
-    final probs =
-        logits.map((frame) => _softmax(frame)).toList();
+    final probs = logits.map((frame) => _softmax(frame)).toList();
 
     final scores = <double>[];
     int minFrame = 0;

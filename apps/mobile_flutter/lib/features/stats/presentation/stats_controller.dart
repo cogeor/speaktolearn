@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/di.dart';
 import '../../progress/domain/sentence_rating.dart';
-import '../../text_sequences/domain/text_sequence.dart';
 import '../domain/practice_stats.dart';
 
 /// Provider to toggle demo mode for stats (debug builds only).
@@ -83,11 +82,13 @@ class StatsController extends AsyncNotifier<PracticeStats> {
       // Calculate cumulative progress by HSK level
       final cumulativeProgress = _calculateCumulativeProgress(
         allAttempts
-            .map((a) => (
-                  sequenceId: a.textSequenceId,
-                  date: a.gradedAt,
-                  rating: a.rating,
-                ))
+            .map(
+              (a) => (
+                sequenceId: a.textSequenceId,
+                date: a.gradedAt,
+                rating: a.rating,
+              ),
+            )
             .toList(),
         sequenceHskMap,
       );
@@ -180,7 +181,8 @@ class StatsController extends AsyncNotifier<PracticeStats> {
     };
 
     // Group attempts by date
-    final attemptsByDate = <DateTime, List<({String sequenceId, SentenceRating rating})>>{};
+    final attemptsByDate =
+        <DateTime, List<({String sequenceId, SentenceRating rating})>>{};
     for (final attempt in sortedAttempts) {
       final date = DateTime(
         attempt.date.year,
@@ -228,11 +230,13 @@ class StatsController extends AsyncNotifier<PracticeStats> {
         total += count;
       }
 
-      dataPoints.add(CumulativeDataPoint(
-        date: currentDate,
-        countsByLevel: countsByLevel,
-        total: total,
-      ));
+      dataPoints.add(
+        CumulativeDataPoint(
+          date: currentDate,
+          countsByLevel: countsByLevel,
+          total: total,
+        ),
+      );
 
       currentDate = currentDate.add(const Duration(days: 1));
     }

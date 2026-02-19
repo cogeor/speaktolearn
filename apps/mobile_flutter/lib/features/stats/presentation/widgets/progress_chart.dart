@@ -17,10 +17,7 @@ const _totalColor = Color(0xFF424242); // Dark gray for total
 
 /// A line chart showing cumulative mastered sentences over time.
 class ProgressChart extends StatelessWidget {
-  const ProgressChart({
-    super.key,
-    required this.dataPoints,
-  });
+  const ProgressChart({super.key, required this.dataPoints});
 
   final List<CumulativeDataPoint> dataPoints;
 
@@ -46,10 +43,7 @@ class ProgressChart extends StatelessWidget {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 200,
-          child: LineChart(_buildChartData(context)),
-        ),
+        SizedBox(height: 200, child: LineChart(_buildChartData(context))),
         const SizedBox(height: 8),
         _buildLegend(),
       ],
@@ -77,7 +71,10 @@ class ProgressChart extends StatelessWidget {
     // Find max Y value for scaling
     final maxY = dataPoints.isEmpty
         ? 10.0
-        : dataPoints.map((p) => p.total).reduce((a, b) => a > b ? a : b).toDouble();
+        : dataPoints
+              .map((p) => p.total)
+              .reduce((a, b) => a > b ? a : b)
+              .toDouble();
     final yInterval = _calculateYInterval(maxY);
 
     return LineChartData(
@@ -85,10 +82,8 @@ class ProgressChart extends StatelessWidget {
         show: true,
         drawVerticalLine: false,
         horizontalInterval: yInterval,
-        getDrawingHorizontalLine: (value) => FlLine(
-          color: Colors.grey.withValues(alpha: 0.2),
-          strokeWidth: 1,
-        ),
+        getDrawingHorizontalLine: (value) =>
+            FlLine(color: Colors.grey.withValues(alpha: 0.2), strokeWidth: 1),
       ),
       titlesData: FlTitlesData(
         leftTitles: AxisTitles(
@@ -123,7 +118,9 @@ class ProgressChart extends StatelessWidget {
           ),
         ),
         topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: const AxisTitles(
+          sideTitles: SideTitles(showTitles: false),
+        ),
       ),
       borderData: FlBorderData(show: false),
       minX: 0,
@@ -239,16 +236,11 @@ class _LegendItem extends StatelessWidget {
                 : null,
           ),
           child: isDashed
-              ? CustomPaint(
-                  painter: _DashedLinePainter(color: color),
-                )
+              ? CustomPaint(painter: _DashedLinePainter(color: color))
               : null,
         ),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 10, color: Colors.grey),
-        ),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
       ],
     );
   }
