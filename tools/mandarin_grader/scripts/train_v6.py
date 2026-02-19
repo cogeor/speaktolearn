@@ -20,6 +20,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Silence floor value in mel domain: log(epsilon) where epsilon=1e-9
+# This must match the value used in extract_mel_spectrogram
+MEL_SILENCE_FLOOR = np.log(1e-9)  # ≈ -20.72
+
 SYNTHETIC_DIR = Path(__file__).parent.parent / "data" / "synthetic_train"
 DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "checkpoints_v6"
 
@@ -227,7 +231,10 @@ def create_dataloader(
             target_tones.append(sample.target_tone)
 
         n_mels = mels[0].shape[0]
-        padded_mels = np.zeros((len(batch), n_mels, max_frames), dtype=np.float32)
+        # Use silence floor for padding, not zeros!
+        # Zero in mel domain corresponds to high energy (≈ e^0 = 1)
+        # Real silence produces mel values around log(1e-9) ≈ -20.72
+        padded_mels = np.full((len(batch), n_mels, max_frames), MEL_SILENCE_FLOOR, dtype=np.float32)
         audio_masks = np.ones((len(batch), max_frames), dtype=bool)  # Start all masked
         for i, mel in enumerate(mels):
             mel_len = mel.shape[1]

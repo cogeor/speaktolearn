@@ -18,6 +18,10 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Silence floor value in mel domain: log(epsilon) where epsilon=1e-9
+# This must match the value used in extract_mel_spectrogram
+MEL_SILENCE_FLOOR = np.log(1e-9)  # ≈ -20.72
+
 SYNTHETIC_DIR = Path(__file__).parent.parent / "data" / "synthetic_train"
 DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "checkpoints_v7"
 
@@ -189,7 +193,10 @@ def create_ctc_dataloader(
     mel_cache: dict | None = None,
     max_duration_s: float = 10.0,
     speed_variation: float = 0.1,
+    pitch_shift_semitones: float = 0.0,
+    formant_shift_percent: float = 0.0,
     noise_snr_db: tuple[float, float] | float | None = (10.0, 30.0),
+    random_padding: bool = True,
 ):
     """Create dataloader for CTC training.
 
@@ -202,7 +209,7 @@ def create_ctc_dataloader(
     from mandarin_grader.model.syllable_predictor_v4 import extract_mel_spectrogram, SyllablePredictorConfigV4
     from mandarin_grader.model.syllable_predictor_v7 import SyllableVocab
     from mandarin_grader.data.autoregressive_dataset import load_audio_wav, spec_augment
-    from mandarin_grader.data.augmentation import pitch_shift
+    from mandarin_grader.data.augmentation import pitch_shift, formant_shift
     from mandarin_grader.data.lexicon import _remove_tone_marks
 
     vocab = SyllableVocab()
@@ -244,7 +251,7 @@ def create_ctc_dataloader(
                     audio = load_audio_wav(sent.audio_path, self.sample_rate)
                 audio = audio.copy()
 
-                # Augmentation
+                # Augmentation (matching V6)
                 if self.augment:
                     # Speed variation
                     if speed_variation > 0:
@@ -254,6 +261,20 @@ def create_ctc_dataloader(
                             if new_length > 1:
                                 indices = np.linspace(0, len(audio) - 1, new_length)
                                 audio = np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
+
+                    # Pitch shift
+                    if pitch_shift_semitones > 0:
+                        semitones = np.random.uniform(-pitch_shift_semitones, pitch_shift_semitones)
+                        if abs(semitones) > 0.1:
+                            audio = pitch_shift(audio, semitones, sr=self.sample_rate)
+
+                    # Formant shift
+                    if formant_shift_percent > 0:
+                        shift_ratio = 1.0 + np.random.uniform(
+                            -formant_shift_percent, formant_shift_percent
+                        ) / 100.0
+                        if abs(shift_ratio - 1.0) > 0.01:
+                            audio = formant_shift(audio, shift_ratio, sr=self.sample_rate)
 
                     # Noise
                     if noise_snr_db is not None:
@@ -330,15 +351,26 @@ def create_ctc_dataloader(
         target_lengths = torch.tensor([len(s) for s in syl_targets], dtype=torch.long)
 
         # Pad mel to max length in batch: [n_mels, time] -> [batch, n_mels, max_time]
+        # Use silence floor for padding, not zeros!
+        # Zero in mel domain corresponds to high energy (≈ e^0 = 1)
+        # Real silence produces mel values around log(1e-9) ≈ -20.72
         max_time = max(m.shape[1] for m in mels)
         n_mels = mels[0].shape[0]
-        padded_mels = torch.zeros(len(batch), n_mels, max_time, dtype=torch.float32)
+        padded_mels = torch.full((len(batch), n_mels, max_time), MEL_SILENCE_FLOOR, dtype=torch.float32)
         audio_masks = torch.ones(len(batch), max_time, dtype=torch.bool)  # True = padded
 
         for i, m in enumerate(mels):
             t = m.shape[1]
-            padded_mels[i, :, :t] = m
-            audio_masks[i, :t] = False  # False = real audio
+            pad_total = max_time - t
+
+            if random_padding and augment and pad_total > 0:
+                # Random offset: distribute padding between start and end
+                pad_start = np.random.randint(0, pad_total + 1)
+            else:
+                pad_start = 0
+
+            padded_mels[i, :, pad_start:pad_start + t] = m
+            audio_masks[i, pad_start:pad_start + t] = False  # False = real audio
 
         # Concatenate targets for CTCLoss (expects 1D tensor of all targets)
         syl_targets_flat = torch.cat(syl_targets)
@@ -539,12 +571,22 @@ def main():
     parser.add_argument("--n-layers", type=int, default=4)
     parser.add_argument("--dim-feedforward", type=int, default=384)
     parser.add_argument("--attention-window", type=int, default=32)
+    parser.add_argument("--cnn-downsample", type=int, default=16,
+                        help="CNN downsampling factor: 16=6fps, 32=3fps, 8=12fps")
 
-    # Augmentation
+    # Augmentation (matching V6)
     parser.add_argument("--speed-variation", type=float, default=0.1)
-    parser.add_argument("--noise-snr-min", type=float, default=10.0)
-    parser.add_argument("--noise-snr-max", type=float, default=30.0)
-    parser.add_argument("--no-noise", action="store_true")
+    parser.add_argument("--pitch-shift", type=float, default=0.0)
+    parser.add_argument("--formant-shift", type=float, default=0.0)
+    parser.add_argument("--noise-snr-min", type=float, default=10.0,
+                        help="Min SNR for noise augmentation (higher = less noise)")
+    parser.add_argument("--noise-snr-max", type=float, default=30.0,
+                        help="Max SNR for noise augmentation")
+    parser.add_argument("--no-noise", action="store_true",
+                        help="Disable noise augmentation")
+    parser.add_argument("--no-random-padding", action="store_true",
+                        help="Disable random padding augmentation")
+    parser.add_argument("--compile", action="store_true", help="Use torch.compile for optimization")
 
     args = parser.parse_args()
 
@@ -600,30 +642,39 @@ def main():
         dim_feedforward=args.dim_feedforward,
         attention_window=args.attention_window,
         max_audio_frames=int(args.max_duration_s * 100),
+        cnn_downsample=args.cnn_downsample,
     )
     model = SyllablePredictorV7(model_config).to(config.device)
 
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
-    logger.info(f"Architecture: d_model={args.d_model}, n_heads={args.n_heads}, n_layers={args.n_layers}")
+    fps = 100 / args.cnn_downsample  # mel is 100fps (10ms hop)
+    logger.info(f"Architecture: d_model={args.d_model}, n_heads={args.n_heads}, n_layers={args.n_layers}, downsample={args.cnn_downsample}x ({fps:.0f}fps)")
     logger.info(f"Device: {config.device}")
 
     noise_snr_db = None if args.no_noise else (args.noise_snr_min, args.noise_snr_max)
-    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, noise={noise_snr_db}")
+    noise_str = f"SNR {args.noise_snr_min:.0f}-{args.noise_snr_max:.0f}dB" if noise_snr_db else "off"
+    padding_str = "random start/end" if not args.no_random_padding else "end only"
+    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%, noise={noise_str}, padding={padding_str}")
 
     preload = not mel_cache
 
+    random_padding = not args.no_random_padding
     train_loader = create_ctc_dataloader(
         train_sentences, config.batch_size, shuffle=True, augment=True,
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
         speed_variation=args.speed_variation,
+        pitch_shift_semitones=args.pitch_shift,
+        formant_shift_percent=args.formant_shift,
         noise_snr_db=noise_snr_db,
+        random_padding=random_padding,
     )
     val_loader = create_ctc_dataloader(
         val_sentences, config.batch_size, shuffle=False, augment=False,
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
+        random_padding=False,  # Validation always pads at end
     )
     logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 

@@ -53,7 +53,10 @@ class SyllablePredictorConfigV7:
     win_length: int = 400  # 25ms at 16kHz
     max_audio_frames: int = 1500  # ~15 seconds max (flexible)
 
-    # CNN front-end (4x downsampling like V6)
+    # CNN front-end downsampling
+    # 32x = ~3 fps output (1000 mel frames -> 31 output frames for 10s audio)
+    # 16x = ~6 fps, 8x = ~12 fps, 4x = ~25 fps
+    cnn_downsample: int = 32  # Total downsampling factor
     cnn_kernel_size: int = 3
 
     # Transformer architecture
@@ -422,30 +425,14 @@ if TORCH_AVAILABLE:
 
             self.vocab = SyllableVocab()
 
-            # CNN front-end: [n_mels, time] -> [d_model, time//4]
-            self.audio_cnn = nn.Sequential(
-                nn.Conv1d(
-                    config.n_mels,
-                    config.d_model // 2,
-                    kernel_size=config.cnn_kernel_size,
-                    stride=2,
-                    padding=config.cnn_kernel_size // 2,
-                ),
-                nn.BatchNorm1d(config.d_model // 2),
-                nn.GELU(),
-                nn.Conv1d(
-                    config.d_model // 2,
-                    config.d_model,
-                    kernel_size=config.cnn_kernel_size,
-                    stride=2,
-                    padding=config.cnn_kernel_size // 2,
-                ),
-                nn.BatchNorm1d(config.d_model),
-                nn.GELU(),
-            )
+            # CNN front-end: [n_mels, time] -> [d_model, time//downsample]
+            # Build CNN with enough stride-2 layers to achieve target downsampling
+            # downsample=32 needs 5 layers (2^5=32), downsample=16 needs 4, etc.
+            self.audio_cnn = self._build_cnn(config)
+            self.cnn_downsample = config.cnn_downsample
 
             # RoPE for transformer
-            max_seq_len = config.max_audio_frames // 4 + 10
+            max_seq_len = config.max_audio_frames // config.cnn_downsample + 10
             self.rope = RotaryPositionalEmbedding(dim=config.d_model, max_len=max_seq_len)
 
             # Sliding window transformer layers
@@ -483,6 +470,50 @@ if TORCH_AVAILABLE:
 
             # CTC decoder
             self.ctc_decoder = CTCDecoder(blank_index=config.blank_index)
+
+        def _build_cnn(self, config: SyllablePredictorConfigV7) -> nn.Sequential:
+            """Build CNN frontend with configurable downsampling.
+
+            Downsampling is achieved via stride-2 convolutions.
+            32x = 5 layers, 16x = 4 layers, 8x = 3 layers, 4x = 2 layers
+            """
+            import math
+            n_layers = int(math.log2(config.cnn_downsample))
+
+            layers = []
+            in_channels = config.n_mels
+
+            for i in range(n_layers):
+                # Gradually increase channels, cap at d_model
+                if i == 0:
+                    out_channels = config.d_model // 4
+                elif i == 1:
+                    out_channels = config.d_model // 2
+                else:
+                    out_channels = config.d_model
+
+                layers.extend([
+                    nn.Conv1d(
+                        in_channels,
+                        out_channels,
+                        kernel_size=config.cnn_kernel_size,
+                        stride=2,
+                        padding=config.cnn_kernel_size // 2,
+                    ),
+                    nn.BatchNorm1d(out_channels),
+                    nn.GELU(),
+                ])
+                in_channels = out_channels
+
+            # Final projection to d_model if not already there
+            if in_channels != config.d_model:
+                layers.extend([
+                    nn.Conv1d(in_channels, config.d_model, kernel_size=1),
+                    nn.BatchNorm1d(config.d_model),
+                    nn.GELU(),
+                ])
+
+            return nn.Sequential(*layers)
 
         def _init_weights(self):
             for module in self.modules():
@@ -526,14 +557,15 @@ if TORCH_AVAILABLE:
             downsampled_len = audio_embed.shape[1]
 
             # Create padding mask for downsampled sequence
+            ds = self.cnn_downsample
             if audio_mask is not None:
                 audio_mask = audio_mask.to(device)
-                # Downsample mask (4x)
-                ds_len = (audio_mask.shape[1] + 3) // 4
+                # Downsample mask
+                ds_len = (audio_mask.shape[1] + ds - 1) // ds
                 downsampled_mask = torch.zeros(batch_size, ds_len, dtype=torch.bool, device=device)
                 for i in range(min(ds_len, downsampled_len)):
-                    start_idx = i * 4
-                    end_idx = min(start_idx + 4, audio_mask.shape[1])
+                    start_idx = i * ds
+                    end_idx = min(start_idx + ds, audio_mask.shape[1])
                     downsampled_mask[:, i] = audio_mask[:, start_idx:end_idx].all(dim=1)
 
                 if downsampled_mask.shape[1] > downsampled_len:
@@ -600,11 +632,11 @@ if TORCH_AVAILABLE:
                 mel_lengths: [batch] tensor of input mel lengths
 
             Returns:
-                [batch] tensor of output lengths (after 4x downsampling)
+                [batch] tensor of output lengths (after downsampling)
             """
-            # CNN does 4x downsampling with padding
-            # Each Conv1d with stride=2 halves the sequence
-            return (mel_lengths + 3) // 4
+            # CNN does cnn_downsample (e.g., 32x) downsampling with padding
+            ds = self.cnn_downsample
+            return (mel_lengths + ds - 1) // ds
 
         def count_parameters(self) -> tuple[int, int]:
             total = sum(p.numel() for p in self.parameters())
@@ -629,7 +661,8 @@ else:
 
         def forward(self, mel, audio_mask=None):
             batch = mel.shape[0]
-            time = mel.shape[2] // 4
+            ds = self.config.cnn_downsample
+            time = mel.shape[2] // ds
             return (
                 np.random.randn(batch, time, self.config.n_syllables + 1),
                 np.random.randn(batch, time, self.config.n_tones + 1),
@@ -648,7 +681,8 @@ else:
             )
 
         def get_input_lengths(self, mel_lengths):
-            return (mel_lengths + 3) // 4
+            ds = self.config.cnn_downsample
+            return (mel_lengths + ds - 1) // ds
 
         def parameters(self):
             return iter([])
