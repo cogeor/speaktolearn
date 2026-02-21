@@ -455,8 +455,8 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
             logger.info(
                 f"Epoch {epoch+1:3d}/{config.epochs} | "
                 f"Loss: {avg_loss:.4f} (syl={avg_syl_loss:.4f}, tone={avg_tone_loss:.4f}) | "
-                f"Train SER/TER: {train_syl_er:.3f}/{train_tone_er:.3f} | "
-                f"Val SER/TER: {val_syl_er:.3f}/{val_tone_er:.3f} | "
+                f"Train: {train_syl_acc:.4f}/{train_tone_acc:.4f} (SER/TER: {train_syl_er:.3f}/{train_tone_er:.3f}) | "
+                f"Val: {val_syl_acc:.4f}/{val_tone_acc:.4f} (SER/TER: {val_syl_er:.3f}/{val_tone_er:.3f}) | "
                 f"{ms_per_batch:.1f}ms/batch"
             )
 
@@ -465,10 +465,15 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
                 "epoch": epoch + 1,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
+                "val_syl_accuracy": val_syl_acc,
+                "val_tone_accuracy": val_tone_acc,
                 "val_syl_error_rate": val_syl_er,
                 "val_tone_error_rate": val_tone_er,
             }, ckpt_path)
 
+            # CTC model selection uses error rate (lower is better)
+            # Unlike V6 which uses accuracy (higher is better)
+            # Both metrics saved for compatibility with downstream tools
             val_combined = 0.7 * val_syl_er + 0.3 * val_tone_er
             if val_combined < best_combined:
                 best_combined = val_combined
@@ -476,6 +481,8 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
                 torch.save({
                     "epoch": epoch + 1,
                     "model_state_dict": model.state_dict(),
+                    "val_syl_accuracy": val_syl_acc,
+                    "val_tone_accuracy": val_tone_acc,
                     "val_syl_error_rate": val_syl_er,
                     "val_tone_error_rate": val_tone_er,
                 }, best_path)
