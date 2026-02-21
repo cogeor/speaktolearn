@@ -69,9 +69,6 @@ class TrainingConfig:
     log_every_epochs: int = 1
     checkpoint_dir: Path = DEFAULT_CHECKPOINT_DIR
     device: str = "cuda"
-    overfit_test: bool = False
-    overfit_samples: int = 8
-    overfit_steps: int = 200
 
 
 def edit_distance(ref: list, hyp: list) -> int:
@@ -504,22 +501,19 @@ def main():
     parser.add_argument("--max-duration-s", type=float, default=10.0)
 
     parser.add_argument("--resume", type=str, default=None)
-    parser.add_argument("--overfit-test", action="store_true")
 
-    # Model architecture
-    parser.add_argument("--d-model", type=int, default=192)
-    parser.add_argument("--n-heads", type=int, default=6)
-    parser.add_argument("--n-layers", type=int, default=4)
-    parser.add_argument("--dim-feedforward", type=int, default=384)
-    parser.add_argument("--attention-window", type=int, default=32)
-    parser.add_argument("--cnn-downsample", type=int, default=16,
-                        help="CNN downsampling factor: 16=6fps, 32=3fps, 8=12fps")
+    # Model architecture (BiLSTM)
+    parser.add_argument("--lstm-hidden", type=int, default=96,
+                        help="LSTM hidden size (bidirectional doubles this)")
+    parser.add_argument("--lstm-layers", type=int, default=2,
+                        help="Number of BiLSTM layers")
+    parser.add_argument("--cnn-downsample", type=int, default=4,
+                        help="CNN downsampling factor: 4=25fps, 8=12fps")
 
     # Augmentation
     parser.add_argument("--speed-variation", type=float, default=0.1)
     parser.add_argument("--no-random-padding", action="store_true",
                         help="Disable random padding augmentation")
-    parser.add_argument("--compile", action="store_true", help="Use torch.compile for optimization")
 
     args = parser.parse_args()
 
@@ -530,7 +524,6 @@ def main():
         log_every_epochs=args.log_every_epochs,
         checkpoint_dir=args.checkpoint_dir,
         device=args.device,
-        overfit_test=args.overfit_test,
     )
 
     logger = setup_logging(config.checkpoint_dir)
@@ -569,11 +562,8 @@ def main():
 
     from mandarin_grader.model.syllable_predictor_v7 import SyllablePredictorV7, SyllablePredictorConfigV7
     model_config = SyllablePredictorConfigV7(
-        d_model=args.d_model,
-        n_heads=args.n_heads,
-        n_layers=args.n_layers,
-        dim_feedforward=args.dim_feedforward,
-        attention_window=args.attention_window,
+        lstm_hidden=args.lstm_hidden,
+        lstm_layers=args.lstm_layers,
         max_audio_frames=int(args.max_duration_s * 100),
         cnn_downsample=args.cnn_downsample,
     )
@@ -582,7 +572,7 @@ def main():
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
     fps = 100 / args.cnn_downsample  # mel is 100fps (10ms hop)
-    logger.info(f"Architecture: d_model={args.d_model}, n_heads={args.n_heads}, n_layers={args.n_layers}, downsample={args.cnn_downsample}x ({fps:.0f}fps)")
+    logger.info(f"Architecture: BiLSTM d_model={model_config.d_model}, lstm_layers={model_config.lstm_layers}, lstm_hidden={model_config.lstm_hidden}, downsample={args.cnn_downsample}x ({fps:.0f}fps)")
     logger.info(f"Device: {config.device}")
 
     random_padding = not args.no_random_padding
