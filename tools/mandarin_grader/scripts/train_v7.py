@@ -188,14 +188,10 @@ def create_ctc_dataloader(
     batch_size: int,
     shuffle: bool,
     augment: bool,
-    preload: bool = False,
     logger=None,
     mel_cache: dict | None = None,
     max_duration_s: float = 10.0,
     speed_variation: float = 0.1,
-    pitch_shift_semitones: float = 0.0,
-    formant_shift_percent: float = 0.0,
-    noise_snr_db: tuple[float, float] | float | None = (10.0, 30.0),
     random_padding: bool = True,
 ):
     """Create dataloader for CTC training.
@@ -209,7 +205,6 @@ def create_ctc_dataloader(
     from mandarin_grader.model.syllable_predictor_v4 import extract_mel_spectrogram, SyllablePredictorConfigV4
     from mandarin_grader.model.syllable_predictor_v7 import SyllableVocab
     from mandarin_grader.data.autoregressive_dataset import load_audio_wav, spec_augment
-    from mandarin_grader.data.augmentation import pitch_shift, formant_shift
     from mandarin_grader.data.lexicon import _remove_tone_marks
 
     vocab = SyllableVocab()
@@ -223,19 +218,7 @@ def create_ctc_dataloader(
             self.augment = augment
             self.sample_rate = 16000
             self.max_samples = int(max_duration_s * self.sample_rate)
-            self._audio_cache = {}
             self._mel_cache = mel_cache or {}
-
-        def preload_audio(self, progress_callback=None):
-            total = len(self.sentences)
-            for i, sent in enumerate(self.sentences):
-                key = str(sent.audio_path)
-                if key not in self._audio_cache:
-                    self._audio_cache[key] = load_audio_wav(sent.audio_path, self.sample_rate)
-                if progress_callback and (i + 1) % 1000 == 0:
-                    progress_callback(i + 1, total)
-            if progress_callback:
-                progress_callback(total, total)
 
         def __len__(self):
             return len(self.sentences)
@@ -246,60 +229,28 @@ def create_ctc_dataloader(
 
             mel = self._mel_cache.get(key)
             if mel is None:
-                audio = self._audio_cache.get(key)
-                if audio is None:
-                    audio = load_audio_wav(sent.audio_path, self.sample_rate)
-                audio = audio.copy()
+                audio = load_audio_wav(sent.audio_path, self.sample_rate)
 
-                # Augmentation (matching V6)
-                if self.augment:
-                    # Speed variation
-                    if speed_variation > 0:
-                        factor = 1.0 + np.random.uniform(-speed_variation, speed_variation)
-                        if abs(factor - 1.0) > 0.01:
-                            new_length = int(len(audio) / factor)
-                            if new_length > 1:
-                                indices = np.linspace(0, len(audio) - 1, new_length)
-                                audio = np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
-
-                    # Pitch shift
-                    if pitch_shift_semitones > 0:
-                        semitones = np.random.uniform(-pitch_shift_semitones, pitch_shift_semitones)
-                        if abs(semitones) > 0.1:
-                            audio = pitch_shift(audio, semitones, sr=self.sample_rate)
-
-                    # Formant shift
-                    if formant_shift_percent > 0:
-                        shift_ratio = 1.0 + np.random.uniform(
-                            -formant_shift_percent, formant_shift_percent
-                        ) / 100.0
-                        if abs(shift_ratio - 1.0) > 0.01:
-                            audio = formant_shift(audio, shift_ratio, sr=self.sample_rate)
-
-                    # Noise
-                    if noise_snr_db is not None:
-                        signal_power = np.mean(audio ** 2)
-                        if signal_power > 1e-10:
-                            if isinstance(noise_snr_db, tuple):
-                                snr = np.random.uniform(noise_snr_db[0], noise_snr_db[1])
-                            else:
-                                snr = noise_snr_db
-                            snr_linear = 10 ** (snr / 10)
-                            noise_power = signal_power / snr_linear
-                            noise = np.random.randn(len(audio)).astype(np.float32) * np.sqrt(noise_power)
-                            audio = audio + noise
+                # Speed variation augmentation (applied before mel extraction)
+                if self.augment and speed_variation > 0:
+                    factor = 1.0 + np.random.uniform(-speed_variation, speed_variation)
+                    if abs(factor - 1.0) > 0.01:
+                        new_length = int(len(audio) / factor)
+                        if new_length > 1:
+                            indices = np.linspace(0, len(audio) - 1, new_length)
+                            audio = np.interp(indices, np.arange(len(audio)), audio).astype(np.float32)
 
                 # Truncate
                 if len(audio) > self.max_samples:
                     audio = audio[:self.max_samples]
 
                 mel = extract_mel_spectrogram(audio, mel_config)
-                if self.augment:
-                    mel = spec_augment(mel)
-            else:
+
+            # spec_augment (applied after mel extraction)
+            if self.augment:
+                mel = spec_augment(mel.copy() if mel is self._mel_cache.get(key) else mel)
+            elif mel is self._mel_cache.get(key):
                 mel = mel.copy()
-                if self.augment:
-                    mel = spec_augment(mel)
 
             # Target sequences (CTC blank at 0, so syllable IDs start at 1)
             # Vocab.encode returns ID starting at 2 (0=PAD, 1=BOS in old vocab)
@@ -327,18 +278,8 @@ def create_ctc_dataloader(
 
     dataset = CTCDataset(sentences, augment=augment)
 
-    if mel_cache:
-        dataset._mel_cache.update(mel_cache)
-        if logger:
-            logger.info(f"  Injected {len(mel_cache)} precomputed mel entries")
-
-    if preload:
-        def progress(loaded, total):
-            if logger:
-                logger.info(f"  Preloading audio: {loaded}/{total} ({100*loaded/total:.0f}%)")
-        if logger:
-            logger.info("Preloading audio files into memory...")
-        dataset.preload_audio(progress_callback=progress)
+    if mel_cache and logger:
+        logger.info(f"  Using {len(mel_cache)} precomputed mel entries")
 
     def collate_fn(batch):
         """Collate batch with variable-length padding for CTC."""
@@ -574,16 +515,8 @@ def main():
     parser.add_argument("--cnn-downsample", type=int, default=16,
                         help="CNN downsampling factor: 16=6fps, 32=3fps, 8=12fps")
 
-    # Augmentation (matching V6)
+    # Augmentation
     parser.add_argument("--speed-variation", type=float, default=0.1)
-    parser.add_argument("--pitch-shift", type=float, default=0.0)
-    parser.add_argument("--formant-shift", type=float, default=0.0)
-    parser.add_argument("--noise-snr-min", type=float, default=10.0,
-                        help="Min SNR for noise augmentation (higher = less noise)")
-    parser.add_argument("--noise-snr-max", type=float, default=30.0,
-                        help="Max SNR for noise augmentation")
-    parser.add_argument("--no-noise", action="store_true",
-                        help="Disable noise augmentation")
     parser.add_argument("--no-random-padding", action="store_true",
                         help="Disable random padding augmentation")
     parser.add_argument("--compile", action="store_true", help="Use torch.compile for optimization")
@@ -652,27 +585,20 @@ def main():
     logger.info(f"Architecture: d_model={args.d_model}, n_heads={args.n_heads}, n_layers={args.n_layers}, downsample={args.cnn_downsample}x ({fps:.0f}fps)")
     logger.info(f"Device: {config.device}")
 
-    noise_snr_db = None if args.no_noise else (args.noise_snr_min, args.noise_snr_max)
-    noise_str = f"SNR {args.noise_snr_min:.0f}-{args.noise_snr_max:.0f}dB" if noise_snr_db else "off"
-    padding_str = "random start/end" if not args.no_random_padding else "end only"
-    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%, noise={noise_str}, padding={padding_str}")
-
-    preload = not mel_cache
-
     random_padding = not args.no_random_padding
+    padding_str = "random start/end" if random_padding else "end only"
+    logger.info(f"Augmentation: speed=+/-{args.speed_variation*100:.0f}%, spec_augment=on, padding={padding_str}")
+
     train_loader = create_ctc_dataloader(
         train_sentences, config.batch_size, shuffle=True, augment=True,
-        preload=preload, logger=logger, mel_cache=mel_cache,
+        logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
         speed_variation=args.speed_variation,
-        pitch_shift_semitones=args.pitch_shift,
-        formant_shift_percent=args.formant_shift,
-        noise_snr_db=noise_snr_db,
         random_padding=random_padding,
     )
     val_loader = create_ctc_dataloader(
         val_sentences, config.batch_size, shuffle=False, augment=False,
-        preload=preload, logger=logger, mel_cache=mel_cache,
+        logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
         random_padding=False,  # Validation always pads at end
     )
