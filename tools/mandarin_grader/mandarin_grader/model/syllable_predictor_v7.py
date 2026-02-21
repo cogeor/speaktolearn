@@ -1,4 +1,4 @@
-"""Full-Sentence Syllable+Tone Predictor V7 - CTC-based Architecture.
+"""Full-Sentence Syllable+Tone Predictor V7 - CTC-based BiLSTM Architecture.
 
 This model uses CTC (Connectionist Temporal Classification) for sequence prediction,
 outputting per-frame probabilities for syllables and tones.
@@ -6,8 +6,8 @@ outputting per-frame probabilities for syllables and tones.
 Architecture:
     Input: mel [bs, n_mels, time]
     - Audio: mel -> CNN (4x downsampling) -> [bs, time//4, d_model]
-    - Transformer with RoPE and sliding window attention
-    - Per-frame output heads (no position token needed)
+    - Bidirectional LSTM encoder (2 layers)
+    - Per-frame output heads (simple Linear)
     - Output: syllable_logits [bs, time//4, n_syl+1], tone_logits [bs, time//4, n_tone+1]
 
 Key differences from V6:
@@ -21,7 +21,6 @@ Key differences from V6:
 from __future__ import annotations
 
 import json
-import math
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple, Optional
@@ -44,7 +43,7 @@ def load_syllable_vocab() -> list[str]:
 
 @dataclass
 class SyllablePredictorConfigV7:
-    """Configuration for CTC-based transformer model V7."""
+    """Configuration for CTC-based BiLSTM model V7."""
 
     # Audio input
     n_mels: int = 80
@@ -53,21 +52,15 @@ class SyllablePredictorConfigV7:
     win_length: int = 400  # 25ms at 16kHz
     max_audio_frames: int = 1500  # ~15 seconds max (flexible)
 
-    # CNN front-end downsampling
-    # 32x = ~3 fps output (1000 mel frames -> 31 output frames for 10s audio)
-    # 16x = ~6 fps, 8x = ~12 fps, 4x = ~25 fps
-    cnn_downsample: int = 32  # Total downsampling factor
+    # CNN front-end downsampling (4x = 2 layers with stride 2)
+    cnn_downsample: int = 4
     cnn_kernel_size: int = 3
 
-    # Transformer architecture
+    # BiLSTM architecture
     d_model: int = 192
-    n_heads: int = 6
-    n_layers: int = 4
-    dim_feedforward: int = 384
+    lstm_layers: int = 2
+    lstm_hidden: int = 96  # d_model // 2, bidirectional doubles this
     dropout: float = 0.1
-
-    # Sliding window attention
-    attention_window: int = 32
 
     # Vocabulary sizes (CTC blank at index 0)
     n_syllables: int = 530  # Will be updated from vocab
@@ -111,146 +104,6 @@ except ImportError:
 
 if TORCH_AVAILABLE:
 
-    class RotaryPositionalEmbedding(nn.Module):
-        """Rotary Position Embedding (RoPE) - reused from V6."""
-
-        def __init__(self, dim: int, max_len: int = 2048):
-            super().__init__()
-            inv_freq = 1.0 / (10000 ** (torch.arange(0, dim, 2).float() / dim))
-            self.register_buffer("inv_freq", inv_freq)
-            self.max_len = max_len
-            self._init_cache(max_len)
-
-        def _init_cache(self, seq_len: int):
-            t = torch.arange(seq_len, device=self.inv_freq.device)
-            freqs = torch.einsum("i,j->ij", t.float(), self.inv_freq)
-            emb = torch.cat([freqs, freqs], dim=-1)
-            self.register_buffer("cos_cached", emb.cos()[None, :, :], persistent=False)
-            self.register_buffer("sin_cached", emb.sin()[None, :, :], persistent=False)
-
-        def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-            seq_len = x.shape[1]
-            if seq_len > self.cos_cached.shape[1]:
-                self._init_cache(seq_len)
-            return self.cos_cached[:, :seq_len], self.sin_cached[:, :seq_len]
-
-
-    def rotate_half(x: torch.Tensor) -> torch.Tensor:
-        x1, x2 = x[..., :x.shape[-1] // 2], x[..., x.shape[-1] // 2:]
-        return torch.cat([-x2, x1], dim=-1)
-
-
-    def apply_rotary_pos_emb(x: torch.Tensor, cos: torch.Tensor, sin: torch.Tensor) -> torch.Tensor:
-        return (x * cos) + (rotate_half(x) * sin)
-
-
-    class SlidingWindowAttentionLayer(nn.Module):
-        """Transformer layer using SDPA with sliding window attention mask.
-
-        Simplified from V6 - no global attention tokens needed for CTC.
-        """
-
-        def __init__(
-            self,
-            d_model: int,
-            nhead: int,
-            dim_feedforward: int,
-            dropout: float = 0.1,
-            attention_window: int = 32,
-        ):
-            super().__init__()
-            self.d_model = d_model
-            self.nhead = nhead
-            self.head_dim = d_model // nhead
-            self.attention_window = attention_window
-            self.dropout_p = dropout
-
-            # Projections
-            self.q_proj = nn.Linear(d_model, d_model)
-            self.k_proj = nn.Linear(d_model, d_model)
-            self.v_proj = nn.Linear(d_model, d_model)
-            self.out_proj = nn.Linear(d_model, d_model)
-
-            # FFN
-            self.linear1 = nn.Linear(d_model, dim_feedforward)
-            self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-            # Norms and dropout
-            self.norm1 = nn.LayerNorm(d_model)
-            self.norm2 = nn.LayerNorm(d_model)
-            self.dropout = nn.Dropout(dropout)
-            self.dropout1 = nn.Dropout(dropout)
-            self.dropout2 = nn.Dropout(dropout)
-
-            self.activation = nn.GELU()
-            self._attn_mask_cache = {}
-
-        def _get_attn_mask(self, seq_len: int, device: torch.device):
-            """Get sliding window attention mask (no global tokens for CTC)."""
-            cache_key = (seq_len, str(device))
-            if cache_key not in self._attn_mask_cache:
-                idx = torch.arange(seq_len, device=device)
-                # Sliding window: |q - kv| <= window_size
-                local_mask = (idx.unsqueeze(0) - idx.unsqueeze(1)).abs() <= self.attention_window
-                # Convert to additive mask
-                attn_mask = torch.zeros(seq_len, seq_len, device=device)
-                attn_mask.masked_fill_(~local_mask, float('-inf'))
-                self._attn_mask_cache[cache_key] = attn_mask
-            return self._attn_mask_cache[cache_key]
-
-        def forward(
-            self,
-            src: torch.Tensor,
-            cos: torch.Tensor,
-            sin: torch.Tensor,
-            src_key_padding_mask: torch.Tensor | None = None,
-        ) -> torch.Tensor:
-            # Pre-norm
-            x = self.norm1(src)
-            x = src + self._sa_block(x, cos, sin, src_key_padding_mask)
-            x = x + self._ff_block(self.norm2(x))
-            return x
-
-        def _sa_block(
-            self,
-            x: torch.Tensor,
-            cos: torch.Tensor,
-            sin: torch.Tensor,
-            key_padding_mask: torch.Tensor | None,
-        ) -> torch.Tensor:
-            batch_size, seq_len, _ = x.shape
-
-            q = self.q_proj(x).view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
-            k = self.k_proj(x).view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
-            v = self.v_proj(x).view(batch_size, seq_len, self.nhead, self.head_dim).transpose(1, 2)
-
-            # Apply RoPE
-            cos_head = cos.view(1, seq_len, self.nhead, self.head_dim).transpose(1, 2)
-            sin_head = sin.view(1, seq_len, self.nhead, self.head_dim).transpose(1, 2)
-            q = apply_rotary_pos_emb(q, cos_head, sin_head)
-            k = apply_rotary_pos_emb(k, cos_head, sin_head)
-
-            # Sliding window mask
-            attn_mask = self._get_attn_mask(seq_len, x.device)
-
-            # Combine with padding mask
-            if key_padding_mask is not None:
-                padding_mask = key_padding_mask.unsqueeze(1).unsqueeze(2)
-                attn_mask = attn_mask.unsqueeze(0) + padding_mask.float().masked_fill(padding_mask, float('-inf'))
-
-            attn_output = F.scaled_dot_product_attention(
-                q, k, v,
-                attn_mask=attn_mask,
-                dropout_p=self.dropout_p if self.training else 0.0,
-            )
-
-            attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
-            return self.dropout1(self.out_proj(attn_output))
-
-        def _ff_block(self, x: torch.Tensor) -> torch.Tensor:
-            return self.dropout2(self.linear2(self.activation(self.linear1(x))))
-
-
     class CTCDecoder:
         """CTC decoder for converting frame-level logits to sequences."""
 
@@ -258,28 +111,17 @@ if TORCH_AVAILABLE:
             self.blank_index = blank_index
 
         def greedy_decode(self, logits: torch.Tensor) -> List[List[int]]:
-            """Greedy CTC decoding: argmax + collapse + remove blanks.
-
-            Args:
-                logits: [batch, time, vocab_size]
-
-            Returns:
-                List of decoded sequences (one per batch)
-            """
-            # Get most likely token at each frame
-            predictions = logits.argmax(dim=-1)  # [batch, time]
+            """Greedy CTC decoding: argmax + collapse + remove blanks."""
+            predictions = logits.argmax(dim=-1)
 
             decoded = []
             for seq in predictions:
-                # Collapse repeated tokens
                 collapsed = []
                 prev = None
                 for token in seq.tolist():
                     if token != prev:
                         collapsed.append(token)
                         prev = token
-
-                # Remove blank tokens
                 result = [t for t in collapsed if t != self.blank_index]
                 decoded.append(result)
 
@@ -289,11 +131,7 @@ if TORCH_AVAILABLE:
             self,
             logits: torch.Tensor,
         ) -> Tuple[List[List[int]], List[List[float]]]:
-            """Greedy decode with per-token probabilities.
-
-            Returns:
-                Tuple of (decoded_sequences, per_token_probabilities)
-            """
+            """Greedy decode with per-token probabilities."""
             probs = F.softmax(logits, dim=-1)
             predictions = logits.argmax(dim=-1)
 
@@ -325,28 +163,12 @@ if TORCH_AVAILABLE:
             logits: torch.Tensor,
             target_ids: List[int],
         ) -> List[float]:
-            """Score pronunciation by finding max probability for each target syllable.
-
-            This is the core grading logic for pronunciation assessment:
-            1. Apply softmax to get per-frame probabilities
-            2. For each target syllable, find frames where that syllable has highest prob
-            3. Take the max probability across those frames as the score
-
-            Args:
-                logits: [time, vocab_size] frame-level logits (single sample)
-                target_ids: List of target syllable/tone IDs to match
-
-            Returns:
-                List of per-target scores (0.0 to 1.0)
-            """
-            probs = F.softmax(logits, dim=-1)  # [time, vocab]
+            """Score pronunciation by finding max probability for each target syllable."""
+            probs = F.softmax(logits, dim=-1)
 
             scores = []
             for target_id in target_ids:
-                # Get probability of target at each frame
-                target_probs = probs[:, target_id]  # [time]
-
-                # Find max probability for this target
+                target_probs = probs[:, target_id]
                 max_prob = target_probs.max().item()
                 scores.append(max_prob)
 
@@ -357,21 +179,8 @@ if TORCH_AVAILABLE:
             logits: torch.Tensor,
             target_ids: List[int],
         ) -> Tuple[List[float], List[int]]:
-            """Score with frame alignment - assigns frames to target syllables.
-
-            More sophisticated grading that considers temporal order:
-            1. Find best frame for each target syllable in sequence
-            2. Ensure frames are monotonically increasing (respects time)
-            3. Return scores and aligned frame indices
-
-            Args:
-                logits: [time, vocab_size] frame-level logits
-                target_ids: List of target syllable/tone IDs
-
-            Returns:
-                Tuple of (per_target_scores, aligned_frame_indices)
-            """
-            probs = F.softmax(logits, dim=-1)  # [time, vocab]
+            """Score with frame alignment - assigns frames to target syllables."""
+            probs = F.softmax(logits, dim=-1)
             n_frames = probs.shape[0]
             n_targets = len(target_ids)
 
@@ -383,8 +192,6 @@ if TORCH_AVAILABLE:
             min_frame = 0
 
             for i, target_id in enumerate(target_ids):
-                # Search from min_frame to end (or proportional window)
-                # Allow some flexibility but maintain order
                 max_search_frame = min(n_frames, min_frame + (n_frames - min_frame) // max(1, n_targets - i))
                 max_search_frame = max(max_search_frame, min_frame + 1)
 
@@ -400,20 +207,18 @@ if TORCH_AVAILABLE:
 
                 scores.append(score)
                 aligned_frames.append(best_frame)
-                min_frame = best_frame + 1  # Next target must come after
+                min_frame = best_frame + 1
 
             return scores, aligned_frames
 
 
     class SyllablePredictorV7(nn.Module):
-        """CTC-based transformer for syllable+tone prediction.
+        """CTC-based BiLSTM for syllable+tone prediction.
 
         Architecture:
         1. Audio CNN: mel frames -> d_model (4x sequence reduction)
-        2. Transformer with RoPE and sliding window attention
-        3. Per-frame output heads for syllable and tone
-
-        No position tokens needed - CTC learns alignment from targets.
+        2. Bidirectional LSTM encoder (2 layers)
+        3. Per-frame Linear output heads for syllable and tone
         """
 
         def __init__(self, config: SyllablePredictorConfigV7 | None = None):
@@ -425,95 +230,36 @@ if TORCH_AVAILABLE:
 
             self.vocab = SyllableVocab()
 
-            # CNN front-end: [n_mels, time] -> [d_model, time//downsample]
-            # Build CNN with enough stride-2 layers to achieve target downsampling
-            # downsample=32 needs 5 layers (2^5=32), downsample=16 needs 4, etc.
-            self.audio_cnn = self._build_cnn(config)
+            # CNN front-end: [n_mels, time] -> [d_model, time//4]
+            # 2 layers with stride 2 each = 4x downsampling
+            self.audio_cnn = nn.Sequential(
+                nn.Conv1d(config.n_mels, config.d_model // 2, kernel_size=config.cnn_kernel_size, stride=2, padding=config.cnn_kernel_size // 2),
+                nn.BatchNorm1d(config.d_model // 2),
+                nn.GELU(),
+                nn.Conv1d(config.d_model // 2, config.d_model, kernel_size=config.cnn_kernel_size, stride=2, padding=config.cnn_kernel_size // 2),
+                nn.BatchNorm1d(config.d_model),
+                nn.GELU(),
+            )
             self.cnn_downsample = config.cnn_downsample
 
-            # RoPE for transformer
-            max_seq_len = config.max_audio_frames // config.cnn_downsample + 10
-            self.rope = RotaryPositionalEmbedding(dim=config.d_model, max_len=max_seq_len)
-
-            # Sliding window transformer layers
-            self.transformer_layers = nn.ModuleList([
-                SlidingWindowAttentionLayer(
-                    d_model=config.d_model,
-                    nhead=config.n_heads,
-                    dim_feedforward=config.dim_feedforward,
-                    dropout=config.dropout,
-                    attention_window=config.attention_window,
-                )
-                for _ in range(config.n_layers)
-            ])
-
-            self.output_norm = nn.LayerNorm(config.d_model)
-
-            # CTC output heads (vocab_size + 1 for blank token at index 0)
-            # Syllable head: blank + n_syllables
-            self.syllable_head = nn.Sequential(
-                nn.Linear(config.d_model, config.d_model),
-                nn.GELU(),
-                nn.Dropout(config.dropout),
-                nn.Linear(config.d_model, config.n_syllables + 1),
+            # Bidirectional LSTM encoder
+            self.lstm = nn.LSTM(
+                input_size=config.d_model,
+                hidden_size=config.lstm_hidden,
+                num_layers=config.lstm_layers,
+                batch_first=True,
+                bidirectional=True,
+                dropout=config.dropout if config.lstm_layers > 1 else 0,
             )
 
-            # Tone head: blank + n_tones
-            self.tone_head = nn.Sequential(
-                nn.Linear(config.d_model, config.d_model // 2),
-                nn.GELU(),
-                nn.Dropout(config.dropout),
-                nn.Linear(config.d_model // 2, config.n_tones + 1),
-            )
+            # Simple Linear output heads (vocab_size + 1 for blank token at index 0)
+            self.syllable_head = nn.Linear(config.d_model, config.n_syllables + 1)
+            self.tone_head = nn.Linear(config.d_model, config.n_tones + 1)
 
             self._init_weights()
 
             # CTC decoder
             self.ctc_decoder = CTCDecoder(blank_index=config.blank_index)
-
-        def _build_cnn(self, config: SyllablePredictorConfigV7) -> nn.Sequential:
-            """Build CNN frontend with configurable downsampling.
-
-            Downsampling is achieved via stride-2 convolutions.
-            32x = 5 layers, 16x = 4 layers, 8x = 3 layers, 4x = 2 layers
-            """
-            import math
-            n_layers = int(math.log2(config.cnn_downsample))
-
-            layers = []
-            in_channels = config.n_mels
-
-            for i in range(n_layers):
-                # Gradually increase channels, cap at d_model
-                if i == 0:
-                    out_channels = config.d_model // 4
-                elif i == 1:
-                    out_channels = config.d_model // 2
-                else:
-                    out_channels = config.d_model
-
-                layers.extend([
-                    nn.Conv1d(
-                        in_channels,
-                        out_channels,
-                        kernel_size=config.cnn_kernel_size,
-                        stride=2,
-                        padding=config.cnn_kernel_size // 2,
-                    ),
-                    nn.BatchNorm1d(out_channels),
-                    nn.GELU(),
-                ])
-                in_channels = out_channels
-
-            # Final projection to d_model if not already there
-            if in_channels != config.d_model:
-                layers.extend([
-                    nn.Conv1d(in_channels, config.d_model, kernel_size=1),
-                    nn.BatchNorm1d(config.d_model),
-                    nn.GELU(),
-                ])
-
-            return nn.Sequential(*layers)
 
         def _init_weights(self):
             for module in self.modules():
@@ -535,7 +281,7 @@ if TORCH_AVAILABLE:
 
             Args:
                 mel: Mel spectrogram [batch, n_mels, time]
-                audio_mask: Padding mask [batch, time], True = padded
+                audio_mask: Padding mask [batch, time], True = padded (unused in BiLSTM)
 
             Returns:
                 Tuple of:
@@ -548,48 +294,16 @@ if TORCH_AVAILABLE:
             device = next(self.parameters()).device
             mel = mel.to(device)
 
-            batch_size = mel.shape[0]
-            original_len = mel.shape[2]
-
             # CNN: [batch, n_mels, time] -> [batch, d_model, time//4]
-            audio_embed = self.audio_cnn(mel)
-            audio_embed = audio_embed.transpose(1, 2)  # [batch, time//4, d_model]
-            downsampled_len = audio_embed.shape[1]
+            x = self.audio_cnn(mel)
+            x = x.transpose(1, 2)  # [batch, time//4, d_model]
 
-            # Create padding mask for downsampled sequence
-            ds = self.cnn_downsample
-            if audio_mask is not None:
-                audio_mask = audio_mask.to(device)
-                # Downsample mask
-                ds_len = (audio_mask.shape[1] + ds - 1) // ds
-                downsampled_mask = torch.zeros(batch_size, ds_len, dtype=torch.bool, device=device)
-                for i in range(min(ds_len, downsampled_len)):
-                    start_idx = i * ds
-                    end_idx = min(start_idx + ds, audio_mask.shape[1])
-                    downsampled_mask[:, i] = audio_mask[:, start_idx:end_idx].all(dim=1)
-
-                if downsampled_mask.shape[1] > downsampled_len:
-                    downsampled_mask = downsampled_mask[:, :downsampled_len]
-                elif downsampled_mask.shape[1] < downsampled_len:
-                    pad = torch.ones(batch_size, downsampled_len - downsampled_mask.shape[1],
-                                     dtype=torch.bool, device=device)
-                    downsampled_mask = torch.cat([downsampled_mask, pad], dim=1)
-            else:
-                downsampled_mask = None
-
-            # Get RoPE
-            cos, sin = self.rope(audio_embed)
-
-            # Transformer
-            encoded = audio_embed
-            for layer in self.transformer_layers:
-                encoded = layer(encoded, cos, sin, src_key_padding_mask=downsampled_mask)
-
-            encoded = self.output_norm(encoded)
+            # BiLSTM: [batch, time//4, d_model] -> [batch, time//4, d_model]
+            x, _ = self.lstm(x)
 
             # Per-frame output heads
-            syllable_logits = self.syllable_head(encoded)  # [batch, time//4, n_syl+1]
-            tone_logits = self.tone_head(encoded)  # [batch, time//4, n_tone+1]
+            syllable_logits = self.syllable_head(x)  # [batch, time//4, n_syl+1]
+            tone_logits = self.tone_head(x)  # [batch, time//4, n_tone+1]
 
             return syllable_logits, tone_logits
 
@@ -612,7 +326,6 @@ if TORCH_AVAILABLE:
             with torch.no_grad():
                 syllable_logits, tone_logits = self.forward(mel, audio_mask)
 
-            # CTC decode
             syllable_ids, syllable_probs_list = self.ctc_decoder.decode_with_probs(syllable_logits)
             tone_ids, tone_probs_list = self.ctc_decoder.decode_with_probs(tone_logits)
 
@@ -626,15 +339,7 @@ if TORCH_AVAILABLE:
             )
 
         def get_input_lengths(self, mel_lengths: torch.Tensor) -> torch.Tensor:
-            """Get output lengths after CNN downsampling (for CTC loss).
-
-            Args:
-                mel_lengths: [batch] tensor of input mel lengths
-
-            Returns:
-                [batch] tensor of output lengths (after downsampling)
-            """
-            # CNN does cnn_downsample (e.g., 32x) downsampling with padding
+            """Get output lengths after CNN downsampling (for CTC loss)."""
             ds = self.cnn_downsample
             return (mel_lengths + ds - 1) // ds
 
@@ -692,14 +397,14 @@ else:
 
 
 if __name__ == "__main__":
-    # Quick test
-    print("Testing SyllablePredictorV7...")
+    print("Testing SyllablePredictorV7 (BiLSTM)...")
 
     if TORCH_AVAILABLE:
         import torch
 
         config = SyllablePredictorConfigV7()
         print(f"Config: n_syllables={config.n_syllables}, n_tones={config.n_tones}")
+        print(f"Config: lstm_layers={config.lstm_layers}, lstm_hidden={config.lstm_hidden}")
 
         model = SyllablePredictorV7(config)
         total_params, trainable_params = model.count_parameters()
@@ -727,6 +432,6 @@ if __name__ == "__main__":
         print(f"Decoded syllables: {len(output.syllable_ids[0])} tokens")
         print(f"Decoded tones: {len(output.tone_ids[0])} tokens")
 
-        print("\n✓ All tests passed!")
+        print("\nAll tests passed!")
     else:
         print("PyTorch not available, skipping tests")
