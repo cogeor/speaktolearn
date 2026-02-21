@@ -109,7 +109,8 @@ def load_training_data(
     logger,
     train_split: float = 0.8,
     max_sentences_per_source: int | None = None,
-) -> tuple[list, list, dict[str, np.ndarray]]:
+    load_test_set: bool = False,
+) -> tuple[list, list, list, dict[str, np.ndarray]]:
     """Load training data (same as V6)."""
     from mandarin_grader.data.synthetic_source import SyntheticDataSource
     from mandarin_grader.data.aishell_tar_source import AISHELL3TarDataSource
@@ -168,7 +169,7 @@ def load_training_data(
     logger.info(f"Total sentences: {len(all_sentences)}")
 
     if not all_sentences:
-        return [], [], {}
+        return [], [], [], {}
 
     np.random.seed(42)
     indices = np.random.permutation(len(all_sentences))
@@ -177,7 +178,39 @@ def load_training_data(
     train = [all_sentences[i] for i in indices[:split_idx]]
     val = [all_sentences[i] for i in indices[split_idx:]]
     logger.info(f"Train: {len(train)}, Val: {len(val)}")
-    return train, val, mel_cache
+
+    # Load test set (official AISHELL-3 test split with different speakers)
+    test_sentences = []
+    if load_test_set:
+        for source_name, data_dir in zip(sources, data_dirs):
+            if source_name != "aishell3":
+                continue
+            try:
+                source = source_classes[source_name]
+                test_sents = source.load(data_dir, split="test")
+                logger.info(f"  Loaded {len(test_sents)} test sentences from {source_name}")
+
+                if hasattr(source, "get_mel_cache"):
+                    test_cache = source.get_mel_cache()
+                    mel_cache.update(test_cache)
+                    logger.info(f"  Test mel cache: {len(test_cache)} files")
+
+                for s in test_sents:
+                    test_sentences.append(SyntheticSentenceInfo(
+                        id=s.id,
+                        audio_path=s.audio_path,
+                        text=s.text,
+                        syllables=s.syllables,
+                        syllable_boundaries=s.syllable_boundaries,
+                        sample_rate=s.sample_rate,
+                        total_samples=s.total_samples,
+                    ))
+            except Exception as e:
+                logger.error(f"  Error loading test set from {source_name}: {e}")
+
+        logger.info(f"Test: {len(test_sentences)}")
+
+    return train, val, test_sentences, mel_cache
 
 
 def create_ctc_dataloader(
@@ -383,7 +416,7 @@ def evaluate(model, dataloader, device: str, logger=None) -> tuple[float, float,
     return syl_exact, tone_exact, syl_er, tone_er
 
 
-def train(model, train_loader, val_loader, config: TrainingConfig, logger, start_epoch: int = 0):
+def train(model, train_loader, val_loader, config: TrainingConfig, logger, start_epoch: int = 0, test_loader=None):
     import torch
     import torch.nn.functional as F
 
@@ -478,6 +511,18 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
             if val_combined < best_combined:
                 best_combined = val_combined
                 best_path = config.checkpoint_dir / "best_model.pt"
+
+                # Evaluate on test set if available
+                test_syl_acc, test_tone_acc, test_syl_er, test_tone_er = 0.0, 0.0, 0.0, 0.0
+                if test_loader is not None:
+                    test_syl_acc, test_tone_acc, test_syl_er, test_tone_er = evaluate(model, test_loader, config.device)
+                    logger.info(
+                        f"  -> New best model! Val ER: {val_combined:.4f} | "
+                        f"Test: {test_syl_acc:.4f}/{test_tone_acc:.4f} (SER/TER: {test_syl_er:.3f}/{test_tone_er:.3f})"
+                    )
+                else:
+                    logger.info(f"  -> New best model! Combined ER: {val_combined:.4f}")
+
                 torch.save({
                     "epoch": epoch + 1,
                     "model_state_dict": model.state_dict(),
@@ -485,8 +530,11 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
                     "val_tone_accuracy": val_tone_acc,
                     "val_syl_error_rate": val_syl_er,
                     "val_tone_error_rate": val_tone_er,
+                    "test_syl_accuracy": test_syl_acc,
+                    "test_tone_accuracy": test_tone_acc,
+                    "test_syl_error_rate": test_syl_er,
+                    "test_tone_error_rate": test_tone_er,
                 }, best_path)
-                logger.info(f"  -> New best model! Combined ER: {val_combined:.4f}")
 
     return best_combined
 
@@ -559,9 +607,10 @@ def main():
 
     logger.info(f"Data sources: {sources}")
 
-    train_sentences, val_sentences, mel_cache = load_training_data(
+    train_sentences, val_sentences, test_sentences, mel_cache = load_training_data(
         sources, data_dirs, logger,
         max_sentences_per_source=args.max_sentences,
+        load_test_set=True,
     )
     if not train_sentences:
         logger.error("No training data!")
@@ -599,7 +648,19 @@ def main():
         max_duration_s=args.max_duration_s,
         random_padding=False,  # Validation always pads at end
     )
-    logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
+
+    # Create test loader if test set available
+    test_loader = None
+    if test_sentences:
+        test_loader = create_ctc_dataloader(
+            test_sentences, config.batch_size, shuffle=False, augment=False,
+            logger=logger, mel_cache=mel_cache,
+            max_duration_s=args.max_duration_s,
+            random_padding=False,
+        )
+        logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}, Test={len(test_loader)}")
+    else:
+        logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
     start_epoch = 0
     if args.resume:
@@ -610,7 +671,7 @@ def main():
             start_epoch = checkpoint.get("epoch", 0)
             logger.info(f"Resumed from {ckpt_path} (epoch {start_epoch})")
 
-    best_er = train(model, train_loader, val_loader, config, logger, start_epoch)
+    best_er = train(model, train_loader, val_loader, config, logger, start_epoch, test_loader)
 
     logger.info("=" * 60)
     logger.info(f"Training complete. Best combined error rate: {best_er:.4f}")
