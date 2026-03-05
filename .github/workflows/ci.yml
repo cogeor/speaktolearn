@@ -139,4 +139,21 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build iOS (no codesign)
-        run: flutter build ios --debug --no-codesign
+        run: |
+          set +e
+          flutter build ios --debug --no-codesign > ios_build_output.txt 2>&1
+          EXIT_CODE=$?
+          cat ios_build_output.txt
+          echo "### iOS Build Output" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          tail -n 100 ios_build_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $EXIT_CODE
+
+      - name: Upload iOS Build Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-build-logs
+          path: apps/mobile_flutter/ios_build_output.txt
+          retention-days: 1
