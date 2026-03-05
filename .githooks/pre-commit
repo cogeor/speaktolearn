@@ -41,4 +41,14 @@ if ! flutter analyze --no-fatal-infos 2>/dev/null; then
 fi
 echo "pre-commit: Analyzer OK"
 
+# Run tests
+echo "pre-commit: running tests..."
+if ! flutter test 2>/dev/null; then
+  echo ""
+  echo "pre-commit: Tests failed!"
+  echo "pre-commit: Fix failing tests before committing."
+  exit 1
+fi
+echo "pre-commit: Tests OK"
+
 echo "pre-commit: All checks passed."
