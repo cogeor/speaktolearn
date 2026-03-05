@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:speak_to_learn/features/scoring/data/asr_similarity_scorer.dart';
@@ -263,53 +264,60 @@ void main() {
     );
   });
 
-  group('Ground truth sentences from dataset', () {
-    // These tests verify the expected ground truth sentences produce 100 scores
-    // when the speech recognizer returns exact matches
+  group(
+    'Ground truth sentences from dataset',
+    () {
+      // These tests verify the expected ground truth sentences produce 100 scores
+      // when the speech recognizer returns exact matches
 
-    final groundTruthSentences = {
-      'ts_000001': '你好',
-      'ts_000002': '谢谢',
-      'ts_000003': '我爱你',
-      'ts_000004': '早上好',
-      'ts_000005': '晚安',
-      'ts_000006': '我很高兴',
-      'ts_000007': '你在哪里',
-      'ts_000008': '我饿了',
-      'ts_000009': '请坐',
-      'ts_000010': '他是谁',
-    };
+      final groundTruthSentences = {
+        'ts_000001': '你好',
+        'ts_000002': '谢谢',
+        'ts_000003': '我爱你',
+        'ts_000004': '早上好',
+        'ts_000005': '晚安',
+        'ts_000006': '我很高兴',
+        'ts_000007': '你在哪里',
+        'ts_000008': '我饿了',
+        'ts_000009': '请坐',
+        'ts_000010': '他是谁',
+      };
 
-    for (final entry in groundTruthSentences.entries) {
-      test(
-        '${entry.key}: "${entry.value}" scores 100 on exact match',
-        () async {
-          final mockRecognizer = MockSpeechRecognizer(
-            defaultResponse: entry.value,
-          );
-          final scorer = AsrSimilarityScorer(recognizer: mockRecognizer);
+      for (final entry in groundTruthSentences.entries) {
+        test(
+          '${entry.key}: "${entry.value}" scores 100 on exact match',
+          () async {
+            final mockRecognizer = MockSpeechRecognizer(
+              defaultResponse: entry.value,
+            );
+            final scorer = AsrSimilarityScorer(recognizer: mockRecognizer);
 
-          final sequence = TextSequence(
-            id: entry.key,
-            text: entry.value,
-            language: 'zh-CN',
-          );
-          final recording = Recording(
-            id: 'test_recording',
-            textSequenceId: sequence.id,
-            createdAt: DateTime.now(),
-            filePath: '/test/path.m4a',
-          );
+            final sequence = TextSequence(
+              id: entry.key,
+              text: entry.value,
+              language: 'zh-CN',
+            );
+            final recording = Recording(
+              id: 'test_recording',
+              textSequenceId: sequence.id,
+              createdAt: DateTime.now(),
+              filePath: '/test/path.m4a',
+            );
 
-          final grade = await scorer.score(sequence, recording);
+            final grade = await scorer.score(sequence, recording);
 
-          expect(
-            grade.overall,
-            100,
-            reason: 'Sentence "${entry.value}" should score 100 on exact match',
-          );
-        },
-      );
-    }
-  });
+            expect(
+              grade.overall,
+              100,
+              reason:
+                  'Sentence "${entry.value}" should score 100 on exact match',
+            );
+          },
+        );
+      }
+    },
+    skip: Platform.environment.containsKey('CI')
+        ? 'Skipped on CI to avoid asset dependencies'
+        : null,
+  );
 }

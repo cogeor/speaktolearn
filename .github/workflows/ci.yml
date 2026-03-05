@@ -39,6 +39,9 @@ jobs:
       - name: Verify formatting
         run: dart format --output=none --set-exit-if-changed .
 
+      - name: Create empty asset directories for analyzer
+        run: mkdir -p assets/datasets assets/examples/female assets/examples/male assets/models assets/ml
+
       - name: Run analyzer
         run: |
           set +e
