@@ -42,7 +42,15 @@ jobs:
       - name: Run analyzer
         # Note: --no-fatal-infos ignores info-level issues (like avoid_print)
         # Must match .githooks/pre-commit analyzer flags
-        run: flutter analyze --no-fatal-infos
+        run: |
+          set +e
+          flutter analyze --no-fatal-infos > analyzer_output.txt 2>&1
+          EXIT_CODE=$?
+          echo "### Analyzer Output" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          cat analyzer_output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $EXIT_CODE
 
       - name: Run tests
         run: flutter test --coverage
