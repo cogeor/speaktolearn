@@ -40,16 +40,16 @@ jobs:
         run: dart format --output=none --set-exit-if-changed .
 
       - name: Run analyzer
-        # Note: --no-fatal-infos ignores info-level issues (like avoid_print)
-        # Must match .githooks/pre-commit analyzer flags
         run: |
           set +e
           flutter analyze --no-fatal-infos > analyzer_output.txt 2>&1
           EXIT_CODE=$?
-          echo "### Analyzer Output" >> $GITHUB_STEP_SUMMARY
-          echo '```text' >> $GITHUB_STEP_SUMMARY
-          cat analyzer_output.txt >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git checkout -b ci-logs-${{ github.run_id }}
+          git add analyzer_output.txt
+          git commit -m "chore: save analyzer logs [skip ci]" || true
+          git push -f origin ci-logs-${{ github.run_id }} || true
           exit $EXIT_CODE
 
       - name: Run tests
