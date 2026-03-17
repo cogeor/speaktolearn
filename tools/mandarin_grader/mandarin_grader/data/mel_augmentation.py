@@ -410,6 +410,78 @@ def apply_mel_augmentation(
 # Preset configurations
 # -----------------------------------------------------------------------------
 
+# -----------------------------------------------------------------------------
+# Per-utterance normalization utilities
+# -----------------------------------------------------------------------------
+
+def apply_utterance_cmvn(mel: NDArray[np.float32]) -> NDArray[np.float32]:
+    """Per-utterance Cepstral Mean and Variance Normalization.
+
+    Subtracts the per-mel-bin mean and divides by the per-mel-bin standard
+    deviation over the full utterance. This normalizes for channel differences
+    such as volume, EQ, and microphone frequency response.
+
+    Args:
+        mel: Mel spectrogram [n_mels, time]
+
+    Returns:
+        Normalized mel spectrogram with zero mean and unit variance per bin
+    """
+    mean = np.mean(mel, axis=1, keepdims=True)
+    std = np.std(mel, axis=1, keepdims=True)
+    return ((mel - mean) / (std + 1e-5)).astype(np.float32)
+
+
+def apply_pcen(
+    mel: NDArray[np.float32],
+    alpha: float = 0.98,
+    delta: float = 2.0,
+    r: float = 0.5,
+    eps: float = 1e-6,
+    smoothing_coeff: float = 0.025,
+) -> NDArray[np.float32]:
+    """Per-Channel Energy Normalization (PCEN).
+
+    PCEN is a trainable alternative to log-mel that provides automatic
+    gain control and dynamic range compression. It is particularly
+    effective for far-field / noisy recordings.
+
+    Formula: PCEN(x) = (x / (M + eps)^alpha + delta)^r - delta^r
+    where M is an IIR-smoothed version of x (the AGC reference).
+
+    The mel spectrogram is assumed to be in *linear* (power) domain.
+    If your pipeline produces log-mel, exponentiate first:
+        mel_linear = np.exp(log_mel)
+
+    Args:
+        mel: Linear-scale mel spectrogram [n_mels, time]
+        alpha: AGC strength (0 = no AGC, 1 = full gain normalization)
+        delta: Bias term that prevents near-zero input from being boosted
+        r: Compression exponent (0.5 = square-root compression)
+        eps: Stability epsilon added to denominator
+        smoothing_coeff: IIR filter coefficient for AGC envelope estimation.
+            Higher = faster adaptation (more like CMN), lower = slower (more stable).
+            Typical speech value: 0.025 (100ms at 100fps hop rate).
+
+    Returns:
+        PCEN-normalized spectrogram [n_mels, time], float32
+    """
+    n_mels, n_time = mel.shape
+
+    # Compute IIR-smoothed AGC reference M along time axis
+    # M[t] = (1 - s) * M[t-1] + s * mel[t]
+    M = np.zeros_like(mel)
+    M[:, 0] = mel[:, 0]
+    for t in range(1, n_time):
+        M[:, t] = (1.0 - smoothing_coeff) * M[:, t - 1] + smoothing_coeff * mel[:, t]
+
+    # PCEN: (mel / (M + eps)^alpha + delta)^r - delta^r
+    agc = mel / (M + eps) ** alpha
+    pcen_out = (agc + delta) ** r - (delta ** r)
+
+    return pcen_out.astype(np.float32)
+
+
 def get_preset_config(preset: str) -> MelAugmentConfig:
     """Get a preset augmentation configuration.
 

@@ -39,6 +39,10 @@ class CollateFn:
         augment_preset: str = "mobile",
         use_context_mask: bool = False,
         max_syllable_position: int | None = None,
+        signal_aug_rir_dir: str | None = None,
+        signal_aug_noise_dir: str | None = None,
+        signal_aug_codec_prob: float = 0.0,
+        use_pcen: bool = False,
     ):
         self.max_frames = max_frames
         self.random_padding = random_padding
@@ -46,11 +50,16 @@ class CollateFn:
         self.augment_preset = augment_preset
         self.use_context_mask = use_context_mask
         self.max_syllable_position = max_syllable_position
+        self.signal_aug_rir_dir = signal_aug_rir_dir
+        self.signal_aug_noise_dir = signal_aug_noise_dir
+        self.signal_aug_codec_prob = signal_aug_codec_prob
+        self.use_pcen = use_pcen
         # Lazy import to avoid pickling issues
         self._vocab = None
         self._mel_config = None
         self._mask_token = None
         self._pad_token = 0
+        self._waveform_augmenter = None
 
     def _get_vocab(self):
         if self._vocab is None:
@@ -59,6 +68,48 @@ class CollateFn:
             # MASK token = next ID after vocab
             self._mask_token = len(self._vocab)
         return self._vocab
+
+    def _get_waveform_augmenter(self):
+        """Lazily construct WaveformAugmenter when first needed in a worker."""
+        if self._waveform_augmenter is None:
+            from mandarin_grader.data.signal_augmentation import (
+                WaveformAugmenter,
+                WaveformAugmentConfig,
+                RIRConfig,
+                AdditiveNoiseConfig,
+                CodecConfig,
+            )
+            rir_enabled = bool(
+                self.signal_aug_rir_dir or
+                # Enable with synthetic RIR if rir_dir not set but augment is on
+                False
+            )
+            noise_enabled = bool(self.signal_aug_noise_dir)
+            codec_enabled = self.signal_aug_codec_prob > 0.0
+
+            # Only build augmenter if at least one augmentation is requested
+            if rir_enabled or noise_enabled or codec_enabled:
+                cfg = WaveformAugmentConfig(
+                    rir=RIRConfig(
+                        enabled=rir_enabled,
+                        prob=0.5,
+                        rir_dir=self.signal_aug_rir_dir,
+                    ),
+                    noise=AdditiveNoiseConfig(
+                        enabled=noise_enabled,
+                        prob=0.5,
+                        noise_dir=self.signal_aug_noise_dir,
+                    ),
+                    codec=CodecConfig(
+                        enabled=codec_enabled,
+                        prob=self.signal_aug_codec_prob,
+                    ),
+                )
+                self._waveform_augmenter = WaveformAugmenter(cfg)
+            else:
+                # Sentinel: no signal augmentation configured
+                self._waveform_augmenter = False  # type: ignore[assignment]
+        return self._waveform_augmenter
 
     def _get_mel_config(self):
         if self._mel_config is None:
@@ -69,7 +120,7 @@ class CollateFn:
     def __call__(self, batch):
         import torch
         from mandarin_grader.model.syllable_predictor_v4 import extract_mel_spectrogram
-        from mandarin_grader.data.mel_augmentation import get_preset_config, apply_mel_augmentation
+        from mandarin_grader.data.mel_augmentation import get_preset_config, apply_mel_augmentation, apply_utterance_cmvn, apply_pcen
 
         vocab = self._get_vocab()
         mel_config = self._get_mel_config()
@@ -78,19 +129,29 @@ class CollateFn:
         if self.augment:
             mel_aug_config = get_preset_config(self.augment_preset)
 
+        # Resolve waveform augmenter once per batch (lazy, worker-local)
+        waveform_augmenter = self._get_waveform_augmenter() if self.augment else None
+
         mels, positions, target_syls, target_tones = [], [], [], []
         context_ids_list = []
 
         for sample in batch:
-            # 1. Get base mel spectrogram
-            if sample.mel_full is not None:
+            # 1a. Apply signal-domain augmentation on raw audio (before mel extraction)
+            if self.augment and waveform_augmenter and sample.audio_full is not None:
+                sample_audio = waveform_augmenter.augment(
+                    sample.audio_full,
+                    sr=mel_config.sample_rate,
+                )
+                mel = extract_mel_spectrogram(sample_audio, mel_config)
+            # 1b. Get base mel spectrogram from cache or audio
+            elif sample.mel_full is not None:
                 mel = sample.mel_full.copy()
             elif sample.audio_full is not None:
                 mel = extract_mel_spectrogram(sample.audio_full, mel_config)
             else:
                 raise ValueError(f"Sample {sample.sample_id} has neither mel nor audio")
 
-            # 2. Apply augmentation locally within the worker process just before padding
+            # 2. Apply mel-domain augmentation
             if self.augment and mel_aug_config is not None:
                 mel = apply_mel_augmentation(mel, mel_aug_config)
 
@@ -98,12 +159,14 @@ class CollateFn:
             if mel.shape[1] > self.max_frames:
                 mel = mel[:, :self.max_frames]
 
-            # 4. Apply CMVN (Cepstral Mean and Variance Normalization)
-            # Computed per-utterance over only the valid length to handle volume/EQ differences
-            mel_mean = np.mean(mel, axis=1, keepdims=True)
-            mel_std = np.std(mel, axis=1, keepdims=True)
-            # Add epsilon to prevent division by zero for silent frames
-            mel = (mel - mel_mean) / (mel_std + 1e-5)
+            # 4. Per-utterance normalization
+            if self.use_pcen:
+                # PCEN expects linear (power) domain; mel from extract_mel_spectrogram is log-domain
+                mel_linear = np.exp(mel)
+                mel = apply_pcen(mel_linear)
+            else:
+                # Standard CMVN: subtract per-bin mean, divide by per-bin std
+                mel = apply_utterance_cmvn(mel)
 
             mels.append(mel)
             positions.append(sample.position)
@@ -359,6 +422,10 @@ def create_dataloader(
     random_padding: bool = True,
     augment_preset: str = "none",
     use_context_mask: bool = False,
+    signal_aug_rir_dir: str | None = None,
+    signal_aug_noise_dir: str | None = None,
+    signal_aug_codec_prob: float = 0.0,
+    use_pcen: bool = False,
 ):
     """Create dataloader for V6 training.
 
@@ -375,6 +442,10 @@ def create_dataloader(
         random_padding: Whether to randomly place audio within the padded frame
         augment_preset: Named preset for mel-domain augmentations (resolved in CollateFn)
         use_context_mask: Whether to build context_ids for context-mask mode
+        signal_aug_rir_dir: Path to RIR .wav directory (None = synthetic or disabled)
+        signal_aug_noise_dir: Path to noise corpus directory (None = Gaussian or disabled)
+        signal_aug_codec_prob: Probability of codec compression augmentation (0.0 = disabled)
+        use_pcen: If True, apply PCEN normalization instead of CMVN
     """
     from torch.utils.data import DataLoader
     from mandarin_grader.data.full_sentence_dataset import FullSentenceDataset
@@ -409,6 +480,10 @@ def create_dataloader(
         augment_preset=augment_preset,
         use_context_mask=use_context_mask,
         max_syllable_position=max_syllable_position,
+        signal_aug_rir_dir=signal_aug_rir_dir,
+        signal_aug_noise_dir=signal_aug_noise_dir,
+        signal_aug_codec_prob=signal_aug_codec_prob,
+        use_pcen=use_pcen,
     )
 
     # Use multiple workers for parallel data loading/augmentation
@@ -593,6 +668,22 @@ def main():
                         help="Disable random start/end padding (always pad at end)")
     parser.add_argument("--compile", action="store_true", help="Use torch.compile for FlexAttention optimization")
 
+    # Signal-domain (waveform-level) augmentation
+    parser.add_argument("--signal-aug-rir-dir", type=str, default=None,
+                        help="Path to RIR .wav directory (e.g. OpenSLR-28). "
+                             "If omitted, synthetic exponential-decay RIRs are used when RIR augmentation is enabled.")
+    parser.add_argument("--signal-aug-noise-dir", type=str, default=None,
+                        help="Path to noise corpus directory (e.g. MUSAN noise/ sub-folder). "
+                             "Providing this enables additive noise augmentation.")
+    parser.add_argument("--signal-aug-codec-prob", type=float, default=0.0,
+                        help="Probability of applying codec compression simulation per sample "
+                             "(0.0 = disabled, default). Requires ffmpeg on PATH for full simulation.")
+
+    # Per-utterance normalization
+    parser.add_argument("--use-pcen", action="store_true",
+                        help="Use Per-Channel Energy Normalization (PCEN) instead of CMVN. "
+                             "Better for noisy/far-field recordings.")
+
     args = parser.parse_args()
 
     config = TrainingConfig(
@@ -719,6 +810,22 @@ def main():
             )
         logger.info(f"  Random padding: {'enabled' if random_padding else 'disabled'}")
 
+    # Log signal-domain augmentation settings
+    if args.signal_aug_rir_dir or args.signal_aug_noise_dir or args.signal_aug_codec_prob > 0.0:
+        logger.info("Signal-domain augmentation:")
+        if args.signal_aug_rir_dir:
+            logger.info(f"  RIR dir: {args.signal_aug_rir_dir} (prob=0.5)")
+        else:
+            logger.info("  RIR: disabled (set --signal-aug-rir-dir to enable)")
+        if args.signal_aug_noise_dir:
+            logger.info(f"  Noise dir: {args.signal_aug_noise_dir} (prob=0.5, SNR 5-20dB)")
+        else:
+            logger.info("  Additive noise: disabled (set --signal-aug-noise-dir to enable)")
+        if args.signal_aug_codec_prob > 0.0:
+            logger.info(f"  Codec simulation: prob={args.signal_aug_codec_prob:.0%} (32-64 kbps AAC)")
+
+    logger.info(f"Per-utterance normalization: {'PCEN' if args.use_pcen else 'CMVN'}")
+
     preload = not mel_cache
 
     train_loader = create_dataloader(
@@ -729,6 +836,10 @@ def main():
         random_padding=random_padding,
         augment_preset=preset,
         use_context_mask=args.use_context_mask,
+        signal_aug_rir_dir=args.signal_aug_rir_dir,
+        signal_aug_noise_dir=args.signal_aug_noise_dir,
+        signal_aug_codec_prob=args.signal_aug_codec_prob,
+        use_pcen=args.use_pcen,
     )
     val_loader = create_dataloader(
         val_sentences, config.batch_size, shuffle=False, augment=False,
@@ -737,6 +848,7 @@ def main():
         max_syllable_position=args.max_syllable_position,
         random_padding=False,  # Validation always pads at end
         use_context_mask=args.use_context_mask,
+        use_pcen=args.use_pcen,
     )
 
     # Create test loader if test set available
@@ -749,6 +861,7 @@ def main():
             max_syllable_position=args.max_syllable_position,
             random_padding=False,
             use_context_mask=args.use_context_mask,
+            use_pcen=args.use_pcen,
         )
         logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}, Test={len(test_loader)}")
     else:
