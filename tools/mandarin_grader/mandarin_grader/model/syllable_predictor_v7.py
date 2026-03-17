@@ -67,6 +67,11 @@ class SyllablePredictorConfigV7:
     n_tones: int = 5  # Tones 1-4 + neutral
     blank_index: int = 0  # CTC blank token
 
+    # Pitch embedding (F0 bins)
+    use_pitch_embedding: bool = False
+    pitch_n_bins: int = 64   # Number of F0 pitch bins (+ 1 unvoiced token = 65 total)
+    pitch_embed_dim: int = 32  # Embedding dimension for each pitch bin
+
     def __post_init__(self):
         vocab = load_syllable_vocab()
         if vocab:
@@ -242,6 +247,27 @@ if TORCH_AVAILABLE:
             )
             self.cnn_downsample = config.cnn_downsample
 
+            # Optional pitch embedding
+            # Token 0 = unvoiced, tokens 1..n_bins = pitch bins
+            if config.use_pitch_embedding:
+                self.pitch_embedding = nn.Embedding(
+                    config.pitch_n_bins + 1,  # +1 for unvoiced token (index 0)
+                    config.pitch_embed_dim,
+                )
+                # Downsamples pitch token sequence to match CNN output (time//4)
+                # Average-pool groups of cnn_downsample frames
+                self._pitch_pool_size = config.cnn_downsample
+                lstm_input_size = config.d_model + config.pitch_embed_dim
+            else:
+                self.pitch_embedding = None
+                lstm_input_size = config.d_model
+
+            # Input projection fuses CNN features [+pitch embed] -> d_model for LSTM
+            if config.use_pitch_embedding:
+                self.input_proj = nn.Linear(lstm_input_size, config.d_model)
+            else:
+                self.input_proj = None
+
             # Bidirectional LSTM encoder
             self.lstm = nn.LSTM(
                 input_size=config.d_model,
@@ -276,12 +302,16 @@ if TORCH_AVAILABLE:
             self,
             mel: torch.Tensor | np.ndarray,
             audio_mask: torch.Tensor | None = None,
+            pitch_bins: torch.Tensor | np.ndarray | None = None,
         ) -> tuple[torch.Tensor, torch.Tensor]:
             """Forward pass.
 
             Args:
                 mel: Mel spectrogram [batch, n_mels, time]
                 audio_mask: Padding mask [batch, time], True = padded (unused in BiLSTM)
+                pitch_bins: F0 bin indices [batch, time], integer, values 0..n_bins.
+                    0 = unvoiced. Required when config.use_pitch_embedding=True;
+                    ignored otherwise.
 
             Returns:
                 Tuple of:
@@ -298,6 +328,36 @@ if TORCH_AVAILABLE:
             x = self.audio_cnn(mel)
             x = x.transpose(1, 2)  # [batch, time//4, d_model]
 
+            # Optionally concatenate pitch embeddings
+            if self.config.use_pitch_embedding and pitch_bins is not None:
+                if isinstance(pitch_bins, np.ndarray):
+                    pitch_bins = torch.from_numpy(pitch_bins).long()
+                pitch_bins = pitch_bins.to(device)  # [batch, time]
+
+                # Downsample pitch_bins to match CNN output length (time//4).
+                # Take the mode (most common bin) within each group of cnn_downsample
+                # frames by simple decimation: pick the centre frame of each window.
+                ds = self._pitch_pool_size
+                t_full = pitch_bins.shape[1]
+                t_down = x.shape[1]
+
+                # Pad to a multiple of ds if necessary, then reshape and take centre
+                pad_needed = t_down * ds - t_full
+                if pad_needed > 0:
+                    pitch_bins = F.pad(pitch_bins, (0, pad_needed), value=0)
+
+                # Reshape to [batch, t_down, ds] and pick centre frame
+                pitch_down = pitch_bins[:, :t_down * ds].reshape(
+                    pitch_bins.shape[0], t_down, ds
+                )[:, :, ds // 2]  # [batch, t_down]
+
+                # Embed: [batch, t_down] -> [batch, t_down, pitch_embed_dim]
+                pitch_emb = self.pitch_embedding(pitch_down)
+
+                # Concatenate with CNN features and project back to d_model
+                x = torch.cat([x, pitch_emb], dim=-1)  # [batch, t_down, d_model + pitch_embed_dim]
+                x = self.input_proj(x)  # [batch, t_down, d_model]
+
             # BiLSTM: [batch, time//4, d_model] -> [batch, time//4, d_model]
             x, _ = self.lstm(x)
 
@@ -311,20 +371,25 @@ if TORCH_AVAILABLE:
             self,
             mel: torch.Tensor | np.ndarray,
             audio_mask: torch.Tensor | np.ndarray | None = None,
+            pitch_bins: torch.Tensor | np.ndarray | None = None,
         ) -> PredictorOutputV7:
             """Make predictions with CTC decoding."""
             if isinstance(mel, np.ndarray):
                 mel = torch.from_numpy(mel).float()
             if isinstance(audio_mask, np.ndarray):
                 audio_mask = torch.from_numpy(audio_mask).bool()
+            if isinstance(pitch_bins, np.ndarray):
+                pitch_bins = torch.from_numpy(pitch_bins).long()
 
             if mel.dim() == 2:
                 mel = mel.unsqueeze(0)
             if audio_mask is not None and audio_mask.dim() == 1:
                 audio_mask = audio_mask.unsqueeze(0)
+            if pitch_bins is not None and pitch_bins.dim() == 1:
+                pitch_bins = pitch_bins.unsqueeze(0)
 
             with torch.no_grad():
-                syllable_logits, tone_logits = self.forward(mel, audio_mask)
+                syllable_logits, tone_logits = self.forward(mel, audio_mask, pitch_bins)
 
             syllable_ids, syllable_probs_list = self.ctc_decoder.decode_with_probs(syllable_logits)
             tone_ids, tone_probs_list = self.ctc_decoder.decode_with_probs(tone_logits)

@@ -565,6 +565,10 @@ def main():
     parser.add_argument("--cnn-downsample", type=int, default=4,
                         help="CNN downsampling factor: 4=25fps, 8=12fps")
 
+    # Pitch embedding
+    parser.add_argument("--use-pitch-embedding", action="store_true",
+                        help="Add F0 pitch embeddings to V7 feature stack")
+
     # Augmentation
     parser.add_argument("--speed-variation", type=float, default=0.1)
     parser.add_argument("--no-random-padding", action="store_true",
@@ -622,13 +626,15 @@ def main():
         lstm_layers=args.lstm_layers,
         max_audio_frames=int(args.max_duration_s * 100),
         cnn_downsample=args.cnn_downsample,
+        use_pitch_embedding=args.use_pitch_embedding,
     )
     model = SyllablePredictorV7(model_config).to(config.device)
 
     total_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model: {total_params:,} params ({total_params * 4 / 1024 / 1024:.2f} MB)")
     fps = 100 / args.cnn_downsample  # mel is 100fps (10ms hop)
-    logger.info(f"Architecture: BiLSTM d_model={model_config.d_model}, lstm_layers={model_config.lstm_layers}, lstm_hidden={model_config.lstm_hidden}, downsample={args.cnn_downsample}x ({fps:.0f}fps)")
+    pitch_str = f", pitch_embedding=on (n_bins={model_config.pitch_n_bins}, embed_dim={model_config.pitch_embed_dim})" if args.use_pitch_embedding else ", pitch_embedding=off"
+    logger.info(f"Architecture: BiLSTM d_model={model_config.d_model}, lstm_layers={model_config.lstm_layers}, lstm_hidden={model_config.lstm_hidden}, downsample={args.cnn_downsample}x ({fps:.0f}fps){pitch_str}")
     logger.info(f"Device: {config.device}")
 
     random_padding = not args.no_random_padding
