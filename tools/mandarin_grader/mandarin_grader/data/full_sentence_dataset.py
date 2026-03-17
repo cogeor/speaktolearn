@@ -26,7 +26,6 @@ from .autoregressive_dataset import (
     load_audio_wav,
     spec_augment,
 )
-from .augmentation import pitch_shift, formant_shift
 
 
 @dataclass
@@ -41,6 +40,7 @@ class FullSentenceSample:
     target_syllable: str  # Base pinyin of target syllable
     target_tone: Tone  # Tone of target syllable
     n_syllables: int  # Total syllables in sentence
+    context_syllables: list[str] | None = None  # Base pinyin for all positions (for context-mask mode)
 
 
 class FullSentenceDataset:
@@ -68,8 +68,6 @@ class FullSentenceDataset:
         noise_snr_db: tuple[float, float] | float | None = 30.0,
         speed_variation: float = 0.1,
         volume_variation_db: float = 12.0,
-        pitch_shift_semitones: float = 0.0,
-        formant_shift_percent: float = 0.0,
     ):
         """Initialize dataset.
 
@@ -85,8 +83,6 @@ class FullSentenceDataset:
                 - tuple[float, float]: (min_snr, max_snr) range to sample from
             speed_variation: Speed variation fraction (0.1 = ±10%)
             volume_variation_db: Volume variation in dB
-            pitch_shift_semitones: Max pitch shift in semitones (±)
-            formant_shift_percent: Max formant shift in percent (±)
         """
         self.sentences = sentences
         self.max_syllable_position = max_syllable_position
@@ -96,8 +92,6 @@ class FullSentenceDataset:
         self.noise_snr_db = noise_snr_db
         self.speed_variation = speed_variation
         self.volume_variation_db = volume_variation_db
-        self.pitch_shift_semitones = pitch_shift_semitones
-        self.formant_shift_percent = formant_shift_percent
 
         # Build index of (sent_idx, syl_idx) pairs - one sample per syllable like V4
         self._index = []
@@ -140,23 +134,7 @@ class FullSentenceDataset:
         if not self.augment:
             return audio
 
-        # 1. Pitch shift
-        if self.pitch_shift_semitones > 0:
-            semitones = np.random.uniform(
-                -self.pitch_shift_semitones, self.pitch_shift_semitones
-            )
-            if abs(semitones) > 0.1:
-                audio = pitch_shift(audio, semitones, sr=self.sample_rate)
-
-        # 2. Formant shift
-        if self.formant_shift_percent > 0:
-            shift_ratio = 1.0 + np.random.uniform(
-                -self.formant_shift_percent, self.formant_shift_percent
-            ) / 100.0
-            if abs(shift_ratio - 1.0) > 0.01:
-                audio = formant_shift(audio, shift_ratio, sr=self.sample_rate)
-
-        # 3. Speed variation
+        # 1. Speed variation
         if self.speed_variation > 0:
             factor = 1.0 + np.random.uniform(-self.speed_variation, self.speed_variation)
             if abs(factor - 1.0) > 0.01:
@@ -208,6 +186,14 @@ class FullSentenceDataset:
         target_pinyin = _remove_tone_marks(target_syl.pinyin)
         target_tone = target_syl.tone_surface
 
+        # Build context syllables for all positions (for context-mask mode)
+        max_syl = len(sentence.syllables)
+        if self.max_syllable_position is not None:
+            max_syl = min(max_syl, self.max_syllable_position)
+        context_syllables = [
+            _remove_tone_marks(sentence.syllables[i].pinyin) for i in range(max_syl)
+        ]
+
         if mel is None:
             # Apply augmentation
             audio = self._apply_augmentation(audio)
@@ -219,9 +205,8 @@ class FullSentenceDataset:
             mel_full = None
         else:
             audio = None
-            # Apply SpecAugment to mel if augmenting
-            if self.augment:
-                mel = spec_augment(mel.copy())
+            # Augmentations for mel-domain are now handled in CollateFn 
+            # to prevent Windows PyTorch multiprocessing IPC hangs.
             mel_full = mel
 
         return FullSentenceSample(
@@ -233,4 +218,5 @@ class FullSentenceDataset:
             target_syllable=target_pinyin,
             target_tone=target_tone,
             n_syllables=len(sentence.syllables),
+            context_syllables=context_syllables,
         )

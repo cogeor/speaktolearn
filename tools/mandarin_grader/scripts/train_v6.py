@@ -28,6 +28,135 @@ SYNTHETIC_DIR = Path(__file__).parent.parent / "data" / "synthetic_train"
 DEFAULT_CHECKPOINT_DIR = Path(__file__).parent.parent / "checkpoints_v6"
 
 
+class CollateFn:
+    """Picklable collate function for multi-worker DataLoader on Windows."""
+
+    def __init__(
+        self,
+        max_frames: int,
+        random_padding: bool,
+        augment: bool,
+        augment_preset: str = "mobile",
+        use_context_mask: bool = False,
+        max_syllable_position: int | None = None,
+    ):
+        self.max_frames = max_frames
+        self.random_padding = random_padding
+        self.augment = augment
+        self.augment_preset = augment_preset
+        self.use_context_mask = use_context_mask
+        self.max_syllable_position = max_syllable_position
+        # Lazy import to avoid pickling issues
+        self._vocab = None
+        self._mel_config = None
+        self._mask_token = None
+        self._pad_token = 0
+
+    def _get_vocab(self):
+        if self._vocab is None:
+            from mandarin_grader.model.syllable_predictor_v6 import SyllableVocab
+            self._vocab = SyllableVocab()
+            # MASK token = next ID after vocab
+            self._mask_token = len(self._vocab)
+        return self._vocab
+
+    def _get_mel_config(self):
+        if self._mel_config is None:
+            from mandarin_grader.model.syllable_predictor_v4 import SyllablePredictorConfigV4
+            self._mel_config = SyllablePredictorConfigV4()
+        return self._mel_config
+
+    def __call__(self, batch):
+        import torch
+        from mandarin_grader.model.syllable_predictor_v4 import extract_mel_spectrogram
+        from mandarin_grader.data.mel_augmentation import get_preset_config, apply_mel_augmentation
+
+        vocab = self._get_vocab()
+        mel_config = self._get_mel_config()
+
+        mel_aug_config = None
+        if self.augment:
+            mel_aug_config = get_preset_config(self.augment_preset)
+
+        mels, positions, target_syls, target_tones = [], [], [], []
+        context_ids_list = []
+
+        for sample in batch:
+            # 1. Get base mel spectrogram
+            if sample.mel_full is not None:
+                mel = sample.mel_full.copy()
+            elif sample.audio_full is not None:
+                mel = extract_mel_spectrogram(sample.audio_full, mel_config)
+            else:
+                raise ValueError(f"Sample {sample.sample_id} has neither mel nor audio")
+
+            # 2. Apply augmentation locally within the worker process just before padding
+            if self.augment and mel_aug_config is not None:
+                mel = apply_mel_augmentation(mel, mel_aug_config)
+
+            # 3. Truncate to max frames
+            if mel.shape[1] > self.max_frames:
+                mel = mel[:, :self.max_frames]
+
+            # 4. Apply CMVN (Cepstral Mean and Variance Normalization)
+            # Computed per-utterance over only the valid length to handle volume/EQ differences
+            mel_mean = np.mean(mel, axis=1, keepdims=True)
+            mel_std = np.std(mel, axis=1, keepdims=True)
+            # Add epsilon to prevent division by zero for silent frames
+            mel = (mel - mel_mean) / (mel_std + 1e-5)
+
+            mels.append(mel)
+            positions.append(sample.position)
+            target_syls.append(vocab.encode(sample.target_syllable))
+            target_tones.append(sample.target_tone)
+
+            # Build context_ids for context-mask mode
+            if self.use_context_mask:
+                ctx = np.full(self.max_syllable_position, self._pad_token, dtype=np.int64)
+                ctx_syls = sample.context_syllables or []
+                for i in range(self.max_syllable_position):
+                    if i == sample.position:
+                        ctx[i] = self._mask_token
+                    elif i < len(ctx_syls):
+                        ctx[i] = vocab.encode(ctx_syls[i])
+                    # else: stays PAD (short sentence)
+                context_ids_list.append(ctx)
+
+        # Pad mels to max_frames with silence floor
+        # Even though CMVN centers around 0, 0.0 represents average energy, not silence.
+        # Since the mel is now normalized (mean=0, std=1), a 5-sigma outlier is a solid true silence.
+        CMVN_PAD_VALUE = -5.0
+        n_mels = mels[0].shape[0]
+        padded_mels = np.full((len(batch), n_mels, self.max_frames), CMVN_PAD_VALUE, dtype=np.float32)
+        audio_masks = np.ones((len(batch), self.max_frames), dtype=bool)
+
+        for i, mel in enumerate(mels):
+            mel_len = mel.shape[1]
+            if self.random_padding and self.augment and mel_len < self.max_frames:
+                max_offset = self.max_frames - mel_len
+                start_offset = np.random.randint(0, max_offset + 1)
+            else:
+                start_offset = 0
+            end_offset = start_offset + mel_len
+            padded_mels[i, :, start_offset:end_offset] = mel
+            audio_masks[i, start_offset:end_offset] = False
+
+        result = {
+            "mel": torch.tensor(padded_mels, dtype=torch.float32),
+            "position": torch.tensor(positions, dtype=torch.long),
+            "audio_mask": torch.tensor(audio_masks, dtype=torch.bool),
+            "target_syllable": torch.tensor(target_syls, dtype=torch.long),
+            "target_tone": torch.tensor(target_tones, dtype=torch.long),
+        }
+
+        if self.use_context_mask:
+            result["context_ids"] = torch.tensor(
+                np.stack(context_ids_list), dtype=torch.long
+            )
+
+        return result
+
+
 def get_warmup_cosine_scheduler(optimizer, warmup_steps: int, total_steps: int):
     import torch
     import math
@@ -83,16 +212,21 @@ def load_training_data(
     logger,
     train_split: float = 0.8,
     max_sentences_per_source: int | None = None,
-) -> tuple[list, list, dict[str, np.ndarray]]:
+    load_test_set: bool = False,
+) -> tuple[list, list, list, dict[str, np.ndarray]]:
     from mandarin_grader.data.synthetic_source import SyntheticDataSource
     from mandarin_grader.data.aishell_tar_source import AISHELL3TarDataSource
     from mandarin_grader.data.tts_source import TTSDataSource
     from mandarin_grader.data.autoregressive_dataset import SyntheticSentenceInfo
 
+    # Note: AISHELL3TarDataSource works for any tar dataset with same format
+    # (including openai_tts_tar, etc.)
     source_classes = {
         "synthetic": SyntheticDataSource(),
         "aishell3": AISHELL3TarDataSource(),
-        "tts": TTSDataSource(),
+        "openai_tts_tar": AISHELL3TarDataSource(),
+        "tts_tar": AISHELL3TarDataSource(),  # Generic tar format
+        "tts": TTSDataSource(),  # Raw wav format
     }
 
     all_sentences = []
@@ -114,15 +248,20 @@ def load_training_data(
             kwargs = {}
             if max_sentences_per_source:
                 kwargs["max_sentences"] = max_sentences_per_source
-
+            
+            logger.info("  Starting source.load()...")
             sentences = source.load(data_dir, **kwargs)
-            logger.info(f"  Loaded {len(sentences)} sentences from {source_name}")
+            logger.info(f"  Finished source.load(). Loaded {len(sentences)} sentences from {source_name}")
 
+            logger.info("  Starting get_mel_cache()...")
             if hasattr(source, "get_mel_cache"):
                 source_cache = source.get_mel_cache()
                 mel_cache.update(source_cache)
-                logger.info(f"  Mel cache: {len(source_cache)} files pre-loaded")
+                logger.info(f"  Finished get_mel_cache(). Mel cache: {len(source_cache)} files pre-loaded")
+            else:
+                logger.info("  No get_mel_cache method found.")
 
+            logger.info("  Starting appending to all_sentences...")
             for s in sentences:
                 all_sentences.append(SyntheticSentenceInfo(
                     id=s.id,
@@ -133,6 +272,7 @@ def load_training_data(
                     sample_rate=s.sample_rate,
                     total_samples=s.total_samples,
                 ))
+            logger.info("  Finished appending to all_sentences.")
 
         except Exception as e:
             logger.error(f"  Error loading {source_name}: {e}")
@@ -141,16 +281,69 @@ def load_training_data(
     logger.info(f"Total sentences: {len(all_sentences)}")
 
     if not all_sentences:
-        return [], [], {}
+        return [], [], [], {}
 
+    logger.info("  Starting permutation...")
     np.random.seed(42)
     indices = np.random.permutation(len(all_sentences))
     split_idx = int(len(all_sentences) * train_split)
+    logger.info("  Finished permutation.")
 
+    logger.info("  Starting train/val split...")
     train = [all_sentences[i] for i in indices[:split_idx]]
     val = [all_sentences[i] for i in indices[split_idx:]]
     logger.info(f"Train: {len(train)}, Val: {len(val)}")
-    return train, val, mel_cache
+
+    # Load test set (official AISHELL-3 test split with different speakers)
+    test_sentences = []
+    if load_test_set:
+        logger.info("  Starting test set loading...")
+        for source_name, data_dir in zip(sources, data_dirs):
+            if source_name != "aishell3":
+                continue
+            try:
+                source = source_classes[source_name]
+                logger.info(f"    Starting test source.load() for {source_name}...")
+                test_sents = source.load(data_dir, split="test")
+                # Limit the test set to essentially 500 samples so we don't spend ~4 minutes extracting
+                # 24,000+ files from tarballs just for standard evaluation loops.
+                test_sents = test_sents[:500] 
+                logger.info(f"    Loaded {len(test_sents)} test sentences from {source_name} (subset)")
+
+                logger.info(f"    Starting test get_mel_cache() for {source_name}...")
+                if hasattr(source, "get_mel_cache"):
+                    test_cache = source.get_mel_cache()
+                    mel_cache.update(test_cache)
+                    logger.info(f"    Test mel cache: {len(test_cache)} files")
+
+                logger.info(f"    Starting test appending to test_sentences...")
+                for s in test_sents:
+                    test_sentences.append(SyntheticSentenceInfo(
+                        id=s.id,
+                        audio_path=s.audio_path,
+                        text=s.text,
+                        syllables=s.syllables,
+                        syllable_boundaries=s.syllable_boundaries,
+                        sample_rate=s.sample_rate,
+                        total_samples=s.total_samples,
+                    ))
+                logger.info(f"    Finished test appending to test_sentences.")
+            except Exception as e:
+                logger.error(f"  Error loading test set from {source_name}: {e}")
+
+        logger.info(f"Test: {len(test_sentences)}")
+
+    return train, val, test_sentences, mel_cache
+
+
+def _worker_init_fn(worker_id):
+    """Ensure independent random state for each worker process to avoid RNG lock contention."""
+    import numpy as np
+    import random
+    import torch
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 
 def create_dataloader(
@@ -163,22 +356,31 @@ def create_dataloader(
     mel_cache: dict | None = None,
     max_duration_s: float = 10.0,
     max_syllable_position: int | None = None,
-    speed_variation: float = 0.1,
-    pitch_shift_semitones: float = 0.0,
-    formant_shift_percent: float = 0.0,
-    noise_snr_db: tuple[float, float] | float | None = (10.0, 30.0),
     random_padding: bool = True,
+    augment_preset: str = "none",
+    use_context_mask: bool = False,
 ):
-    import torch
+    """Create dataloader for V6 training.
+
+    Args:
+        sentences: List of sentence info objects
+        batch_size: Batch size
+        shuffle: Whether to shuffle data
+        augment: Whether to apply augmentation
+        preload: Whether to preload audio into memory
+        logger: Logger instance
+        mel_cache: Precomputed mel spectrograms cache
+        max_duration_s: Maximum audio duration in seconds
+        max_syllable_position: Only train on syllables at positions < this value
+        random_padding: Whether to randomly place audio within the padded frame
+        augment_preset: Named preset for mel-domain augmentations (resolved in CollateFn)
+        use_context_mask: Whether to build context_ids for context-mask mode
+    """
     from torch.utils.data import DataLoader
     from mandarin_grader.data.full_sentence_dataset import FullSentenceDataset
-    from mandarin_grader.data.autoregressive_dataset import spec_augment
-    from mandarin_grader.model.syllable_predictor_v6 import SyllablePredictorConfigV6, SyllableVocab
-    from mandarin_grader.model.syllable_predictor_v4 import extract_mel_spectrogram, SyllablePredictorConfigV4
+    from mandarin_grader.model.syllable_predictor_v6 import SyllablePredictorConfigV6
 
     config = SyllablePredictorConfigV6()
-    vocab = SyllableVocab()
-    mel_config = SyllablePredictorConfigV4()
 
     dataset = FullSentenceDataset(
         sentences=sentences,
@@ -186,10 +388,6 @@ def create_dataloader(
         max_duration_s=max_duration_s,
         max_syllable_position=max_syllable_position,
         augment=augment,
-        noise_snr_db=noise_snr_db if augment else None,
-        speed_variation=speed_variation,
-        pitch_shift_semitones=pitch_shift_semitones,
-        formant_shift_percent=formant_shift_percent,
     )
 
     if mel_cache:
@@ -206,81 +404,51 @@ def create_dataloader(
         dataset.preload_audio(progress_callback=progress)
 
     max_frames = int(max_duration_s * 100)
+    collate_fn = CollateFn(
+        max_frames, random_padding, augment,
+        augment_preset=augment_preset,
+        use_context_mask=use_context_mask,
+        max_syllable_position=max_syllable_position,
+    )
 
-    def collate_fn(batch):
-        mels, positions, target_syls, target_tones = [], [], [], []
-        mel_lengths = []
-
-        for sample in batch:
-            if sample.mel_full is not None:
-                mel = sample.mel_full
-            elif sample.audio_full is not None:
-                mel = extract_mel_spectrogram(sample.audio_full, mel_config)
-                if augment:
-                    mel = spec_augment(mel)
-            else:
-                raise ValueError(f"Sample {sample.sample_id} has neither mel nor audio")
-
-            if mel.shape[1] > max_frames:
-                mel = mel[:, :max_frames]
-
-            mels.append(mel)
-            mel_lengths.append(mel.shape[1])
-            positions.append(sample.position)
-            target_syls.append(vocab.encode(sample.target_syllable))
-            target_tones.append(sample.target_tone)
-
-        n_mels = mels[0].shape[0]
-        # Use silence floor for padding, not zeros!
-        # Zero in mel domain corresponds to high energy (≈ e^0 = 1)
-        # Real silence produces mel values around log(1e-9) ≈ -20.72
-        padded_mels = np.full((len(batch), n_mels, max_frames), MEL_SILENCE_FLOOR, dtype=np.float32)
-        audio_masks = np.ones((len(batch), max_frames), dtype=bool)  # Start all masked
-        for i, mel in enumerate(mels):
-            mel_len = mel.shape[1]
-            if random_padding and augment and mel_len < max_frames:
-                # Random offset: distribute padding between start and end
-                max_offset = max_frames - mel_len
-                start_offset = np.random.randint(0, max_offset + 1)
-            else:
-                start_offset = 0
-            end_offset = start_offset + mel_len
-            padded_mels[i, :, start_offset:end_offset] = mel
-            audio_masks[i, start_offset:end_offset] = False  # False = real audio (not masked)
-
-        return {
-            "mel": torch.tensor(padded_mels, dtype=torch.float32),
-            "position": torch.tensor(positions, dtype=torch.long),
-            "audio_mask": torch.tensor(audio_masks, dtype=torch.bool),
-            "target_syllable": torch.tensor(target_syls, dtype=torch.long),
-            "target_tone": torch.tensor(target_tones, dtype=torch.long),
-        }
-
+    # Use multiple workers for parallel data loading/augmentation
+    num_workers = 4 if augment else 0
     return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle,
-                      collate_fn=collate_fn, num_workers=0)
+                      collate_fn=collate_fn, num_workers=num_workers,
+                      worker_init_fn=_worker_init_fn if num_workers > 0 else None,
+                      persistent_workers=num_workers > 0)
 
 
-def evaluate(model, dataloader, device: str) -> tuple[float, float]:
+def evaluate(model, dataloader, device: str, max_batches: int | None = None, use_context_mask: bool = False) -> tuple[float, float]:
     import torch
     model.eval()
     syl_correct, tone_correct, total = 0, 0, 0
+    batches_processed = 0
 
     with torch.no_grad():
         for batch in dataloader:
             mel = batch["mel"].to(device)
-            position = batch["position"].to(device)
             audio_mask = batch["audio_mask"].to(device)
 
-            syl_logits, tone_logits = model(mel, position, audio_mask)
+            if use_context_mask and "context_ids" in batch:
+                context_ids = batch["context_ids"].to(device)
+                syl_logits, tone_logits = model(mel, audio_mask=audio_mask, context_ids=context_ids)
+            else:
+                position = batch["position"].to(device)
+                syl_logits, tone_logits = model(mel, position, audio_mask)
 
             syl_correct += (syl_logits.argmax(-1).cpu() == batch["target_syllable"]).sum().item()
             tone_correct += (tone_logits.argmax(-1).cpu() == batch["target_tone"]).sum().item()
             total += mel.shape[0]
 
+            batches_processed += 1
+            if max_batches is not None and batches_processed >= max_batches:
+                break
+
     return syl_correct / max(total, 1), tone_correct / max(total, 1)
 
 
-def train(model, train_loader, val_loader, config: TrainingConfig, logger, start_epoch: int = 0):
+def train(model, train_loader, val_loader, config: TrainingConfig, logger, start_epoch: int = 0, test_loader=None, use_context_mask: bool = False):
     import torch
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
@@ -294,6 +462,8 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
 
     logger.info(f"Starting training from epoch {start_epoch + 1} to {config.epochs}")
     logger.info(f"Warmup steps: {warmup_steps}")
+    if use_context_mask:
+        logger.info("Context-mask mode: ENABLED")
 
     for epoch in range(start_epoch, config.epochs):
         model.train()
@@ -302,13 +472,19 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
 
         for batch in train_loader:
             mel = batch["mel"].to(config.device)
-            position = batch["position"].to(config.device)
             audio_mask = batch["audio_mask"].to(config.device)
             target_syl = batch["target_syllable"].to(config.device)
             target_tone = batch["target_tone"].to(config.device)
 
             optimizer.zero_grad()
-            syl_logits, tone_logits = model(mel, position, audio_mask)
+
+            if use_context_mask and "context_ids" in batch:
+                context_ids = batch["context_ids"].to(config.device)
+                syl_logits, tone_logits = model(mel, audio_mask=audio_mask, context_ids=context_ids)
+            else:
+                position = batch["position"].to(config.device)
+                syl_logits, tone_logits = model(mel, position, audio_mask)
+
             syl_loss = syl_criterion(syl_logits, target_syl)
             tone_loss = tone_criterion(tone_logits, target_tone)
             loss = 0.7 * syl_loss + 0.3 * tone_loss
@@ -320,17 +496,23 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
             total_loss += loss.item()
             num_batches += 1
 
+            if num_batches % 50 == 0:
+                cur_ms_per_batch = ((time.time() - epoch_start) / num_batches) * 1000
+                logger.info(f"  Epoch {epoch+1} | Batch {num_batches}/{len(train_loader)} | Loss: {loss.item():.4f} | {cur_ms_per_batch:.1f}ms/batch")
+
         epoch_time = time.time() - epoch_start
         avg_loss = total_loss / max(num_batches, 1)
         ms_per_batch = (epoch_time / num_batches) * 1000
 
         if (epoch + 1) % config.log_every_epochs == 0 or epoch == config.epochs - 1:
-            train_syl, train_tone = evaluate(model, train_loader, config.device)
-            val_syl, val_tone = evaluate(model, val_loader, config.device)
+            eval_batches = 50  # Hardcoded subsampling to speed up validation
+
+            train_syl, train_tone = evaluate(model, train_loader, config.device, max_batches=eval_batches, use_context_mask=use_context_mask)
+            val_syl, val_tone = evaluate(model, val_loader, config.device, max_batches=eval_batches, use_context_mask=use_context_mask)
 
             logger.info(
                 f"Epoch {epoch+1:3d}/{config.epochs} | Loss: {avg_loss:.4f} | "
-                f"Train: {train_syl:.4f}/{train_tone:.4f} | Val: {val_syl:.4f}/{val_tone:.4f} | "
+                f"Train (sub): {train_syl:.4f}/{train_tone:.4f} | Val (sub): {val_syl:.4f}/{val_tone:.4f} | "
                 f"{ms_per_batch:.1f}ms/batch"
             )
 
@@ -347,13 +529,23 @@ def train(model, train_loader, val_loader, config: TrainingConfig, logger, start
             if val_combined > best_val_acc:
                 best_val_acc = val_combined
                 best_path = config.checkpoint_dir / "best_model.pt"
+
+                # Evaluate on test set if available
+                test_syl, test_tone = 0.0, 0.0
+                if test_loader is not None:
+                    test_syl, test_tone = evaluate(model, test_loader, config.device, max_batches=eval_batches, use_context_mask=use_context_mask)
+                    logger.info(f"  -> New best model! Val (sub): {val_combined:.4f} | Test (sub): {test_syl:.4f}/{test_tone:.4f}")
+                else:
+                    logger.info(f"  -> New best model! Combined (sub): {val_combined:.4f}")
+
                 torch.save({
                     "epoch": epoch + 1,
                     "model_state_dict": model.state_dict(),
                     "val_syl_accuracy": val_syl,
                     "val_tone_accuracy": val_tone,
+                    "test_syl_accuracy": test_syl,
+                    "test_tone_accuracy": test_tone,
                 }, best_path)
-                logger.info(f"  -> New best model! Combined: {val_combined:.4f}")
 
     return best_val_acc
 
@@ -386,15 +578,17 @@ def main():
     parser.add_argument("--dim-feedforward", type=int, default=384)
     parser.add_argument("--attention-window", type=int, default=32)
 
-    parser.add_argument("--speed-variation", type=float, default=0.1)
-    parser.add_argument("--pitch-shift", type=float, default=0.0)
-    parser.add_argument("--formant-shift", type=float, default=0.0)
-    parser.add_argument("--noise-snr-min", type=float, default=10.0,
-                        help="Minimum SNR for noise augmentation (dB)")
-    parser.add_argument("--noise-snr-max", type=float, default=30.0,
-                        help="Maximum SNR for noise augmentation (dB)")
-    parser.add_argument("--no-noise", action="store_true",
-                        help="Disable noise augmentation")
+    # Context-mask mode
+    parser.add_argument("--use-context-mask", action="store_true",
+                        help="Use context-mask mode (BERT-style masked prediction with sentence context). "
+                             "Requires --max-syllable-position to be set.")
+
+    # Mel-domain augmentation (works with precomputed mel cache)
+    parser.add_argument("--augment-preset", type=str, default="mobile",
+                        choices=["none", "light", "studio", "mobile"],
+                        help="Augmentation preset: none, light, studio, mobile (default: mobile)")
+    parser.add_argument("--no-augment", action="store_true",
+                        help="Disable all augmentation (same as --augment-preset none)")
     parser.add_argument("--no-random-padding", action="store_true",
                         help="Disable random start/end padding (always pad at end)")
     parser.add_argument("--compile", action="store_true", help="Use torch.compile for FlexAttention optimization")
@@ -428,7 +622,9 @@ def main():
             if source == "synthetic":
                 data_dirs.append(SYNTHETIC_DIR)
             elif source == "aishell3":
-                data_dirs.append(Path(__file__).parent.parent / "datasets" / "aishell3" / "data_aishell3")
+                data_dirs.append(Path(__file__).parent.parent / "datasets" / "aishell3_tar")
+            elif source == "openai_tts_tar":
+                data_dirs.append(Path(__file__).parent.parent / "datasets" / "openai_tts_tar")
             else:
                 data_dirs.append(Path(__file__).parent.parent / "datasets" / source)
 
@@ -438,9 +634,10 @@ def main():
 
     logger.info(f"Data sources: {sources}")
 
-    train_sentences, val_sentences, mel_cache = load_training_data(
+    train_sentences, val_sentences, test_sentences, mel_cache = load_training_data(
         sources, data_dirs, logger,
         max_sentences_per_source=args.max_sentences,
+        load_test_set=True,
     )
     if not train_sentences:
         logger.error("No training data!")
@@ -454,6 +651,7 @@ def main():
         dim_feedforward=args.dim_feedforward,
         attention_window=args.attention_window,
         max_audio_frames=int(args.max_duration_s * 100),
+        max_context_positions=args.max_syllable_position or 4,
     )
     model = SyllablePredictorV6(model_config).to(config.device)
 
@@ -470,18 +668,56 @@ def main():
         logger.info(f"Max syllable position: {args.max_syllable_position} (only training on first {args.max_syllable_position} syllables)")
     logger.info(f"Attention window: {args.attention_window} (sliding window + global on pos 0)")
     logger.info(f"FlexAttention available: {FLEX_ATTENTION_AVAILABLE}")
+    logger.info(f"Context-mask mode: {'ENABLED' if args.use_context_mask else 'disabled'}")
+    if args.use_context_mask:
+        logger.info(f"  Context positions: {args.max_syllable_position}")
     logger.info(f"Device: {config.device}")
-    # Determine noise config
-    if args.no_noise:
-        noise_snr_db = None
-        noise_str = "disabled"
-    else:
-        noise_snr_db = (args.noise_snr_min, args.noise_snr_max)
-        noise_str = f"SNR {args.noise_snr_min}-{args.noise_snr_max}dB"
+
+    # Configure mel-domain augmentation pipeline
+    from mandarin_grader.data.mel_augmentation import get_preset_config
 
     random_padding = not args.no_random_padding
-    padding_str = "random start/end" if random_padding else "end only"
-    logger.info(f"Augmentation: speed=±{args.speed_variation*100:.0f}%, pitch=±{args.pitch_shift:.1f}st, formant=±{args.formant_shift:.0f}%, noise={noise_str}, padding={padding_str}")
+    preset = "none" if args.no_augment else args.augment_preset
+
+    if preset == "none":
+        mel_aug_config = None
+        logger.info("Augmentation: DISABLED")
+    else:
+        mel_aug_config = get_preset_config(preset)
+        cfg = mel_aug_config
+
+        # Log configuration details
+        logger.info(f"Augmentation preset: {preset}")
+        logger.info(
+            f"  Time stretch: {cfg.time_stretch.range[0]:.2f}-{cfg.time_stretch.range[1]:.2f} "
+            f"(prob={cfg.time_stretch.prob:.0%})"
+        )
+        logger.info(
+            f"  Gain: {cfg.gain.db_range[0]:+.0f} to {cfg.gain.db_range[1]:+.0f}dB "
+            f"(prob={cfg.gain.prob:.0%})"
+        )
+        logger.info(
+            f"  SpecAugment: F={cfg.spec_augment.freq_mask_param}, T={cfg.spec_augment.time_mask_param} "
+            f"(prob={cfg.spec_augment.prob:.0%})"
+        )
+        if cfg.low_shelf_boost.enabled:
+            logger.info(
+                f"  LF boost: bins {cfg.low_shelf_boost.cutoff_bin_range}, "
+                f"{cfg.low_shelf_boost.boost_db_range[0]:.0f}-{cfg.low_shelf_boost.boost_db_range[1]:.0f}dB "
+                f"(prob={cfg.low_shelf_boost.prob:.0%})"
+            )
+        if cfg.spectral_noise.enabled:
+            logger.info(
+                f"  Spectral noise: SNR {cfg.spectral_noise.snr_db_range[0]:.0f}-{cfg.spectral_noise.snr_db_range[1]:.0f}dB "
+                f"(prob={cfg.spectral_noise.prob:.0%})"
+            )
+        if cfg.temporal_smear.enabled:
+            logger.info(
+                f"  Temporal smear: {cfg.temporal_smear.decay_frames_range[0]}-{cfg.temporal_smear.decay_frames_range[1]} frames, "
+                f"wet {cfg.temporal_smear.wet_ratio_range[0]:.0%}-{cfg.temporal_smear.wet_ratio_range[1]:.0%} "
+                f"(prob={cfg.temporal_smear.prob:.0%})"
+            )
+        logger.info(f"  Random padding: {'enabled' if random_padding else 'disabled'}")
 
     preload = not mel_cache
 
@@ -490,20 +726,33 @@ def main():
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
         max_syllable_position=args.max_syllable_position,
-        speed_variation=args.speed_variation,
-        pitch_shift_semitones=args.pitch_shift,
-        formant_shift_percent=args.formant_shift,
-        noise_snr_db=noise_snr_db,
         random_padding=random_padding,
+        augment_preset=preset,
+        use_context_mask=args.use_context_mask,
     )
     val_loader = create_dataloader(
         val_sentences, config.batch_size, shuffle=False, augment=False,
         preload=preload, logger=logger, mel_cache=mel_cache,
         max_duration_s=args.max_duration_s,
         max_syllable_position=args.max_syllable_position,
-        random_padding=False,  # Validation always pads at end for consistency
+        random_padding=False,  # Validation always pads at end
+        use_context_mask=args.use_context_mask,
     )
-    logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
+
+    # Create test loader if test set available
+    test_loader = None
+    if test_sentences:
+        test_loader = create_dataloader(
+            test_sentences, config.batch_size, shuffle=False, augment=False,
+            preload=preload, logger=logger, mel_cache=mel_cache,
+            max_duration_s=args.max_duration_s,
+            max_syllable_position=args.max_syllable_position,
+            random_padding=False,
+            use_context_mask=args.use_context_mask,
+        )
+        logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}, Test={len(test_loader)}")
+    else:
+        logger.info(f"Batches: Train={len(train_loader)}, Val={len(val_loader)}")
 
     start_epoch = 0
     if args.resume:
@@ -514,7 +763,7 @@ def main():
             start_epoch = checkpoint.get("epoch", 0)
             logger.info(f"Resumed from {ckpt_path} (epoch {start_epoch})")
 
-    best_acc = train(model, train_loader, val_loader, config, logger, start_epoch)
+    best_acc = train(model, train_loader, val_loader, config, logger, start_epoch, test_loader, use_context_mask=args.use_context_mask)
 
     logger.info("=" * 60)
     logger.info(f"Training complete. Best combined accuracy: {best_acc:.4f}")
