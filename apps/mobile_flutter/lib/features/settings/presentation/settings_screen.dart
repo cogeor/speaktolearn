@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../app/di.dart';
+import '../../recording/data/export_service.dart';
 import '../../stats/presentation/stats_controller.dart';
 import '../domain/app_settings.dart';
 import 'settings_controller.dart';
@@ -89,6 +91,25 @@ class SettingsScreen extends ConsumerWidget {
                   title: const Text('Clear All Stats'),
                   subtitle: const Text('Remove all progress data'),
                   onTap: () => _clearStats(context, ref),
+                ),
+                const Divider(),
+                // Developer section - only visible in debug builds
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'Developer',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+                _RecordingStatsRow(),
+                ListTile(
+                  leading: const Icon(Icons.folder_zip),
+                  title: const Text('Export All Recordings'),
+                  subtitle: const Text('Zip WAV+JSON corpus and share'),
+                  onTap: () => _exportCorpus(context),
                 ),
               ],
             ],
@@ -193,6 +214,53 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _exportCorpus(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 24),
+            Text('Building corpus zip...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final result = await ExportService().exportCorpus();
+
+      if (context.mounted) Navigator.of(context).pop();
+
+      if (!result.hasFiles) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No recordings found to export.')),
+          );
+        }
+        return;
+      }
+
+      await Share.shareXFiles(
+        [XFile(result.zipPath)],
+        subject: 'SpeakToLearn corpus',
+        text: 'SpeakToLearn corpus (${result.fileCount} files)',
+      );
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   String _voicePreferenceLabel(VoicePreference pref) {
     switch (pref) {
       case VoicePreference.noPreference:
@@ -202,5 +270,41 @@ class SettingsScreen extends ConsumerWidget {
       case VoicePreference.female:
         return 'Female';
     }
+  }
+}
+
+/// Displays WAV count and total size for on-device recordings.
+class _RecordingStatsRow extends StatefulWidget {
+  @override
+  State<_RecordingStatsRow> createState() => _RecordingStatsRowState();
+}
+
+class _RecordingStatsRowState extends State<_RecordingStatsRow> {
+  late Future<RecordingStats> _statsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _statsFuture = ExportService().getStats();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<RecordingStats>(
+      future: _statsFuture,
+      builder: (context, snapshot) {
+        final subtitle = switch (snapshot.connectionState) {
+          ConnectionState.done when snapshot.hasData =>
+            '${snapshot.data!.wavCount} recordings · ${snapshot.data!.formattedSize}',
+          ConnectionState.done => 'Could not load stats',
+          _ => 'Loading...',
+        };
+        return ListTile(
+          leading: const Icon(Icons.mic),
+          title: const Text('Recording Stats'),
+          subtitle: Text(subtitle),
+        );
+      },
+    );
   }
 }
