@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../scoring/domain/grade.dart';
 import '../domain/progress_repository.dart';
 import '../domain/rating_attempt.dart';
 import '../domain/sentence_rating.dart';
@@ -13,13 +14,17 @@ class ProgressRepositoryImpl implements ProgressRepository {
   ProgressRepositoryImpl({
     required Box<dynamic> progressBox,
     required Box<dynamic> attemptsBox,
+    required Box<dynamic> scoreAttemptsBox,
   }) : _progressBox = progressBox,
-       _attemptsBox = attemptsBox;
+       _attemptsBox = attemptsBox,
+       _scoreAttemptsBox = scoreAttemptsBox;
 
   static const _maxAttempts = 50;
+  static const _maxScoreAttempts = 10;
 
   final Box<dynamic> _progressBox;
   final Box<dynamic> _attemptsBox;
+  final Box<dynamic> _scoreAttemptsBox;
 
   @override
   Future<TextSequenceProgress> getProgress(String textSequenceId) async {
@@ -161,6 +166,28 @@ class ProgressRepositoryImpl implements ProgressRepository {
   }
 
   @override
+  Future<void> saveScoreAttempt(String textSequenceId, Grade grade) async {
+    final existing = await getScoreHistory(textSequenceId);
+    final updated = [grade, ...existing];
+    if (updated.length > _maxScoreAttempts) {
+      updated.removeRange(_maxScoreAttempts, updated.length);
+    }
+    await _scoreAttemptsBox.put(
+      textSequenceId,
+      updated.map((g) => g.toJson()).toList(),
+    );
+  }
+
+  @override
+  Future<List<Grade>> getScoreHistory(String textSequenceId) async {
+    final data = _scoreAttemptsBox.get(textSequenceId);
+    if (data == null) return [];
+    return (data as List)
+        .map((item) => Grade.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  @override
   Future<void> generateFakeStats({
     required List<String> sequenceIds,
     int days = 60,
@@ -222,5 +249,6 @@ class ProgressRepositoryImpl implements ProgressRepository {
   Future<void> clearAllStats() async {
     await _progressBox.clear();
     await _attemptsBox.clear();
+    await _scoreAttemptsBox.clear();
   }
 }

@@ -22,4 +22,7 @@ abstract class RecordingRepository {
 
   /// Checks if a recording exists for a text sequence.
   Future<bool> hasRecording(String textSequenceId);
+
+  /// Returns all historical recordings for a text sequence, oldest first.
+  Future<List<Recording>> listHistory(String textSequenceId);
 }

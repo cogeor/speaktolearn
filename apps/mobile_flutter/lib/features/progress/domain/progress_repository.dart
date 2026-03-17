@@ -1,3 +1,4 @@
+import '../../scoring/domain/grade.dart';
 import 'rating_attempt.dart';
 import 'text_sequence_progress.dart';
 
@@ -35,6 +36,15 @@ abstract class ProgressRepository {
 
   /// Returns all rating attempts across all sequences.
   Future<List<RatingAttempt>> getAllAttempts();
+
+  // Score attempt methods
+
+  /// Saves an ML score attempt for a text sequence.
+  /// Keeps the most recent 10 grades per sentence.
+  Future<void> saveScoreAttempt(String textSequenceId, Grade grade);
+
+  /// Returns the ML score history for a text sequence, newest first.
+  Future<List<Grade>> getScoreHistory(String textSequenceId);
 
   // Debug methods
 

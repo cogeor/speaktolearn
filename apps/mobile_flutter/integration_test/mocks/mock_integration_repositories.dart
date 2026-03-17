@@ -9,6 +9,7 @@ import 'package:speak_to_learn/features/progress/domain/progress_repository.dart
 import 'package:speak_to_learn/features/progress/domain/rating_attempt.dart';
 import 'package:speak_to_learn/features/progress/domain/text_sequence_progress.dart';
 import 'package:speak_to_learn/features/recording/domain/audio_recorder.dart';
+import 'package:speak_to_learn/features/scoring/domain/grade.dart';
 import 'package:speak_to_learn/features/recording/domain/recording.dart';
 import 'package:speak_to_learn/features/recording/domain/recording_metadata.dart';
 import 'package:speak_to_learn/features/recording/domain/recording_repository.dart';
@@ -64,6 +65,7 @@ class MockIntegrationProgressRepository implements ProgressRepository {
 
   final Map<String, TextSequenceProgress> _progress;
   final Map<String, List<RatingAttempt>> _attempts = {};
+  final Map<String, List<Grade>> _scoreAttempts = {};
 
   @override
   Future<TextSequenceProgress> getProgress(String textSequenceId) async {
@@ -143,6 +145,17 @@ class MockIntegrationProgressRepository implements ProgressRepository {
   }
 
   @override
+  Future<void> saveScoreAttempt(String textSequenceId, Grade grade) async {
+    final existing = _scoreAttempts[textSequenceId] ?? [];
+    _scoreAttempts[textSequenceId] = [grade, ...existing];
+  }
+
+  @override
+  Future<List<Grade>> getScoreHistory(String textSequenceId) async {
+    return _scoreAttempts[textSequenceId] ?? [];
+  }
+
+  @override
   Future<void> generateFakeStats({
     required List<String> sequenceIds,
     int days = 60,
@@ -155,6 +168,7 @@ class MockIntegrationProgressRepository implements ProgressRepository {
   Future<void> clearAllStats() async {
     _progress.clear();
     _attempts.clear();
+    _scoreAttempts.clear();
   }
 }
 
@@ -185,6 +199,12 @@ class MockIntegrationRecordingRepository implements RecordingRepository {
   @override
   Future<bool> hasRecording(String textSequenceId) async {
     return _recordings.containsKey(textSequenceId);
+  }
+
+  @override
+  Future<List<Recording>> listHistory(String textSequenceId) async {
+    final recording = _recordings[textSequenceId];
+    return recording != null ? [recording] : [];
   }
 }
 

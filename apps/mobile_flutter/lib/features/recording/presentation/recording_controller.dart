@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../core/audio/audio_player.dart' show AudioPlayer, PlaybackState;
 import '../../../core/audio/audio_source.dart';
+import '../../progress/domain/progress_repository.dart';
 import '../../text_sequences/domain/text_sequence.dart';
 import '../../scoring/domain/pronunciation_scorer.dart';
 import '../domain/audio_recorder.dart';
@@ -37,16 +38,19 @@ class RecordingController extends StateNotifier<RecordingState> {
     required RecordingRepository repository,
     required AudioPlayer audioPlayer,
     required PronunciationScorer scorer,
+    required ProgressRepository progressRepository,
   }) : _recorder = recorder,
        _repository = repository,
        _audioPlayer = audioPlayer,
        _scorer = scorer,
+       _progressRepository = progressRepository,
        super(const RecordingState());
 
   final AudioRecorder _recorder;
   final RecordingRepository _repository;
   final AudioPlayer _audioPlayer;
   final PronunciationScorer _scorer;
+  final ProgressRepository _progressRepository;
 
   Timer? _autoStopTimer;
   Timer? _countdownTimer;
@@ -217,6 +221,9 @@ class RecordingController extends StateNotifier<RecordingState> {
 
       // Score the pronunciation using ML scorer
       final grade = await _scorer.score(textSequence, recording);
+
+      // Persist the ML score to Hive for history
+      await _progressRepository.saveScoreAttempt(textSequence.id, grade);
 
       // Write sidecar metadata JSON alongside the WAV file.
       final metadata = RecordingMetadata(

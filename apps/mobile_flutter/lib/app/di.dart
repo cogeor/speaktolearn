@@ -56,9 +56,11 @@ final textSequenceRepositoryProvider = Provider<TextSequenceRepository>((ref) {
 final progressRepositoryProvider = Provider<ProgressRepository>((ref) {
   final progressBox = ref.watch(hiveBoxProvider(HiveBoxes.progress));
   final attemptsBox = ref.watch(hiveBoxProvider(HiveBoxes.attempts));
+  final scoreAttemptsBox = ref.watch(hiveBoxProvider(HiveBoxes.scoreAttempts));
   return ProgressRepositoryImpl(
     progressBox: progressBox,
     attemptsBox: attemptsBox,
+    scoreAttemptsBox: scoreAttemptsBox,
   );
 });
 
@@ -98,6 +100,7 @@ final recordingControllerProvider =
         repository: ref.watch(recordingRepositoryProvider),
         audioPlayer: ref.watch(audioPlayerProvider),
         scorer: ref.watch(pronunciationScorerProvider),
+        progressRepository: ref.watch(progressRepositoryProvider),
       );
     });
 
@@ -136,13 +139,26 @@ Future<String?> _loadDatasetFingerprint() async {
   }
 }
 
+/// Moves the recordings directory to a timestamped backup folder rather than
+/// deleting it, so that recordings made against an older dataset are preserved.
 Future<void> _clearRecordingsDir() async {
   try {
     final appDir = await getApplicationDocumentsDirectory();
     final recordingsDir = Directory('${appDir.path}/recordings');
-    if (await recordingsDir.exists()) {
-      await recordingsDir.delete(recursive: true);
-    }
+    if (!await recordingsDir.exists()) return;
+
+    // Build a timestamp string without colons for a safe directory name.
+    final now = DateTime.now().toUtc();
+    final y = now.year.toString().padLeft(4, '0');
+    final mo = now.month.toString().padLeft(2, '0');
+    final d = now.day.toString().padLeft(2, '0');
+    final h = now.hour.toString().padLeft(2, '0');
+    final mi = now.minute.toString().padLeft(2, '0');
+    final s = now.second.toString().padLeft(2, '0');
+    final ts = '$y$mo${d}T$h$mi${s}Z';
+
+    final backupPath = '${appDir.path}/recordings_backup_$ts';
+    await recordingsDir.rename(backupPath);
   } catch (_) {
     // Non-fatal; best-effort cleanup.
   }
@@ -151,6 +167,7 @@ Future<void> _clearRecordingsDir() async {
 Future<void> _resetStateIfDatasetChanged({
   required Box<dynamic> progressBox,
   required Box<dynamic> attemptsBox,
+  required Box<dynamic> scoreAttemptsBox,
   required Box<dynamic> settingsBox,
 }) async {
   final currentFingerprint = await _loadDatasetFingerprint();
@@ -163,6 +180,7 @@ Future<void> _resetStateIfDatasetChanged({
   if (stored != currentFingerprint) {
     await progressBox.clear();
     await attemptsBox.clear();
+    await scoreAttemptsBox.clear();
     await _clearRecordingsDir();
     await settingsBox.put(_datasetFingerprintKey, currentFingerprint);
   }
@@ -176,9 +194,11 @@ Future<List<Override>> createOverrides() async {
   final progressBox = await Hive.openBox<dynamic>(HiveBoxes.progress);
   final attemptsBox = await Hive.openBox<dynamic>(HiveBoxes.attempts);
   final settingsBox = await Hive.openBox<dynamic>(HiveBoxes.settings);
+  final scoreAttemptsBox = await Hive.openBox<dynamic>(HiveBoxes.scoreAttempts);
   await _resetStateIfDatasetChanged(
     progressBox: progressBox,
     attemptsBox: attemptsBox,
+    scoreAttemptsBox: scoreAttemptsBox,
     settingsBox: settingsBox,
   );
 
@@ -186,5 +206,8 @@ Future<List<Override>> createOverrides() async {
     hiveBoxProvider(HiveBoxes.progress).overrideWithValue(progressBox),
     hiveBoxProvider(HiveBoxes.attempts).overrideWithValue(attemptsBox),
     hiveBoxProvider(HiveBoxes.settings).overrideWithValue(settingsBox),
+    hiveBoxProvider(
+      HiveBoxes.scoreAttempts,
+    ).overrideWithValue(scoreAttemptsBox),
   ];
 }

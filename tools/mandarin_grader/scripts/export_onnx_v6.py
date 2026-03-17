@@ -506,6 +506,16 @@ def main():
     parser.add_argument("--fp16", action="store_true")
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--metadata", action="store_true")
+    parser.add_argument(
+        "--batch",
+        action="store_true",
+        help=(
+            "Acknowledge that the export uses a dynamic batch axis, enabling "
+            "batched syllable inference (all N positions in one ORT call). "
+            "The batch axis is always dynamic; this flag is a no-op kept for "
+            "script documentation purposes."
+        ),
+    )
 
     args = parser.parse_args()
 
@@ -521,6 +531,10 @@ def main():
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
+
+    if args.batch:
+        print("  Note: --batch specified; export uses dynamic batch axis (always enabled).")
+        print("        Flutter inference can call OrtSession.run() with N>1 inputs.")
 
     try:
         model, config, inferred = create_model_for_export(args.checkpoint, device)

@@ -119,16 +119,13 @@ class OnnxMlScorerV6 implements MlScorer {
         '⏱️ [V6] Mel extraction: ${stepWatch.elapsedMilliseconds}ms (${mel[0].length} frames)',
       );
 
-      // 5. For each syllable position, run inference with position index
+      // 5. Run batched inference: all N syllables in one ORT call
       stepWatch.reset();
       stepWatch.start();
-      final scores = <double>[];
-      for (int i = 0; i < syllables.length; i++) {
-        final prob = await _runInference(mel, i, syllables[i]);
-        scores.add(prob);
-      }
+      final scores = await _runBatchedInference(mel, syllables);
       print(
-        '⏱️ [V6] Inference (${syllables.length} syllables): ${stepWatch.elapsedMilliseconds}ms (${(stepWatch.elapsedMilliseconds / syllables.length).toStringAsFixed(1)}ms/syllable)',
+        '⏱️ [V6] Batched inference (${syllables.length} syllables): ${stepWatch.elapsedMilliseconds}ms'
+        ' (${syllables.isNotEmpty ? (stepWatch.elapsedMilliseconds / syllables.length).toStringAsFixed(1) : "0"}ms/syllable)',
       );
 
       // 6. Map syllable scores to character scores
@@ -166,34 +163,31 @@ class OnnxMlScorerV6 implements MlScorer {
     }
   }
 
-  /// Run ONNX inference for a single syllable position.
+  /// Run batched ONNX inference for all syllable positions in one call.
   ///
-  /// V6 uses: mel [1, 80, 1000], position [1, 1], audio_mask [1, 1000]
-  /// Position is 0-based index; model internally handles [BOS=1, position=2+i] tokens.
-  Future<double> _runInference(
+  /// The mel and audio_mask are identical for every syllable (same audio);
+  /// only the position index varies. By batching N syllables into one ORT
+  /// call we eliminate N-1 session round-trips.
+  ///
+  /// Inputs:  mel [N, 80, 1000], position [N, 1], audio_mask [N, 1000]
+  /// Outputs: syllable_logits [N, 532], tone_logits [N, 5]
+  Future<List<double>> _runBatchedInference(
     List<List<double>> mel,
-    int position,
-    String targetSyllable,
+    List<String> syllables,
   ) async {
     if (_session == null || _vocab == null) {
       throw StateError('Scorer not initialized');
     }
 
-    // Get target syllable ID (tone-stripped)
-    final targetSylId = _vocab!.encode(targetSyllable);
-    // Get target tone (1-4, or 0 for neutral)
-    final targetTone = _extractTone(targetSyllable);
-
-    // V6: Always pad to fixed 1000 frames (no centering, just pad at end)
-    final origFrames = mel[0].length;
+    final n = syllables.length;
     final timeFrames = _maxMelFrames;
+    final origFrames = mel[0].length;
     final actualFrames = origFrames < timeFrames ? origFrames : timeFrames;
 
-    // Apply per-utterance CMVN over valid frames only (matches Python training).
-    // Computed per mel bin: (x - mean) / (std + epsilon)
+    // 1. Compute CMVN once over valid frames (shared across all syllables)
     const epsilon = 1e-5;
-    final cmvnMel = List<List<double>>.generate(80, (i) {
-      // Compute mean and std over valid frames for this mel bin
+    final melRow = Float32List(80 * timeFrames);
+    for (int i = 0; i < 80; i++) {
       double sum = 0.0;
       for (int t = 0; t < actualFrames; t++) {
         sum += mel[i][t];
@@ -207,42 +201,44 @@ class OnnxMlScorerV6 implements MlScorer {
       }
       final std = sqrt(sumSqDiff / actualFrames);
 
-      // Normalize valid frames
-      return List<double>.generate(actualFrames, (t) {
-        return (mel[i][t] - mean) / (std + epsilon);
-      });
-    });
-
-    // Prepare mel tensor: [1, 80, 1000]
-    // Copy CMVN-normalized frames, pad remaining with _cmvnPadValue
-    final melFlat = Float32List(80 * timeFrames);
-    for (int i = 0; i < 80; i++) {
       for (int t = 0; t < actualFrames; t++) {
-        melFlat[i * timeFrames + t] = cmvnMel[i][t];
+        melRow[i * timeFrames + t] = (mel[i][t] - mean) / (std + epsilon);
       }
-      // Pad remaining frames with CMVN silence floor
       for (int t = actualFrames; t < timeFrames; t++) {
-        melFlat[i * timeFrames + t] = _cmvnPadValue;
+        melRow[i * timeFrames + t] = _cmvnPadValue;
       }
     }
 
-    // V6: position is a single int64 (0-based index)
-    final positionList = Int64List.fromList([position]);
+    // 2. Tile mel row N times → [N, 80, 1000]
+    final melBatch = Float32List(n * 80 * timeFrames);
+    for (int s = 0; s < n; s++) {
+      melBatch.setRange(s * 80 * timeFrames, (s + 1) * 80 * timeFrames, melRow);
+    }
 
-    // Audio mask: true for padded frames, false for real audio frames
-    final audioMask = List<bool>.generate(timeFrames, (t) => t >= actualFrames);
+    // 3. Build position batch [N, 1]
+    final positionBatch = Int64List(n);
+    for (int s = 0; s < n; s++) {
+      positionBatch[s] = s;
+    }
 
-    final melTensor = OrtValueTensor.createTensorWithDataList(melFlat, [
-      1,
+    // 4. Build audio mask batch [N, 1000] — same mask replicated
+    final maskRow = List<bool>.generate(timeFrames, (t) => t >= actualFrames);
+    final maskBatch = <bool>[];
+    for (int s = 0; s < n; s++) {
+      maskBatch.addAll(maskRow);
+    }
+
+    final melTensor = OrtValueTensor.createTensorWithDataList(melBatch, [
+      n,
       80,
       timeFrames,
     ]);
     final positionTensor = OrtValueTensor.createTensorWithDataList(
-      positionList,
-      [1, 1],
+      positionBatch,
+      [n, 1],
     );
-    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(audioMask, [
-      1,
+    final audioMaskTensor = OrtValueTensor.createTensorWithDataList(maskBatch, [
+      n,
       timeFrames,
     ]);
 
@@ -250,43 +246,46 @@ class OnnxMlScorerV6 implements MlScorer {
     OrtRunOptions? runOptions;
 
     try {
-      final inputs = {
-        'mel': melTensor,
-        'position': positionTensor,
-        'audio_mask': audioMaskTensor,
-      };
-
       runOptions = OrtRunOptions();
-      outputs = await _session!.runAsync(runOptions, inputs, [
-        'syllable_logits',
-        'tone_logits',
-      ]);
+      outputs = await _session!.runAsync(
+        runOptions,
+        {
+          'mel': melTensor,
+          'position': positionTensor,
+          'audio_mask': audioMaskTensor,
+        },
+        ['syllable_logits', 'tone_logits'],
+      );
 
       if (outputs == null || outputs.length < 2) {
         throw StateError('Model did not return expected outputs');
       }
 
-      // Extract syllable probability
-      final sylLogitsData = outputs[0]!.value as List;
-      final sylLogits = (sylLogitsData[0] as List).cast<double>();
-      final sylProbs = _softmax(sylLogits);
-      final sylProb = (targetSylId >= 0 && targetSylId < sylProbs.length)
-          ? sylProbs[targetSylId]
-          : 0.0;
+      // outputs[0].value → List of N rows, each List<double> of 532 logits
+      final allSylLogits = outputs[0]!.value as List;
+      final allToneLogits = outputs[1]!.value as List;
 
-      // Extract tone probability
-      final toneLogitsData = outputs[1]!.value as List;
-      final toneLogits = (toneLogitsData[0] as List).cast<double>();
-      final toneProbs = _softmax(toneLogits);
-      final toneIdx = targetTone > 0 ? targetTone - 1 : 4;
-      final toneProb = (toneIdx >= 0 && toneIdx < toneProbs.length)
-          ? toneProbs[toneIdx]
-          : 1.0;
+      final scores = <double>[];
+      for (int s = 0; s < n; s++) {
+        final targetSylId = _vocab!.encode(syllables[s]);
+        final targetTone = _extractTone(syllables[s]);
 
-      // Combined score: 70% syllable, 30% tone
-      final combined = 0.7 * sylProb + 0.3 * toneProb;
+        final sylLogits = (allSylLogits[s] as List).cast<double>();
+        final sylProbs = _softmax(sylLogits);
+        final sylProb = (targetSylId >= 0 && targetSylId < sylProbs.length)
+            ? sylProbs[targetSylId]
+            : 0.0;
 
-      return combined;
+        final toneLogits = (allToneLogits[s] as List).cast<double>();
+        final toneProbs = _softmax(toneLogits);
+        final toneIdx = targetTone > 0 ? targetTone - 1 : 4;
+        final toneProb = (toneIdx >= 0 && toneIdx < toneProbs.length)
+            ? toneProbs[toneIdx]
+            : 1.0;
+
+        scores.add(0.7 * sylProb + 0.3 * toneProb);
+      }
+      return scores;
     } finally {
       outputs?.forEach((output) => output?.release());
       runOptions?.release();
