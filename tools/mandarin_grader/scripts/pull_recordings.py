@@ -7,8 +7,11 @@ This script automates the workflow:
 3. Optionally validate and evaluate with V4 model
 
 Usage:
-    # Pull recordings to ./pulled_recordings/
+    # Pull recordings to ./pulled_recordings/ (incremental, skips already-pulled)
     python pull_recordings.py
+
+    # Force full re-pull (ignore manifest)
+    python pull_recordings.py --all
 
     # Pull and validate format
     python pull_recordings.py --validate
@@ -26,10 +29,13 @@ Requirements:
 """
 
 import argparse
+import json
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+
+MANIFEST_FILENAME = "pulled_manifest.json"
 
 # App package name (from android/app/build.gradle.kts)
 APP_PACKAGE = "com.speaktolearn.speak_to_learn"
@@ -78,7 +84,7 @@ def get_device_recordings_path() -> str:
 
 
 def list_device_recordings(device_id: str | None = None) -> list[str]:
-    """List recordings on device."""
+    """List recordings on device. Returns all filenames (wav and json)."""
     cmd = ["adb"]
     if device_id:
         cmd.extend(["-s", device_id])
@@ -99,7 +105,8 @@ def list_device_recordings(device_id: str | None = None) -> list[str]:
 
     files = []
     for line in result.stdout.strip().split("\n"):
-        if ".wav" in line.lower():
+        lower = line.lower()
+        if ".wav" in lower or ".json" in lower:
             # Parse ls -la output to get filename
             parts = line.split()
             if parts:
@@ -108,47 +115,94 @@ def list_device_recordings(device_id: str | None = None) -> list[str]:
     return files
 
 
+def load_manifest(output_dir: Path) -> set[str]:
+    """Load the set of already-pulled filenames from pulled_manifest.json."""
+    manifest_path = output_dir / MANIFEST_FILENAME
+    if not manifest_path.exists():
+        return set()
+    with open(manifest_path, encoding="utf-8") as f:
+        data = json.load(f)
+    return set(data.get("pulled", []))
+
+
+def save_manifest(output_dir: Path, pulled: set[str]) -> None:
+    """Save the set of pulled filenames to pulled_manifest.json."""
+    manifest_path = output_dir / MANIFEST_FILENAME
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump({"pulled": sorted(pulled)}, f, indent=2)
+
+
 def pull_recordings(
     output_dir: Path,
     device_id: str | None = None,
+    force_all: bool = False,
 ) -> list[Path]:
-    """Pull recordings from device to local directory."""
+    """Pull recordings and sidecar JSON files from device to local directory.
+
+    On subsequent runs, files already listed in pulled_manifest.json are
+    skipped unless force_all is True.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
 
     cmd_base = ["adb"]
     if device_id:
         cmd_base.extend(["-s", device_id])
 
-    # List files first
-    recordings = list_device_recordings(device_id)
+    # Load manifest of already-pulled files
+    already_pulled = set() if force_all else load_manifest(output_dir)
+    if already_pulled:
+        print(f"Manifest: {len(already_pulled)} file(s) already pulled (use --all to re-pull)")
 
-    if not recordings:
+    # List files first
+    all_device_files = list_device_recordings(device_id)
+
+    if not all_device_files:
         print("No recordings found on device.")
         print(f"  Checked: {APP_PACKAGE}/files/recordings/")
         return []
 
-    print(f"Found {len(recordings)} recording(s) on device:")
-    for r in recordings:
-        print(f"  - {r}")
+    # Separate wav files (primary) and json sidecars
+    wav_files = [f for f in all_device_files if f.lower().endswith(".wav")]
+    json_files = {f for f in all_device_files if f.lower().endswith(".json")}
+
+    print(f"Found {len(wav_files)} wav and {len(json_files)} json file(s) on device:")
+    for r in wav_files:
+        sidecar = r.replace(".wav", ".json")
+        has_sidecar = " [+json]" if sidecar in json_files else ""
+        print(f"  - {r}{has_sidecar}")
+
+    # Build list of files to pull: wav + their sidecars
+    files_to_pull = []
+    for wav in wav_files:
+        files_to_pull.append(wav)
+        sidecar = wav.replace(".wav", ".json")
+        if sidecar in json_files:
+            files_to_pull.append(sidecar)
+
+    # Filter out already-pulled files
+    new_files = [f for f in files_to_pull if f not in already_pulled]
+    skipped = [f for f in files_to_pull if f in already_pulled]
+
+    if skipped:
+        print(f"\nSkipping {len(skipped)} already-pulled file(s).")
+    if not new_files:
+        print("No new files to pull.")
+        return []
+
+    print(f"\nPulling {len(new_files)} new file(s)...")
 
     pulled_files = []
+    newly_pulled_names: set[str] = set()
 
     # Pull each file using run-as + cat (workaround for adb pull permissions)
-    for filename in recordings:
+    for filename in new_files:
         local_path = output_dir / filename
-
-        # Use run-as to read file content
-        cmd = cmd_base + [
-            "shell", "run-as", APP_PACKAGE,
-            "cat", f"files/recordings/{filename}"
-        ]
+        is_binary = filename.lower().endswith(".wav")
 
         print(f"Pulling: {filename}...", end=" ")
-        result = run_cmd(cmd, check=False)
 
-        if result.returncode == 0:
-            # Write binary content to local file
-            # Need to pull as binary, so use exec-out instead
+        if is_binary:
+            # Use exec-out for binary wav content
             cmd_bin = cmd_base + [
                 "exec-out", "run-as", APP_PACKAGE,
                 "cat", f"files/recordings/{filename}"
@@ -158,12 +212,32 @@ def pull_recordings(
             if result_bin.returncode == 0 and len(result_bin.stdout) > 0:
                 local_path.write_bytes(result_bin.stdout)
                 pulled_files.append(local_path)
+                newly_pulled_names.add(filename)
                 size_kb = len(result_bin.stdout) / 1024
                 print(f"OK ({size_kb:.1f} KB)")
             else:
                 print("FAILED (empty or error)")
         else:
-            print(f"FAILED ({result.stderr.strip()})")
+            # Text file (JSON sidecar) - use shell + run-as
+            cmd_text = cmd_base + [
+                "shell", "run-as", APP_PACKAGE,
+                "cat", f"files/recordings/{filename}"
+            ]
+            result_text = run_cmd(cmd_text, check=False)
+
+            if result_text.returncode == 0 and result_text.stdout.strip():
+                local_path.write_text(result_text.stdout, encoding="utf-8")
+                pulled_files.append(local_path)
+                newly_pulled_names.add(filename)
+                size_b = len(result_text.stdout)
+                print(f"OK ({size_b} bytes)")
+            else:
+                print(f"FAILED ({result_text.stderr.strip()})")
+
+    # Update manifest with all successfully pulled files
+    updated_manifest = already_pulled | newly_pulled_names
+    save_manifest(output_dir, updated_manifest)
+    print(f"\nManifest updated: {len(updated_manifest)} total file(s) tracked.")
 
     return pulled_files
 
@@ -230,6 +304,11 @@ Examples:
         action="store_true",
         help="List recordings on device without pulling",
     )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Force full re-pull, ignoring pulled_manifest.json",
+    )
 
     args = parser.parse_args()
 
@@ -266,17 +345,21 @@ Examples:
     # List only
     if args.list:
         print(f"\nRecordings on device ({device_id or 'default'}):")
-        recordings = list_device_recordings(device_id)
-        if recordings:
-            for r in recordings:
-                print(f"  - {r}")
+        all_files = list_device_recordings(device_id)
+        if all_files:
+            wav_files = [f for f in all_files if f.lower().endswith(".wav")]
+            json_files = {f for f in all_files if f.lower().endswith(".json")}
+            for r in wav_files:
+                sidecar = r.replace(".wav", ".json")
+                has_sidecar = " [+json]" if sidecar in json_files else ""
+                print(f"  - {r}{has_sidecar}")
         else:
             print("  (none found)")
         sys.exit(0)
 
     # Pull recordings
     print(f"\nPulling recordings to: {args.output.absolute()}")
-    pulled = pull_recordings(args.output, device_id)
+    pulled = pull_recordings(args.output, device_id, force_all=args.all)
 
     if not pulled:
         print("\nNo recordings pulled.")

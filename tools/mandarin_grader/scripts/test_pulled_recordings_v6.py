@@ -2,6 +2,12 @@
 """Test pulled recordings with the deployed V6 ONNX model.
 
 Reports accuracy both without CMVN and with CMVN to quantify the CMVN fix.
+
+Metadata resolution order (per recording):
+  1. Sidecar JSON ({stem}.json) alongside the wav file — preferred.
+  2. App dataset (sentences.zh.json) keyed by the recording stem — fallback.
+
+If neither source has metadata for a recording, the script exits with an error.
 """
 import json
 import sys
@@ -46,12 +52,73 @@ def load_session() -> ort.InferenceSession:
     return session
 
 
-def load_dataset():
-    """Load the sentences dataset."""
+def load_dataset() -> dict:
+    """Load the sentences dataset as a fallback. Returns empty dict if not found."""
+    if not DATASET.exists():
+        return {}
     with open(DATASET, encoding="utf-8") as f:
         data = json.load(f)
     items = {item["id"]: item for item in data["items"]}
     return items
+
+
+def load_sidecar(wav_path: Path) -> dict | None:
+    """Load the sidecar JSON for a wav file, if it exists.
+
+    Expected sidecar keys (written by the app):
+      - "pinyin"  (str): space-separated pinyin syllables, e.g. "ni3 hao3"
+      - "score"   (float, optional): app-reported pronunciation score
+
+    Returns the parsed dict or None if the sidecar does not exist.
+    """
+    sidecar_path = wav_path.with_suffix(".json")
+    if not sidecar_path.exists():
+        return None
+    with open(sidecar_path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def resolve_metadata(wav_path: Path, dataset: dict) -> dict:
+    """Return metadata for a recording.
+
+    Priority:
+      1. Sidecar JSON — contains pinyin written at recording time.
+      2. App dataset — keyed by recording stem (timestamp ID).
+
+    Raises SystemExit with a clear message when neither source is available.
+    """
+    sidecar = load_sidecar(wav_path)
+    if sidecar is not None:
+        pinyin = sidecar.get("pinyin", "").strip()
+        if not pinyin:
+            print(f"\nERROR: Sidecar {wav_path.stem}.json exists but has no 'pinyin' field.")
+            sys.exit(1)
+        return {
+            "source": "sidecar",
+            "romanization": pinyin,
+            "text": sidecar.get("text", ""),
+            "score": sidecar.get("score", None),
+        }
+
+    # Fallback: app dataset
+    ts_id = wav_path.stem
+    if ts_id in dataset:
+        item = dataset[ts_id]
+        return {
+            "source": "dataset",
+            "romanization": item["romanization"],
+            "text": item.get("text", ""),
+            "score": None,
+        }
+
+    # Neither source available — fail clearly
+    print(
+        f"\nERROR: No metadata for recording '{wav_path.name}'.\n"
+        f"  No sidecar file found at: {wav_path.with_suffix('.json')}\n"
+        f"  Recording stem '{ts_id}' not present in dataset: {DATASET}\n"
+        f"  Pull the recording again with a version of the app that writes sidecar JSON."
+    )
+    sys.exit(1)
 
 
 def extract_mel(wav_path: Path) -> np.ndarray:
@@ -210,21 +277,18 @@ def main():
         print(f"Recording: {wav_path.name}")
         print("=" * 70)
 
-        ts_id = wav_path.stem
+        meta = resolve_metadata(wav_path, dataset)
 
-        if ts_id not in dataset:
-            print(f"  Warning: {ts_id} not found in dataset")
-            continue
+        romanization = meta["romanization"]
+        text = meta["text"]
+        source = meta["source"]
+        app_score = meta["score"]
 
-        item = dataset[ts_id]
-        text = item["text"]
-        romanization = item["romanization"]
-        gloss = item.get("gloss", {})
-        gloss_en = gloss.get("en", "") if isinstance(gloss, dict) else str(gloss)
-
-        print(f"  Text:    {text}")
-        print(f"  Pinyin:  {romanization}")
-        print(f"  Gloss:   {gloss_en}")
+        print(f"  Metadata: [{source}]")
+        print(f"  Text:     {text}")
+        print(f"  Pinyin:   {romanization}")
+        if app_score is not None:
+            print(f"  App score: {app_score}")
 
         syllables = romanization.strip().split()
         mel = extract_mel(wav_path)
