@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'dart:math' show exp, max;
+import 'dart:math' show exp, max, sqrt;
 import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
@@ -45,6 +45,10 @@ class OnnxMlScorerV6 implements MlScorer {
 
   // V6 max syllable positions
   static const _maxSyllables = 28;
+
+  // Padding value for CMVN-normalized mel frames (matches Python training).
+  // After CMVN (mean=0, std=1), -5.0 represents a 5-sigma silence floor.
+  static const _cmvnPadValue = -5.0;
 
   @override
   bool get isReady => _isReady;
@@ -185,14 +189,41 @@ class OnnxMlScorerV6 implements MlScorer {
     final timeFrames = _maxMelFrames;
     final actualFrames = origFrames < timeFrames ? origFrames : timeFrames;
 
+    // Apply per-utterance CMVN over valid frames only (matches Python training).
+    // Computed per mel bin: (x - mean) / (std + epsilon)
+    const epsilon = 1e-5;
+    final cmvnMel = List<List<double>>.generate(80, (i) {
+      // Compute mean and std over valid frames for this mel bin
+      double sum = 0.0;
+      for (int t = 0; t < actualFrames; t++) {
+        sum += mel[i][t];
+      }
+      final mean = sum / actualFrames;
+
+      double sumSqDiff = 0.0;
+      for (int t = 0; t < actualFrames; t++) {
+        final diff = mel[i][t] - mean;
+        sumSqDiff += diff * diff;
+      }
+      final std = sqrt(sumSqDiff / actualFrames);
+
+      // Normalize valid frames
+      return List<double>.generate(actualFrames, (t) {
+        return (mel[i][t] - mean) / (std + epsilon);
+      });
+    });
+
     // Prepare mel tensor: [1, 80, 1000]
-    // Copy frames starting at index 0, zero-pad remaining
+    // Copy CMVN-normalized frames, pad remaining with _cmvnPadValue
     final melFlat = Float32List(80 * timeFrames);
     for (int i = 0; i < 80; i++) {
       for (int t = 0; t < actualFrames; t++) {
-        melFlat[i * timeFrames + t] = mel[i][t];
+        melFlat[i * timeFrames + t] = cmvnMel[i][t];
       }
-      // Remaining frames are already zero (Float32List default)
+      // Pad remaining frames with CMVN silence floor
+      for (int t = actualFrames; t < timeFrames; t++) {
+        melFlat[i * timeFrames + t] = _cmvnPadValue;
+      }
     }
 
     // V6: position is a single int64 (0-based index)
