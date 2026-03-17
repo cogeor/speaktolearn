@@ -10,6 +10,7 @@ import 'package:speak_to_learn/features/progress/domain/rating_attempt.dart';
 import 'package:speak_to_learn/features/progress/domain/text_sequence_progress.dart';
 import 'package:speak_to_learn/features/recording/domain/audio_recorder.dart';
 import 'package:speak_to_learn/features/recording/domain/recording.dart';
+import 'package:speak_to_learn/features/recording/domain/recording_metadata.dart';
 import 'package:speak_to_learn/features/recording/domain/recording_repository.dart';
 import 'package:speak_to_learn/features/settings/domain/app_settings.dart';
 import 'package:speak_to_learn/features/settings/domain/settings_repository.dart';
@@ -164,6 +165,11 @@ class MockIntegrationRecordingRepository implements RecordingRepository {
   @override
   Future<void> saveLatest(Recording recording) async {
     _recordings[recording.textSequenceId] = recording;
+  }
+
+  @override
+  Future<void> saveMetadata(RecordingMetadata metadata) async {
+    // No-op in integration tests
   }
 
   @override

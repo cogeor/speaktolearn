@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:audio_waveforms/audio_waveforms.dart';
 import 'package:flutter/foundation.dart';
@@ -13,6 +14,7 @@ import '../../scoring/domain/pronunciation_scorer.dart';
 import '../domain/audio_recorder.dart';
 import '../domain/recording.dart';
 import '../domain/recording_duration_calculator.dart';
+import '../domain/recording_metadata.dart';
 import '../domain/recording_repository.dart';
 import 'recording_state.dart';
 
@@ -215,6 +217,24 @@ class RecordingController extends StateNotifier<RecordingState> {
 
       // Score the pronunciation using ML scorer
       final grade = await _scorer.score(textSequence, recording);
+
+      // Write sidecar metadata JSON alongside the WAV file.
+      final metadata = RecordingMetadata(
+        textSequenceId: textSequence.id,
+        pinyin: textSequence.romanization ?? '',
+        text: textSequence.text,
+        hskLevel: textSequence.hskLevel ?? 0,
+        overallScore: grade.overall,
+        characterScores: grade.characterScores,
+        scoringMethod: grade.method,
+        recordingTimestamp: recording.createdAt.toIso8601String(),
+        deviceModel: Platform.operatingSystem,
+        osVersion: Platform.operatingSystemVersion,
+        appVersion: '1.0.0',
+        audioSampleRate: recording.sampleRate ?? 16000,
+        audioDurationMs: recording.durationMs ?? 0,
+      );
+      await _repository.saveMetadata(metadata);
 
       // Transition to complete phase after file is saved and scored
       state = state.copyWith(

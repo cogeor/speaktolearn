@@ -49,7 +49,11 @@ class RecordPluginRecorder implements AudioRecorder {
           // Mono audio (1 channel) for ML processing
           numChannels: 1,
           // 16-bit PCM (default for WAV)
-          bitRate: 256000, // Higher bitrate for WAV
+          bitRate: 256000,
+          // Audio processing to improve quality on mobile devices
+          autoGain: true, // Normalize volume for quiet/loud speakers
+          echoCancel: true, // Reduce room reverb/echo
+          noiseSuppress: true, // Reduce background noise
         ),
         path: _currentPath!,
       );

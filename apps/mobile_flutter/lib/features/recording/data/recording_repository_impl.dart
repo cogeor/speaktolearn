@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 
 import '../domain/recording.dart';
+import '../domain/recording_metadata.dart';
 import '../domain/recording_repository.dart';
 
 /// File-system based implementation of [RecordingRepository].
@@ -29,6 +31,12 @@ class RecordingRepositoryImpl implements RecordingRepository {
     return '$dir/$textSequenceId.wav';
   }
 
+  /// Gets the sidecar metadata JSON path for a text sequence's recording.
+  Future<String> _getMetadataPath(String textSequenceId) async {
+    final dir = await _getRecordingsDir();
+    return '$dir/$textSequenceId.json';
+  }
+
   @override
   Future<void> saveLatest(Recording recording) async {
     // Delete existing recording if any
@@ -50,6 +58,15 @@ class RecordingRepositoryImpl implements RecordingRepository {
       mimeType: recording.mimeType,
     );
     _cache[recording.textSequenceId] = savedRecording;
+  }
+
+  @override
+  Future<void> saveMetadata(RecordingMetadata metadata) async {
+    final metadataPath = await _getMetadataPath(metadata.textSequenceId);
+    final file = File(metadataPath);
+    await file.writeAsString(
+      const JsonEncoder.withIndent('  ').convert(metadata.toJson()),
+    );
   }
 
   @override
@@ -80,10 +97,18 @@ class RecordingRepositoryImpl implements RecordingRepository {
   @override
   Future<void> deleteLatest(String textSequenceId) async {
     _cache.remove(textSequenceId);
+
     final filePath = await _getFilePath(textSequenceId);
     final file = File(filePath);
     if (await file.exists()) {
       await file.delete();
+    }
+
+    // Also remove companion metadata JSON if it exists.
+    final metadataPath = await _getMetadataPath(textSequenceId);
+    final metadataFile = File(metadataPath);
+    if (await metadataFile.exists()) {
+      await metadataFile.delete();
     }
   }
 
