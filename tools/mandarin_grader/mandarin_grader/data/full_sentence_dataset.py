@@ -20,6 +20,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ..types import Tone
+from ..sandhi import apply_tone_sandhi
 from .lexicon import _remove_tone_marks
 from .autoregressive_dataset import (
     SyntheticSentenceInfo,
@@ -181,8 +182,11 @@ class FullSentenceDataset:
         mel = self._mel_cache.get(key)
         audio = None if mel is not None else self._load_audio(sentence.audio_path).copy()
 
+        # Apply tone sandhi to the full sentence to get surface tones
+        syllables_with_sandhi = apply_tone_sandhi(sentence.syllables)
+
         # Get target syllable info
-        target_syl = sentence.syllables[syl_idx]
+        target_syl = syllables_with_sandhi[syl_idx]
         target_pinyin = _remove_tone_marks(target_syl.pinyin)
         target_tone = target_syl.tone_surface
 
