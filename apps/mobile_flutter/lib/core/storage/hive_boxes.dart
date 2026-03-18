@@ -5,6 +5,7 @@ abstract class HiveBoxes {
   static const String progress = 'progress';
   static const String attempts = 'attempts';
   static const String settings = 'settings';
+  static const String scoreAttempts = 'scoreAttempts';
 }
 
 /// Container for opened Hive boxes.
