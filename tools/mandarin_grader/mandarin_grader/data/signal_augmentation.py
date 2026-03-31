@@ -25,9 +25,10 @@ logger = logging.getLogger(__name__)
 
 # Use scipy for efficient convolution if available
 try:
-    from scipy.signal import fftconvolve
+    from scipy.signal import fftconvolve as _fftconvolve
     SCIPY_AVAILABLE = True
 except ImportError:
+    _fftconvolve = None  # type: ignore[assignment]
     SCIPY_AVAILABLE = False
 
 
@@ -167,7 +168,8 @@ class WaveformAugmenter:
 
         # Convolve: use fftconvolve if scipy available, otherwise np.convolve
         if SCIPY_AVAILABLE:
-            convolved = fftconvolve(audio, rir_norm, mode="full")
+            assert _fftconvolve is not None
+            convolved = _fftconvolve(audio, rir_norm, mode="full")
         else:
             convolved = np.convolve(audio, rir_norm, mode="full")
 
@@ -439,7 +441,8 @@ def _write_wav(path: Path, audio: NDArray[np.float32], sr: int) -> None:
         pass
 
     # Pure stdlib fallback via wave module
-    import wave, struct
+    import wave
+    import struct
     audio_int16 = (audio * 32767).clip(-32768, 32767).astype(np.int16)
     with wave.open(str(path), "w") as wf:
         wf.setnchannels(1)
@@ -471,7 +474,8 @@ def _read_wav(path: Path, sr: int) -> NDArray[np.float32]:
         pass
 
     # Stdlib wave fallback
-    import wave, struct
+    import wave
+    import struct
     with wave.open(str(path), "r") as wf:
         n_frames = wf.getnframes()
         raw = wf.readframes(n_frames)

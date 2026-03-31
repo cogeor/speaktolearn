@@ -70,8 +70,8 @@ class AudioAugmenter:
             return self._rvc_available
 
         try:
-            from ultimate_rvc.core.generate.common import convert
-            from ultimate_rvc.typing_extra import F0Method, RVCContentType
+            from ultimate_rvc.core.generate.common import convert  # noqa: F401
+            from ultimate_rvc.typing_extra import F0Method, RVCContentType  # noqa: F401
             self._rvc_available = True
         except ImportError:
             logger.warning("ultimate_rvc not installed - augmentation disabled")
@@ -248,8 +248,8 @@ class AudioAugmenter:
 # Waveform-level augmentations (pitch shifting, formant shifting)
 # =============================================================================
 
-import numpy as np
-from numpy.typing import NDArray
+import numpy as np  # noqa: E402
+from numpy.typing import NDArray  # noqa: E402
 
 
 def pitch_shift(

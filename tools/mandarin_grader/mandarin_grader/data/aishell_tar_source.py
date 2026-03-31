@@ -11,11 +11,12 @@ import io
 import json
 import tarfile
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 
 from .data_source import DataSource, SentenceInfo
-from ..types import TargetSyllable
+from ..types import TargetSyllable, Tone
 
 
 class AISHELL3TarDataSource(DataSource):
@@ -32,6 +33,7 @@ class AISHELL3TarDataSource(DataSource):
         data_dir: Path,
         split: str = "train",
         max_sentences: int | None = None,
+        **kwargs: Any,
     ) -> list[SentenceInfo]:
         """Load sentences from tar archives.
 
@@ -101,8 +103,8 @@ class AISHELL3TarDataSource(DataSource):
                     pinyin=syl.get("pinyin", ""),
                     initial="",
                     final="",
-                    tone_underlying=tone,
-                    tone_surface=tone,
+                    tone_underlying=cast(Tone, tone),
+                    tone_surface=cast(Tone, tone),
                 ))
 
             if not syllables:

@@ -27,9 +27,11 @@ from numpy.typing import NDArray
 
 # Use scipy for efficient convolution
 try:
-    from scipy.ndimage import convolve1d, zoom
+    from scipy.ndimage import convolve1d as _convolve1d, zoom as _zoom
     SCIPY_AVAILABLE = True
 except ImportError:
+    _convolve1d = None  # type: ignore[assignment]
+    _zoom = None  # type: ignore[assignment]
     SCIPY_AVAILABLE = False
 
 
@@ -150,7 +152,8 @@ def apply_time_stretch(
 
     # Use scipy.ndimage.zoom for vectorized interpolation
     if SCIPY_AVAILABLE:
-        return zoom(mel, (1.0, stretch_factor), order=1).astype(np.float32)
+        assert _zoom is not None
+        return np.asarray(_zoom(mel, (1.0, stretch_factor), order=1)).astype(np.float32)
 
     # Fallback: numpy interpolation
     old_indices = np.arange(n_time)
@@ -316,7 +319,8 @@ def apply_temporal_smear(
 
     if SCIPY_AVAILABLE:
         # Efficient 1D convolution along time axis
-        smeared = convolve1d(mel, kernel, axis=1, mode='constant', cval=mel.min())
+        assert _convolve1d is not None
+        smeared = _convolve1d(mel, kernel, axis=1, mode='constant', cval=mel.min())
     else:
         # Fallback: numpy convolution per row
         smeared = np.zeros_like(mel)
@@ -368,14 +372,14 @@ def apply_mel_augmentation(
     # 2. Low-frequency boost
     cfg = config.low_shelf_boost
     if cfg.enabled and rng.random() < cfg.prob:
-        cutoff = rng.integers(cfg.cutoff_bin_range[0], cfg.cutoff_bin_range[1] + 1)
+        cutoff = int(rng.integers(cfg.cutoff_bin_range[0], cfg.cutoff_bin_range[1] + 1))
         boost = rng.uniform(cfg.boost_db_range[0], cfg.boost_db_range[1])
         mel = apply_low_shelf_boost(mel, cutoff, boost)
 
     # 3. Temporal smear
     cfg = config.temporal_smear
     if cfg.enabled and rng.random() < cfg.prob:
-        decay = rng.integers(cfg.decay_frames_range[0], cfg.decay_frames_range[1] + 1)
+        decay = int(rng.integers(cfg.decay_frames_range[0], cfg.decay_frames_range[1] + 1))
         wet = rng.uniform(cfg.wet_ratio_range[0], cfg.wet_ratio_range[1])
         mel = apply_temporal_smear(mel, decay, wet)
 
@@ -533,7 +537,10 @@ def get_preset_config(preset: str) -> MelAugmentConfig:
         return MelAugmentConfig(
             time_stretch=TimeStretchConfig(range=(0.8, 1.2)),  # Reduced from 0.7-1.3
             gain=GainConfig(db_range=(-15.0, 6.0)),  # Wider for quieter recordings
-            spec_augment=SpecAugmentConfig(freq_mask_param=10, time_mask_param=40, num_freq_masks=3, num_time_masks=3),
+            spec_augment=SpecAugmentConfig(
+                freq_mask_param=10, time_mask_param=40,
+                num_freq_masks=3, num_time_masks=3,
+            ),
             low_shelf_boost=LowShelfBoostConfig(
                 enabled=True,
                 prob=0.8,

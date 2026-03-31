@@ -9,13 +9,12 @@ from __future__ import annotations
 import wave
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
 
 from ..types import Ms, TargetSyllable, SyllableSpan, Tone
-from .lexicon import SyllableLexicon, SyllableEntry, _remove_tone_marks
+from .lexicon import SyllableLexicon, _remove_tone_marks
 
 
 @dataclass

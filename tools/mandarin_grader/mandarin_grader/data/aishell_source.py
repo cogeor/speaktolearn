@@ -26,16 +26,14 @@ Download from: https://www.openslr.org/93/
 
 from __future__ import annotations
 
-import json
 import re
 import wave
 from pathlib import Path
-from typing import Iterator
+from typing import Any, cast
 
-import numpy as np
 
 from .data_source import DataSource, SentenceInfo
-from ..types import TargetSyllable
+from ..types import TargetSyllable, Tone
 from .dataloader import parse_romanization
 
 
@@ -102,6 +100,7 @@ class AISHELL3DataSource(DataSource):
         split: str = "train",
         max_sentences: int | None = None,
         speakers: list[str] | None = None,
+        **kwargs: Any,
     ) -> list[SentenceInfo]:
         """Load AISHELL-3 sentences.
 
@@ -190,8 +189,8 @@ class AISHELL3DataSource(DataSource):
                             pinyin=base,
                             initial="",  # Could parse from pinyin
                             final="",
-                            tone_underlying=tone,
-                            tone_surface=tone,
+                            tone_underlying=cast(Tone, tone),
+                            tone_surface=cast(Tone, tone),
                         ))
                 else:
                     # Fallback: parse from text using existing logic

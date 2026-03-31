@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator, Literal
+from typing import Iterator, Literal, cast
 
-from ..types import Ms, TargetSyllable, Tone
+from ..types import TargetSyllable, Tone
 
 # Pinyin initial consonants (ordered by length for greedy matching)
 INITIALS = [
@@ -38,11 +37,12 @@ def parse_pinyin_syllable(pinyin: str) -> tuple[str, str, Tone]:
         Tuple of (initial, final, tone)
     """
     # Extract tone from tone marks
-    tone: Tone = 0
+    tone: Tone = cast(Tone, 0)
     base_pinyin = ""
     for char in pinyin.lower():
         if char in TONE_MARKS:
-            base_char, tone = TONE_MARKS[char]
+            base_char, tone_int = TONE_MARKS[char]
+            tone = cast(Tone, tone_int)
             base_pinyin += base_char
         else:
             base_pinyin += char
@@ -51,7 +51,7 @@ def parse_pinyin_syllable(pinyin: str) -> tuple[str, str, Tone]:
     if tone == 0 and base_pinyin and base_pinyin[-1].isdigit():
         tone_num = int(base_pinyin[-1])
         if 0 <= tone_num <= 4:
-            tone = tone_num  # type: ignore
+            tone = cast(Tone, tone_num)
             base_pinyin = base_pinyin[:-1]
 
     # Split into initial and final
@@ -125,7 +125,9 @@ def split_pinyin_by_count(romanization: str, n_syllables: int) -> list[str]:
             if rest.startswith("ng"):
                 after_ng = pinyin[end+2:].lower() if end+2 < len(pinyin) else ""
                 # Only include "ng" if not followed by a vowel
-                if not after_ng or (after_ng[0] not in plain_vowels and after_ng[0] not in tone_chars):
+                if not after_ng or (
+                    after_ng[0] not in plain_vowels and after_ng[0] not in tone_chars
+                ):
                     end += 2
             elif rest.startswith("n"):
                 after_n = pinyin[end+1:].lower() if end+1 < len(pinyin) else ""
@@ -413,7 +415,9 @@ class SentenceDataset:
             SentenceDataset with AISHELL samples
         """
         wav_dir = aishell_root / "data_aishell" / "wav" / subset
-        transcript_path = aishell_root / "data_aishell" / "transcript" / "aishell_transcript_v0.8.txt"
+        transcript_path = (
+            aishell_root / "data_aishell" / "transcript" / "aishell_transcript_v0.8.txt"
+        )
 
         if not transcript_path.exists():
             raise FileNotFoundError(f"Transcript not found: {transcript_path}")

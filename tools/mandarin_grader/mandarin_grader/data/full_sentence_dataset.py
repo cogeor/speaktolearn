@@ -25,7 +25,6 @@ from .lexicon import _remove_tone_marks
 from .autoregressive_dataset import (
     SyntheticSentenceInfo,
     load_audio_wav,
-    spec_augment,
 )
 
 
@@ -41,7 +40,8 @@ class FullSentenceSample:
     target_syllable: str  # Base pinyin of target syllable
     target_tone: Tone  # Tone of target syllable
     n_syllables: int  # Total syllables in sentence
-    context_syllables: list[str] | None = None  # Base pinyin for all positions (for context-mask mode)
+    # Base pinyin for all positions (for context-mask mode)
+    context_syllables: list[str] | None = None
 
 
 class FullSentenceDataset:
@@ -199,6 +199,7 @@ class FullSentenceDataset:
         ]
 
         if mel is None:
+            assert audio is not None
             # Apply augmentation
             audio = self._apply_augmentation(audio)
 
@@ -209,7 +210,7 @@ class FullSentenceDataset:
             mel_full = None
         else:
             audio = None
-            # Augmentations for mel-domain are now handled in CollateFn 
+            # Augmentations for mel-domain are now handled in CollateFn
             # to prevent Windows PyTorch multiprocessing IPC hangs.
             mel_full = mel
 

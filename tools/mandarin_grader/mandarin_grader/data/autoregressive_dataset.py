@@ -18,9 +18,8 @@ from __future__ import annotations
 
 import json
 import wave
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator, Literal
 
 import numpy as np
 from numpy.typing import NDArray
@@ -28,7 +27,7 @@ from numpy.typing import NDArray
 from ..types import Tone, TargetSyllable
 from ..pitch import extract_f0_pyin, normalize_f0, hz_to_semitones
 from .lexicon import SyllableLexicon, _remove_tone_marks
-from .dataloader import AudioSample, SentenceDataset, parse_romanization
+from .dataloader import parse_romanization
 from .augmentation import pitch_shift, formant_shift
 
 
@@ -446,7 +445,8 @@ class AutoregressiveDataset:
         else:
             total_samples = sentence.total_samples
             if total_samples is None:
-                total_samples = max(0, (mel.shape[1] - 1) * self._mel_hop_length + self._mel_win_length)
+                hop = self._mel_hop_length
+                total_samples = max(0, (mel.shape[1] - 1) * hop + self._mel_win_length)
             n_syllables = len(sentence.syllables)
             samples_per_syl = total_samples // max(n_syllables, 1)
             syl_start = syl_idx * samples_per_syl
@@ -463,7 +463,8 @@ class AutoregressiveDataset:
 
         if min_chunk_start > max_chunk_start:
             syl_mid = (syl_start + syl_end) // 2
-            chunk_start = max(0, min(syl_mid - self.chunk_samples // 2, total_samples - self.chunk_samples))
+            half_chunk = self.chunk_samples // 2
+            chunk_start = max(0, min(syl_mid - half_chunk, total_samples - self.chunk_samples))
         elif self.augment:
             chunk_start = int(np.random.randint(min_chunk_start, max_chunk_start + 1))
         else:
@@ -510,6 +511,7 @@ class AutoregressiveDataset:
         target_tone = target_syl.tone_surface
 
         if mel is None:
+            assert audio is not None
             # Determine syllable boundaries (exact or estimated)
             if sentence.syllable_boundaries and syl_idx < len(sentence.syllable_boundaries):
                 syl_start, syl_end = sentence.syllable_boundaries[syl_idx]
@@ -619,7 +621,6 @@ def estimate_syllable_positions(
 
         positions = []
         current_syl = 0
-        accumulated = 0
 
         for region_start, region_end in active_regions:
             region_len = region_end - region_start

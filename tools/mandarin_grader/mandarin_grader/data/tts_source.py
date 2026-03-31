@@ -34,9 +34,10 @@ from __future__ import annotations
 import json
 import wave
 from pathlib import Path
+from typing import Any, cast
 
 from .data_source import DataSource, SentenceInfo
-from ..types import TargetSyllable
+from ..types import TargetSyllable, Tone
 
 
 class TTSDataSource(DataSource):
@@ -57,6 +58,7 @@ class TTSDataSource(DataSource):
         data_dir: Path,
         split: str = "train",
         max_sentences: int | None = None,
+        **kwargs: Any,
     ) -> list[SentenceInfo]:
         """Load TTS sentences from data directory.
 
@@ -149,8 +151,8 @@ class TTSDataSource(DataSource):
                 pinyin=pinyin,
                 initial="",
                 final="",
-                tone_underlying=tone,
-                tone_surface=tone,
+                tone_underlying=cast(Tone, tone),
+                tone_surface=cast(Tone, tone),
             ))
         return syllables
 
