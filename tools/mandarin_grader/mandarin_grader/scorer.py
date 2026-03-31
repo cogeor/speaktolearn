@@ -15,15 +15,13 @@ from typing import Literal
 import numpy as np
 from numpy.typing import NDArray
 
-from .align import Aligner, AlignmentResult, DTWAligner, UniformAligner
+from .align import Aligner, DTWAligner, UniformAligner
 from .contour import extract_contour
-from .pitch import extract_f0_pyin, hz_to_semitones, normalize_f0
+from .pitch import extract_f0_pyin
 from .sandhi import apply_tone_sandhi
 from .tone import RuleBasedClassifier, TemplateClassifier, ToneClassifier
 from .types import (
-    Contour,
     FrameTrack,
-    Ms,
     SentenceScore,
     SyllableScores,
     SyllableSpan,

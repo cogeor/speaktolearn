@@ -7,7 +7,7 @@ without requiring forced alignment or neural models.
 import numpy as np
 from numpy.typing import NDArray
 
-from .types import SyllableSpan
+from .types import Ms, SyllableSpan
 
 
 def _medfilt(x: NDArray, kernel_size: int = 5) -> NDArray:
@@ -206,14 +206,14 @@ def segment_by_voicing(
     boundary_frames = find_voicing_gaps(voicing, n_syllables, hop_length_ms=hop_length_ms)
 
     # Convert frames to milliseconds
-    def frame_to_ms(frame: int) -> int:
-        return int(frame * hop_length_ms)
+    def frame_to_ms(frame: int) -> Ms:
+        return Ms(int(frame * hop_length_ms))
 
-    total_ms = int(len(audio) / sr * 1000)
+    total_ms = Ms(int(len(audio) / sr * 1000))
 
     # Build spans
     spans = []
-    prev_ms = 0
+    prev_ms = Ms(0)
 
     for i, bf in enumerate(boundary_frames):
         end_ms = frame_to_ms(bf)
@@ -268,14 +268,14 @@ def segment_by_energy(
     boundary_frames = find_energy_valleys(energy, n_syllables)
 
     # Convert frames to milliseconds
-    def frame_to_ms(frame: int) -> int:
-        return int(frame * hop_length_ms)
+    def frame_to_ms(frame: int) -> Ms:
+        return Ms(int(frame * hop_length_ms))
 
-    total_ms = int(len(audio) / sr * 1000)
+    total_ms = Ms(int(len(audio) / sr * 1000))
 
     # Build spans
     spans = []
-    prev_ms = 0
+    prev_ms = Ms(0)
 
     for i, bf in enumerate(boundary_frames):
         end_ms = frame_to_ms(bf)
