@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false
 #!/usr/bin/env python3
 """Extract tone templates from TTS reference audio.
 
