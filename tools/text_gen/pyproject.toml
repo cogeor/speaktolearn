@@ -36,6 +36,11 @@ where = ["."]
 line-length = 100
 target-version = "py311"
 
+[tool.pyright]
+pythonVersion = "3.11"
+venvPath = "."
+venv = ".venv"
+
 [tool.mypy]
 python_version = "3.11"
 strict = true

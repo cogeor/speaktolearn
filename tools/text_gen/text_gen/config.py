@@ -39,4 +39,4 @@ class Config(BaseSettings):
 
 def load_config() -> Config:
     """Load configuration from environment."""
-    return Config()
+    return Config()  # type: ignore[reportCallIssue]  # BaseSettings populates from env

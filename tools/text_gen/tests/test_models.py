@@ -1,6 +1,5 @@
 """Unit tests for Pydantic models."""
 
-import pytest
 from text_gen.models.text_sequence import TextSequence
 from text_gen.models.dataset import Dataset
 

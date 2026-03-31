@@ -82,7 +82,7 @@ def test_generate_batches_large_counts(mock_config):
         mock_client.chat.completions.create.side_effect = create_mock_response
 
         with patch.object(generator, "_load_prompt", return_value="Test prompt"):
-            dataset = generator.generate(
+            generator.generate(
                 language="zh-CN",
                 count=25,  # Should trigger batching (batch_size=20)
                 tags=[],

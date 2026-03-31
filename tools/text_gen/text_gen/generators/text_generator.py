@@ -161,6 +161,8 @@ Output format: JSON array of objects with keys:
         )
 
         content = response.choices[0].message.content
+        if content is None:
+            raise ValueError("OpenAI returned empty content")
         data = json.loads(content)
 
         # Handle different response formats
