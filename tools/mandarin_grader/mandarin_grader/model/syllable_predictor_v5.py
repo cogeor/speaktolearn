@@ -26,14 +26,22 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 import numpy as np
 from numpy.typing import NDArray
 
+if TYPE_CHECKING:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+    import xformers.ops as xops  # type: ignore[reportMissingImports]
+
 
 # Syllable vocabulary - loaded from metadata
-SYLLABLE_VOCAB_PATH = Path(__file__).parent.parent.parent / "data" / "syllables_v2" / "metadata.json"
+SYLLABLE_VOCAB_PATH = (
+    Path(__file__).parent.parent.parent / "data" / "syllables_v2" / "metadata.json"
+)
 
 
 def load_syllable_vocab() -> list[str]:
@@ -100,7 +108,7 @@ class PredictorOutput:
 
 
 # Reuse SyllableVocab from V4
-from .syllable_predictor_v4 import SyllableVocab
+from .syllable_predictor_v4 import SyllableVocab  # noqa: E402
 
 
 # Try to import PyTorch
@@ -116,7 +124,7 @@ except ImportError:
 XFORMERS_AVAILABLE = False
 if TORCH_AVAILABLE:
     try:
-        import xformers.ops as xops
+        import xformers.ops as xops  # type: ignore[reportMissingImports]
         XFORMERS_AVAILABLE = True
     except ImportError:
         pass
@@ -141,17 +149,22 @@ if TORCH_AVAILABLE:
             self._init_cache(max_len)
 
         def _init_cache(self, seq_len: int):
-            t = torch.arange(seq_len, device=self.inv_freq.device)
-            freqs = torch.einsum("i,j->ij", t.float(), self.inv_freq)
+            inv_freq: torch.Tensor = self.inv_freq  # type: ignore[assignment]
+            t = torch.arange(seq_len, device=inv_freq.device)
+            freqs = torch.einsum("i,j->ij", t.float(), inv_freq)
             emb = torch.cat([freqs, freqs], dim=-1)
             self.register_buffer("cos_cached", emb.cos()[None, :, :], persistent=False)
             self.register_buffer("sin_cached", emb.sin()[None, :, :], persistent=False)
 
         def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
             seq_len = x.shape[1]
-            if seq_len > self.cos_cached.shape[1]:
+            cos_cached: torch.Tensor = self.cos_cached  # type: ignore[assignment]
+            sin_cached: torch.Tensor = self.sin_cached  # type: ignore[assignment]
+            if seq_len > cos_cached.shape[1]:
                 self._init_cache(seq_len)
-            return self.cos_cached[:, :seq_len], self.sin_cached[:, :seq_len]
+                cos_cached = self.cos_cached  # type: ignore[assignment]
+                sin_cached = self.sin_cached  # type: ignore[assignment]
+            return cos_cached[:, :seq_len], sin_cached[:, :seq_len]
 
 
     def rotate_half(x: torch.Tensor) -> torch.Tensor:
@@ -273,10 +286,17 @@ if TORCH_AVAILABLE:
             attn_mask: torch.Tensor | None = None,
         ) -> torch.Tensor:
             if self.norm_first:
-                src = src + self._sa_block(self.norm1(src), cos, sin, src_key_padding_mask, attn_mask)
+                sa = self._sa_block(
+                    self.norm1(src), cos, sin,
+                    src_key_padding_mask, attn_mask,
+                )
+                src = src + sa
                 src = src + self._ff_block(self.norm2(src))
             else:
-                src = self.norm1(src + self._sa_block(src, cos, sin, src_key_padding_mask, attn_mask))
+                sa = self._sa_block(
+                    src, cos, sin, src_key_padding_mask, attn_mask,
+                )
+                src = self.norm1(src + sa)
                 src = self.norm2(src + self._ff_block(src))
             return src
 
@@ -312,7 +332,11 @@ if TORCH_AVAILABLE:
             else:
                 attn_output = self._naive_attention(q, k, v, key_padding_mask, attn_mask)
 
-            attn_output = attn_output.transpose(1, 2).contiguous().view(batch_size, seq_len, self.d_model)
+            attn_output = (
+                attn_output.transpose(1, 2)
+                .contiguous()
+                .view(batch_size, seq_len, self.d_model)
+            )
             return self.dropout1(self.out_proj(attn_output))
 
         def _flash_attention(
@@ -337,7 +361,10 @@ if TORCH_AVAILABLE:
                 # key_padding_mask: [batch, seq_len], True = masked (padding)
                 # Convert to [batch, 1, 1, seq_len] float mask for SDPA
                 combined_mask = key_padding_mask.unsqueeze(1).unsqueeze(2).to(q.dtype)
-                combined_mask = combined_mask.masked_fill(key_padding_mask.unsqueeze(1).unsqueeze(2), float("-inf"))
+                combined_mask = combined_mask.masked_fill(
+                    key_padding_mask.unsqueeze(1).unsqueeze(2),
+                    float("-inf"),
+                )
 
             dropout_p = self.dropout_p if self.training else 0.0
 
@@ -379,7 +406,10 @@ if TORCH_AVAILABLE:
                 # Simple approach: use additive bias
                 # key_padding_mask: [batch, seq], True = masked
                 bias = key_padding_mask.unsqueeze(1).unsqueeze(1).to(q.dtype)  # [batch, 1, 1, seq]
-                attn_bias = bias.masked_fill(key_padding_mask.unsqueeze(1).unsqueeze(1), float("-inf"))
+                attn_bias = bias.masked_fill(
+                    key_padding_mask.unsqueeze(1).unsqueeze(1),
+                    float("-inf"),
+                )
 
             attn_output = xops.memory_efficient_attention(
                 q, k, v,
@@ -420,7 +450,7 @@ if TORCH_AVAILABLE:
             return self.dropout2(self.linear2(self.activation(self.linear1(x))))
 
 
-    class SyllablePredictorV5(nn.Module):
+    class SyllablePredictorV5(nn.Module):  # type: ignore[reportRedeclaration]
         """Full-sentence syllable+tone predictor V5.
 
         Takes full sentence mel spectrogram + position index,
@@ -445,7 +475,6 @@ if TORCH_AVAILABLE:
             self.config = config
 
             self.vocab = SyllableVocab()
-            vocab_size = len(self.vocab)
 
             # CNN front-end: [n_mels, time] -> [d_model, time//8]
             self.audio_cnn = nn.Sequential(
@@ -499,7 +528,7 @@ if TORCH_AVAILABLE:
                 seq_len=max_downsampled,
                 window_size=config.attention_window,
                 global_indices=global_indices,
-                device='cpu',  # Will be moved to correct device in forward
+                device=torch.device('cpu'),  # Will be moved to correct device in forward
             )
             self.register_buffer('cached_attn_mask', cached_mask, persistent=False)
 
@@ -609,13 +638,11 @@ if TORCH_AVAILABLE:
             max_downsampled_frames = self.config.max_audio_frames // 8
 
             # Pad/truncate audio to max_downsampled_frames
-            actual_downsampled_len = downsampled_audio_len
             if downsampled_audio_len < max_downsampled_frames:
                 pad_len = max_downsampled_frames - downsampled_audio_len
                 audio_embed = F.pad(audio_embed, (0, 0, 0, pad_len))
             elif downsampled_audio_len > max_downsampled_frames:
                 audio_embed = audio_embed[:, :max_downsampled_frames, :]
-                actual_downsampled_len = max_downsampled_frames
 
             # Create or adjust audio mask for downsampled sequence
             if audio_mask is not None:
@@ -638,7 +665,10 @@ if TORCH_AVAILABLE:
             else:
                 ds_len = (original_audio_len + 7) // 8
                 ds_len = min(ds_len, max_downsampled_frames)
-                audio_mask = torch.zeros(batch_size, max_downsampled_frames, dtype=torch.bool, device=device)
+                audio_mask = torch.zeros(
+                    batch_size, max_downsampled_frames,
+                    dtype=torch.bool, device=device,
+                )
                 audio_mask[:, ds_len:] = True
 
             # Add audio type embedding
@@ -649,7 +679,8 @@ if TORCH_AVAILABLE:
 
             # Broadcast position embedding to all audio frames
             # This tells every transformer layer which syllable we're looking for
-            audio_embed = audio_embed + pos_embed  # Broadcasting [batch, T, d_model] + [batch, 1, d_model]
+            # Broadcasting [batch, T, d_model] + [batch, 1, d_model]
+            audio_embed = audio_embed + pos_embed
 
             # Get RoPE cos/sin
             cos, sin = self.rope(audio_embed)
@@ -658,7 +689,11 @@ if TORCH_AVAILABLE:
             # Transformer with RoPE and Longformer attention
             encoded = audio_embed
             for layer in self.transformer_layers:
-                encoded = layer(encoded, cos, sin, src_key_padding_mask=audio_mask, attn_mask=self.cached_attn_mask)
+                encoded = layer(
+                    encoded, cos, sin,
+                    src_key_padding_mask=audio_mask,
+                    attn_mask=self.cached_attn_mask,
+                )
 
             # Attention pooling (PMA)
             query = self.pool_query.expand(batch_size, -1, -1)
@@ -707,8 +742,8 @@ if TORCH_AVAILABLE:
             with torch.no_grad():
                 syllable_logits, tone_logits = self.forward(mel, position)
 
-            syllable_pred = syllable_logits[0].argmax().item()
-            tone_pred = tone_logits[0].argmax().item()
+            syllable_pred = int(syllable_logits[0].argmax().item())
+            tone_pred = int(tone_logits[0].argmax().item())
 
             syllable_probs = torch.softmax(syllable_logits[0], dim=-1)
             tone_probs = torch.softmax(tone_logits[0], dim=-1)
@@ -716,8 +751,8 @@ if TORCH_AVAILABLE:
             tone_prob = tone_probs[tone_pred].item()
 
             return PredictorOutput(
-                syllable_logits=syllable_logits.cpu().numpy(),
-                tone_logits=tone_logits.cpu().numpy(),
+                syllable_logits=syllable_logits.cpu().numpy().astype(np.float32),
+                tone_logits=tone_logits.cpu().numpy().astype(np.float32),
                 syllable_pred=syllable_pred,
                 tone_pred=tone_pred,
                 syllable_prob=syllable_prob,
@@ -740,8 +775,8 @@ else:
         def forward(self, mel, position, audio_mask=None):
             batch = mel.shape[0]
             return (
-                np.random.randn(batch, self.config.n_syllables),
-                np.random.randn(batch, self.config.n_tones),
+                np.random.randn(batch, self.config.n_syllables).astype(np.float32),
+                np.random.randn(batch, self.config.n_tones).astype(np.float32),
             )
 
         def predict(self, mel, position):

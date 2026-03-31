@@ -18,16 +18,23 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING
 
 import numpy as np
 from numpy.typing import NDArray
 
+if TYPE_CHECKING:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
+
 
 # Syllable vocabulary - loaded from metadata or hardcoded
-SYLLABLE_VOCAB_PATH = Path(__file__).parent.parent.parent / "data" / "syllables_v2" / "metadata.json"
+SYLLABLE_VOCAB_PATH = (
+    Path(__file__).parent.parent.parent / "data" / "syllables_v2" / "metadata.json"
+)
 
 
 def load_syllable_vocab() -> list[str]:
@@ -160,11 +167,12 @@ if TORCH_AVAILABLE:
 
         def forward(self, x: torch.Tensor) -> torch.Tensor:
             """Add positional encoding to input [batch, seq_len, d_model]."""
-            x = x + self.pe[:, :x.size(1)]
+            pe: torch.Tensor = self.pe  # type: ignore[assignment]
+            x = x + pe[:, :x.size(1)]
             return self.dropout(x)
 
 
-    class SyllablePredictorV3(nn.Module):
+    class SyllablePredictorV3(nn.Module):  # type: ignore[reportRedeclaration]
         """Autoregressive syllable+tone predictor.
 
         Takes mel spectrogram + pinyin context, predicts next syllable and tone.
@@ -308,13 +316,19 @@ if TORCH_AVAILABLE:
                 mask_len = audio_mask.shape[1]
                 if mask_len < self.config.max_audio_frames:
                     # Pad mask with True (masked positions)
-                    pad_mask = torch.ones(batch_size, self.config.max_audio_frames - mask_len, dtype=torch.bool, device=device)
+                    pad_mask = torch.ones(
+                        batch_size, self.config.max_audio_frames - mask_len,
+                        dtype=torch.bool, device=device,
+                    )
                     audio_mask = torch.cat([audio_mask, pad_mask], dim=1)
                 elif mask_len > self.config.max_audio_frames:
                     audio_mask = audio_mask[:, :self.config.max_audio_frames]
             else:
                 # Create mask: True for padded positions
-                audio_mask = torch.zeros(batch_size, self.config.max_audio_frames, dtype=torch.bool, device=device)
+                audio_mask = torch.zeros(
+                    batch_size, self.config.max_audio_frames,
+                    dtype=torch.bool, device=device,
+                )
                 audio_mask[:, original_audio_len:] = True
 
             if pinyin_mask is not None:
@@ -349,7 +363,10 @@ if TORCH_AVAILABLE:
             # Expand for broadcasting: [batch, seq_len, 1]
             keep_mask_expanded = keep_mask.unsqueeze(-1).float()
             # Masked mean
-            pooled = (encoded * keep_mask_expanded).sum(dim=1) / keep_mask_expanded.sum(dim=1).clamp(min=1)
+            pooled = (
+                (encoded * keep_mask_expanded).sum(dim=1)
+                / keep_mask_expanded.sum(dim=1).clamp(min=1)
+            )
 
             pooled = self.output_norm(pooled)
 
@@ -387,12 +404,12 @@ if TORCH_AVAILABLE:
             with torch.no_grad():
                 syllable_logits, tone_logits = self.forward(mel, pinyin_ids)
 
-            syllable_pred = syllable_logits[0].argmax().item()
-            tone_pred = tone_logits[0].argmax().item()
+            syllable_pred = int(syllable_logits[0].argmax().item())
+            tone_pred = int(tone_logits[0].argmax().item())
 
             return PredictorOutput(
-                syllable_logits=syllable_logits.cpu().numpy(),
-                tone_logits=tone_logits.cpu().numpy(),
+                syllable_logits=syllable_logits.cpu().numpy().astype(np.float32),
+                tone_logits=tone_logits.cpu().numpy().astype(np.float32),
                 syllable_pred=syllable_pred,
                 tone_pred=tone_pred,
             )
@@ -418,8 +435,8 @@ else:
         def forward(self, mel, pinyin_ids, audio_mask=None, pinyin_mask=None):
             batch = mel.shape[0]
             return (
-                np.random.randn(batch, self.config.n_syllables),
-                np.random.randn(batch, self.config.n_tones),
+                np.random.randn(batch, self.config.n_syllables).astype(np.float32),
+                np.random.randn(batch, self.config.n_tones).astype(np.float32),
             )
 
         def predict(self, mel, pinyin_ids):

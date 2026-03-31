@@ -16,9 +16,14 @@ a numpy-based stub implementation is provided for testing.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Tuple
+from typing import TYPE_CHECKING, Tuple
 import numpy as np
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
 
 
 # Model configuration
@@ -33,7 +38,7 @@ class ModelConfig:
     win_length: int = 400  # 25ms at 16kHz
 
     # Architecture
-    cnn_channels: list[int] = None  # Will be set in __post_init__
+    cnn_channels: list[int] | None = None  # Will be set in __post_init__
     lstm_hidden: int = 128
     lstm_layers: int = 2
     dropout: float = 0.1
@@ -67,7 +72,7 @@ class ModelOutput:
 try:
     import torch
     import torch.nn as nn
-    import torch.nn.functional as F
+    import torch.nn.functional as F  # noqa: F401
     TORCH_AVAILABLE = True
 except ImportError:
     TORCH_AVAILABLE = False
@@ -95,7 +100,7 @@ if TORCH_AVAILABLE:
             x = self.pool(x)
             return x
 
-    class SyllableToneModel(nn.Module):
+    class SyllableToneModel(nn.Module):  # type: ignore[reportRedeclaration]
         """End-to-end model for syllable segmentation and tone classification.
 
         Architecture:
@@ -114,6 +119,7 @@ if TORCH_AVAILABLE:
             self.config = config
 
             # CNN encoder
+            assert config.cnn_channels is not None
             self.conv_layers = nn.ModuleList()
             in_channels = 1
             for out_channels in config.cnn_channels:
@@ -174,8 +180,6 @@ if TORCH_AVAILABLE:
             x = x.reshape(batch_size, -1, x.shape[2] * x.shape[3])
 
             # Adjust time dimension if needed (due to any conv/pool stride in time)
-            actual_time = x.shape[1]
-
             # BiLSTM
             x, _ = self.lstm(x)
             x = self.dropout(x)

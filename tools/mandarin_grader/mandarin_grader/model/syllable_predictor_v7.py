@@ -23,13 +23,20 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import TYPE_CHECKING, List, Tuple, Optional
 
 import numpy as np
 from numpy.typing import NDArray
 
+if TYPE_CHECKING:
+    import torch
+    import torch.nn as nn
+    import torch.nn.functional as F
 
-SYLLABLE_VOCAB_PATH = Path(__file__).parent.parent.parent / "data" / "syllables_v2" / "metadata.json"
+
+SYLLABLE_VOCAB_PATH = (
+    Path(__file__).parent.parent.parent / "data" / "syllables_v2" / "metadata.json"
+)
 
 
 def load_syllable_vocab() -> list[str]:
@@ -95,7 +102,7 @@ class PredictorOutputV7:
     tone_probs: Optional[NDArray[np.float32]] = None
 
 
-from .syllable_predictor_v4 import SyllableVocab
+from .syllable_predictor_v4 import SyllableVocab  # noqa: E402
 
 
 try:
@@ -109,7 +116,7 @@ except ImportError:
 
 if TORCH_AVAILABLE:
 
-    class CTCDecoder:
+    class CTCDecoder:  # type: ignore[reportRedeclaration]
         """CTC decoder for converting frame-level logits to sequences."""
 
         def __init__(self, blank_index: int = 0):
@@ -197,13 +204,14 @@ if TORCH_AVAILABLE:
             min_frame = 0
 
             for i, target_id in enumerate(target_ids):
-                max_search_frame = min(n_frames, min_frame + (n_frames - min_frame) // max(1, n_targets - i))
+                remaining = (n_frames - min_frame) // max(1, n_targets - i)
+                max_search_frame = min(n_frames, min_frame + remaining)
                 max_search_frame = max(max_search_frame, min_frame + 1)
 
                 target_probs = probs[min_frame:max_search_frame, target_id]
 
                 if len(target_probs) > 0:
-                    best_rel_frame = target_probs.argmax().item()
+                    best_rel_frame = int(target_probs.argmax().item())
                     best_frame = min_frame + best_rel_frame
                     score = target_probs[best_rel_frame].item()
                 else:
@@ -217,7 +225,7 @@ if TORCH_AVAILABLE:
             return scores, aligned_frames
 
 
-    class SyllablePredictorV7(nn.Module):
+    class SyllablePredictorV7(nn.Module):  # type: ignore[reportRedeclaration]
         """CTC-based BiLSTM for syllable+tone prediction.
 
         Architecture:
@@ -238,10 +246,18 @@ if TORCH_AVAILABLE:
             # CNN front-end: [n_mels, time] -> [d_model, time//4]
             # 2 layers with stride 2 each = 4x downsampling
             self.audio_cnn = nn.Sequential(
-                nn.Conv1d(config.n_mels, config.d_model // 2, kernel_size=config.cnn_kernel_size, stride=2, padding=config.cnn_kernel_size // 2),
+                nn.Conv1d(
+                    config.n_mels, config.d_model // 2,
+                    kernel_size=config.cnn_kernel_size, stride=2,
+                    padding=config.cnn_kernel_size // 2,
+                ),
                 nn.BatchNorm1d(config.d_model // 2),
                 nn.GELU(),
-                nn.Conv1d(config.d_model // 2, config.d_model, kernel_size=config.cnn_kernel_size, stride=2, padding=config.cnn_kernel_size // 2),
+                nn.Conv1d(
+                    config.d_model // 2, config.d_model,
+                    kernel_size=config.cnn_kernel_size, stride=2,
+                    padding=config.cnn_kernel_size // 2,
+                ),
                 nn.BatchNorm1d(config.d_model),
                 nn.GELU(),
             )
@@ -352,10 +368,12 @@ if TORCH_AVAILABLE:
                 )[:, :, ds // 2]  # [batch, t_down]
 
                 # Embed: [batch, t_down] -> [batch, t_down, pitch_embed_dim]
+                assert self.pitch_embedding is not None
                 pitch_emb = self.pitch_embedding(pitch_down)
 
                 # Concatenate with CNN features and project back to d_model
                 x = torch.cat([x, pitch_emb], dim=-1)  # [batch, t_down, d_model + pitch_embed_dim]
+                assert self.input_proj is not None
                 x = self.input_proj(x)  # [batch, t_down, d_model]
 
             # BiLSTM: [batch, time//4, d_model] -> [batch, time//4, d_model]
@@ -395,12 +413,12 @@ if TORCH_AVAILABLE:
             tone_ids, tone_probs_list = self.ctc_decoder.decode_with_probs(tone_logits)
 
             return PredictorOutputV7(
-                syllable_logits=syllable_logits.cpu().numpy(),
-                tone_logits=tone_logits.cpu().numpy(),
+                syllable_logits=syllable_logits.cpu().numpy().astype(np.float32),
+                tone_logits=tone_logits.cpu().numpy().astype(np.float32),
                 syllable_ids=syllable_ids,
                 tone_ids=tone_ids,
-                syllable_probs=F.softmax(syllable_logits, dim=-1).cpu().numpy(),
-                tone_probs=F.softmax(tone_logits, dim=-1).cpu().numpy(),
+                syllable_probs=F.softmax(syllable_logits, dim=-1).cpu().numpy().astype(np.float32),
+                tone_probs=F.softmax(tone_logits, dim=-1).cpu().numpy().astype(np.float32),
             )
 
         def get_input_lengths(self, mel_lengths: torch.Tensor) -> torch.Tensor:
@@ -423,6 +441,9 @@ else:
         def greedy_decode(self, logits):
             return [[]]
 
+        def decode_with_probs(self, logits):
+            return [[]], [[]]
+
     class SyllablePredictorV7:
         def __init__(self, config=None):
             self.config = config or SyllablePredictorConfigV7()
@@ -434,8 +455,8 @@ else:
             ds = self.config.cnn_downsample
             time = mel.shape[2] // ds
             return (
-                np.random.randn(batch, time, self.config.n_syllables + 1),
-                np.random.randn(batch, time, self.config.n_tones + 1),
+                np.random.randn(batch, time, self.config.n_syllables + 1).astype(np.float32),
+                np.random.randn(batch, time, self.config.n_tones + 1).astype(np.float32),
             )
 
         def predict(self, mel, audio_mask=None):
@@ -479,7 +500,7 @@ if __name__ == "__main__":
         # Test forward pass with variable lengths
         for time_frames in [200, 500, 1000]:
             mel = torch.randn(2, 80, time_frames)
-            syl_logits, tone_logits = model(mel)
+            syl_logits, tone_logits = model.forward(mel)
 
             expected_time = (time_frames + 3) // 4
             print(f"Input: [2, 80, {time_frames}] -> "
@@ -494,6 +515,8 @@ if __name__ == "__main__":
         print("\nTesting CTC decoding...")
         mel = torch.randn(1, 80, 400)
         output = model.predict(mel)
+        assert output.syllable_ids is not None
+        assert output.tone_ids is not None
         print(f"Decoded syllables: {len(output.syllable_ids[0])} tokens")
         print(f"Decoded tones: {len(output.tone_ids[0])} tokens")
 
